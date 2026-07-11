@@ -7,7 +7,9 @@ This repo stores typhoon tracking records as markdown files.
 ```
 weather/
 └── 颱風/
-    └── {年份}_{中文名}_{英文名}.md
+    └── {年份}/
+        └── {月份}/
+            └── {年份}_{中文名}_{國際命名}.md
 ```
 
 ## File Naming Convention
