@@ -1,30 +1,29 @@
 # Weather - Typhoon Tracking
 
-This repo stores typhoon tracking records as markdown files.
+紀錄颱風動態與災情的 markdown 倉儲。
 
-## Directory Structure
+## 目錄與檔名
 
 ```
-weather/
-└── 颱風/
-    └── {年份}/
-        └── {月份}/
-            └── {年份}_{中文名}_{國際命名}.md
+颱風/{YYYY}/{MM}/{YYYY}_{中文名}_{國際命名}.md
 ```
 
-## File Naming Convention
+範例：`颱風/2026/07/2026_巴威_BAVI.md`
 
-- Pattern: `{YYYY}_{中文名}_{國際命名}.md`
-- Example: `2026_巴威_BAVI.md`
+## 檔案撰寫規則
 
-## File Format Rules
+- 全部使用**繁體中文**
+- 時間戳須含年與時間，如 `2026/7/10 05:30`
+- 災害分級標籤：`🔴重大` `🟡警戒` `🟢一般`
+- 新進展**附加**在檔尾，不覆寫；僅在結構錯誤時修改既有內容
+- 颱風基本資料表（強度、風速、半徑等）置於檔首，使用表格
+- **每次修改**必須在檔首（基本資料表上方）新增一筆 `最後修改：YYYY/M/D HH:mm`，例如 `最後修改：2026/7/11 18:30`
 
-- All timestamps must include year and time (e.g. `2026/7/10 05:30`)
-- Disaster severity tags: `🔴重大` `🟡警戒` `🟢一般`
-- New developments are **appended** to the file, not overwritten
-- Only update existing content if structurally necessary (e.g. correcting wrong data)
+## 章節慣例
 
-## Language
+依序：基本資料 → 警報時程 → 停班停課 → 風力/雨量/浪高 → 災情紀錄（依 🔴🟡🟢 分節）→ 交通影響 → 防災作為 → 備註
 
-- File names and headers use Traditional Chinese (繁體中文)
-- File content uses Traditional Chinese
+## Git
+
+- 預設分支：`main`（原 `master` 已更名）
+- 無 CI、無 lint/test 指令
