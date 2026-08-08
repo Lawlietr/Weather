@@ -49,15 +49,16 @@
 
 ### API Key 設定
 
-```bash
-# 環境變數（建議加入 ~/.bashrc 或 ~/.zshrc）
-export CWA_API_KEY="REMOVED_FOR_SECURITY"
+請在專案根目錄建立 `.env` 文件，內容如下：
 
-# 或使用 .env 文件（需自行實作 dotenv 載入）
-# .env 內容：CWA_API_KEY=REMOVED_FOR_SECURITY
+```bash
+CWA_API_KEY=你的_API_KEY
 ```
 
-⚠️ **安全規範**：API Key **不得**硬編碼在腳本或 commit 到 Git。
+⚠️ **安全規範**：
+- API Key **不得**硬編碼在腳本或 commit 到 Git
+- `.env` 已加入 `.gitignore`，不會被提交
+- 使用時請透過 `os.getenv("CWA_API_KEY")` 或 shell 讀取
 
 ### API 基礎 URL
 
