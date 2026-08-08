@@ -38,6 +38,17 @@
 
 依序：基本資料 → 警報時程 → 停班停課 → 風力/雨量/浪高 → 災情紀錄（依 🔴🟡🟢 分節）→ 交通影響 → 防災作為 → 備註
 
+## 資料來源規範
+
+- **颱風資料**（軌跡、強度、位置、預測）：以中央氣象署（CWA）API 為主
+- **警報與特報**（海上颱風警報、大雨特報、強風特報）：以 CWA API 為主
+- **雨量、風力、浪高**：以 CWA API 為主
+- **災情紀錄**（淹水、樹倒、落石、停電等）：以各縣市新聞媒體為輔，引用時請註明出處
+- **停班停課**：以教育部或各縣市政府公告為主
+- **交通影響**：以交通部或各縣市政府公告為主，新聞媒體為輔
+
+> ⚠️ 使用新聞資料時，請確認時效性，避免使用舊聞；引用時請註明新聞來源與日期。
+
 ## Git
 
 - 預設分支：`main`（原 `master` 已更名）
@@ -76,22 +87,19 @@ CWA_API_KEY=你的_API_KEY
 BASE_URL="https://opendata.cwa.gov.tw/api/v1/rest/datastore"
 ```
 
-### 常用颱風相關 API
+### API 優先級說明
 
-#### 1. 海上颱風警報（W-C0034-001）
+| 優先級 | 說明 | 查詢時機 |
+|--------|------|----------|
+| **P0（必須）** | 颱風追蹤核心資料 | 每次更新都必須查詢 |
+| **P1（重要）** | 災情記錄相關資料 | 颱風警報發布時查詢 |
+| **P2（輔助）** | 可選查詢資料 | 需要時才查詢 |
 
-- **用途**：CAP 格式的颱風警報資訊（警報報數、颱風編號、強度、位置、預測、警戒區域）
-- **回傳格式**：JSON
-- **呼叫方式**：
-```bash
-curl "${BASE_URL}/W-C0034-001?Authorization=${CWA_API_KEY}&format=JSON"
-```
-- **主要欄位**：
-  - `records.info[0].description.typhoon-info`：颱風基本資料（分析數據、預測數據）
-  - `records.info[0].parameter`：警報標題、顏色、嚴重程度
-  - `records.info[0].area`：警戒區域多邊形座標
+---
 
-#### 2. 熱帶氣旋完整資料（W-C0034-005）⭐ 推薦使用
+### P0 必須查詢（颱風追蹤核心）
+
+#### 1. 熱帶氣旋完整資料（W-C0034-005）⭐ 最優先
 
 - **用途**：西北太平洋及南海所有活動中熱帶氣旋的**完整歷史軌跡 + 未來預報**
 - **回傳格式**：JSON
@@ -103,7 +111,25 @@ curl "${BASE_URL}/W-C0034-005?Authorization=${CWA_API_KEY}&format=JSON"
   - `records.TropicalCyclones[].AnalysisData.Fix`：過去至現在的觀測資料（每 6 小時）
   - `records.TropicalCyclones[].ForecastData.Fix`：未來預報（6h~120h）
   - 每個 Fix 包含：DateTime、位置（CoordinateLatitude/Longitude）、最大風速、氣壓、移動速度/方向、暴風半徑
-- **特點**：資料最完整，適合自動更新颱風軌跡和預報
+- **特點**：資料最完整，**每次更新都必須查詢**，適合自動更新颱風軌跡和預報
+
+#### 2. 海上颱風警報（W-C0034-001）
+
+- **用途**：CAP 格式的颱風警報資訊（警報報數、颱風編號、強度、位置、預測、警戒區域）
+- **回傳格式**：JSON
+- **呼叫方式**：
+```bash
+curl "${BASE_URL}/W-C0034-001?Authorization=${CWA_API_KEY}&format=JSON"
+```
+- **主要欄位**：
+  - `records.info[0].description.typhoon-info`：颱風基本資料（分析數據、預測數據）
+  - `records.info[0].parameter`：警報標題、顏色、嚴重程度
+  - `records.info[0].area`：警戒區域多邊形座標
+- **特點**：提供警報顏色與警戒區域，**每次更新都必須查詢**
+
+---
+
+### P1 重要（災情記錄相關）
 
 #### 3. 陸上強風特報（W-C0033-001）
 
@@ -116,14 +142,75 @@ curl "${BASE_URL}/W-C0033-001?Authorization=${CWA_API_KEY}&format=JSON"
 - **主要欄位**：
   - `records.location[].hazardConditions.hazards`：各縣市強風特報
   - 包含：phenomena（陸上強風）、significance（特報）、validTime（有效時間）
+- **特點**：當有陸上強風特報時查詢，用於記錄陸上風災影響
 
-### 其他可用 API（已測試）
+#### 4. 災害性天氣特報（W-C0033-003）
 
-| Data ID | 用途 | 格式 | 備註 |
-|---------|------|------|------|
-| `F-A0012-001` | 海面天氣預報 | XML/ZIP | 非 JSON |
-| `F-C0032-001` | 今明 36 小時天氣預報 | JSON | 鄉鎮預報 |
-| `O-A0002-001` | 全測站逐時氣象資料 | JSON | 自動氣象站觀測 |
+- **用途**：豪大雨特報等災害性天氣資訊（CAP 格式）
+- **回傳格式**：JSON
+- **呼叫方式**：
+```bash
+curl "${BASE_URL}/W-C0033-003?Authorization=${CWA_API_KEY}&format=JSON"
+```
+- **主要欄位**：
+  - `records.info[].description`：災害說明（通常會提及颱風編號與影響）
+  - `records.info[].parameter`：警報顏色、嚴重程度（如：severity_level、alert_color）
+  - `records.info[].area`：警戒區域（區/鄉鎮級別）
+  - `records.info[].effective`：生效時間
+  - `records.info[].onset`：開始時間
+  - `records.info[].expires`：失效時間
+- **特點**：當有豪大雨特報時查詢，用於記錄降雨災情
+
+#### 5. 自動氣象站逐時資料（O-A0001-001 / O-A0002-001 / O-A0003-001）
+
+- **用途**：各測站的實際觀測資料（雨量、風速、氣溫、濕度、氣壓等）
+- **回傳格式**：JSON
+- **呼叫方式**：
+```bash
+curl "${BASE_URL}/O-A0001-001?Authorization=${CWA_API_KEY}&format=JSON"
+curl "${BASE_URL}/O-A0002-001?Authorization=${CWA_API_KEY}&format=JSON"
+curl "${BASE_URL}/O-A0003-001?Authorization=${CWA_API_KEY}&format=JSON"
+```
+- **主要欄位**：
+  - `StationName`：測站名稱
+  - `Precipitation`：雨量
+  - `WindSpeed`：風速
+  - `PeakGustSpeed`：最大陣風
+  - `AirTemperature`：氣溫
+  - `RelativeHumidity`：濕度
+  - `AirPressure`：氣壓
+- **特點**：當需要記錄實際觀測資料時查詢，用於災情紀錄與預報驗證
+
+---
+
+### P2 輔助（可選查詢）
+
+#### 6. 今明 36 小時天氣預報（F-C0032-001）
+
+- **用途**：鄉鎮級天氣預報（天氣現象、降雨機率）
+- **回傳格式**：JSON
+- **呼叫方式**：
+```bash
+curl "${BASE_URL}/F-C0032-001?Authorization=${CWA_API_KEY}&format=JSON"
+```
+- **主要欄位**：
+  - `locationName`：鄉鎮名稱
+  - `weatherElement[].time[].parameter`：天氣現象、降雨機率（PoP）
+- **特點**：當需要了解鄉鎮級預報時查詢，**可選**
+
+#### 7. 潮汐預報（F-A0021-001）
+
+- **用途**：未來 1 個月潮汐預報（鄉鎮、大潮小潮、滿潮乾潮、時間、潮高）
+- **回傳格式**：JSON
+- **呼叫方式**：
+```bash
+curl "${BASE_URL}/F-A0021-001?Authorization=${CWA_API_KEY}&format=JSON"
+```
+- **主要欄位**：
+  - `LocationName`：鄉鎮名稱
+  - `Tide`：滿潮/乾潮
+  - `TideHeights`：潮高
+- **特點**：當颱風可能引發沿海風暴潮時查詢，**可選**
 
 ### 資料解析範例（Python）
 
