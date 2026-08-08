@@ -49,7 +49,17 @@
 
 ### API Key 設定
 
-請在專案根目錄建立 `.env` 文件，內容如下：
+**方式一：環境變數（推薦，自動載入）**
+
+API Key 已設定在 `~/.zshrc`，開啟新 terminal 即可使用：
+
+```bash
+export CWA_API_KEY="你的_API_KEY"
+```
+
+**方式二：專案 `.env` 文件**
+
+在專案根目錄建立 `.env` 文件，內容如下：
 
 ```bash
 CWA_API_KEY=你的_API_KEY
