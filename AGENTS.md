@@ -256,3 +256,49 @@ def get_typhoon_data():
 5. **開發指南**：https://opendata.cwa.gov.tw/devManual/insrtuction
 6. **資料清單**：https://opendata.cwa.gov.tw/devManual/datalist
 7. **Swagger 線上文件**：https://opendata.cwa.gov.tw/dist/opendata-swagger.html
+
+---
+
+## Obscura 無頭瀏覽器工具
+
+用於爬取中央氣象署網站的 JavaScript 渲染內容（當 API 無法取得時）。
+
+### 基本資訊
+- **Binary 位置**：`/usr/local/bin/obscura`（v0.2.0）
+- **Docker 容器**：`obscura`（MCP HTTP port 3000, CDP port 9222）
+- **技能文件**：`/root/.pi/agent/skills/obscura/SKILL.md`
+
+### 常用指令
+
+```bash
+# 提取頁面文字（JS 執行後）
+obscura fetch https://www.cwa.gov.tw --dump text --timeout 20
+
+# 提取完整 HTML
+obscura fetch https://www.cwa.gov.tw --dump html --timeout 20
+
+# 提取連結
+obscura fetch https://www.cwa.gov.tw --dump links --timeout 20
+
+# 等待特定元素
+obscura fetch https://example.com --selector ".content" --timeout 15
+
+# Stealth 模式（防封鎖）
+obscura --stealth fetch https://example.com --dump text
+```
+
+### 中央氣象署常用頁面
+
+| 頁面 | URL | 說明 |
+|------|-----|------|
+| 首頁 | `https://www.cwa.gov.tw/V8/C/` | 天氣預報、氣象觀測 |
+| 颱風警報 | `TY_WARN.html` | 颱風警報狀態 |
+| 颱風消息 | `TY_NEWS.html` | 颱風路徑潛勢預報 |
+| 颱風強風告警 | `TY_WIND.html` | 強風告警狀態 |
+
+### 注意事項
+- 首頁有 SVG JS 錯誤（`getTotalLength is not a function`），不影響主要內容
+- 舊路徑 `Typhoon.html` 已移除，正確路徑為 `P/Typhoon/TY_*.html`
+- 多語句 JS 需包 IIFE：`(function(){ ... })()`
+- SSRF 保護會阻擋 private network，需加 `--allow-private-network`
+- Docker 容器未運行時：`docker run -d --name obscura -p 3000:3000 h4ckf0r0day/obscura mcp --http --port 3000 --host 0.0.0.0`
