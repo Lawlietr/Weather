@@ -109,13 +109,15 @@ CWA_API_KEY=你的_API_KEY
 BASE_URL="https://opendata.cwa.gov.tw/api/v1/rest/datastore"
 ```
 
-### API 優先級說明
+### API 優先級說明（依事件類型）
 
-| 優先級 | 說明 | 查詢時機 |
-|--------|------|----------|
-| **P0（必須）** | 颱風追蹤核心資料 | 每次更新都必須查詢 |
-| **P1（重要）** | 災情記錄相關資料 | 颱風警報發布時查詢 |
-| **P2（輔助）** | 可選查詢資料 | 需要時才查詢 |
+| 優先級 | 颱風事件 | 豪雨/大雨事件（非颱風） |
+|--------|----------|--------------------------|
+| **P0（必須）** | W-C0034-005（軌跡）、W-C0034-001（海警） | W-C0033-002/003（豪大雨特報）、O-A0002-001（雨量站） |
+| **P1（重要）** | W-C0033-001（強風特報）、W-C0033-003、O-A0001-001（逐時氣象） | W-C0033-001（強風特報）、O-A0001-001（逐時氣象）、C-B0025-001（每日雨量）、F-D0047-xxx（鄉鎮預報） |
+| **P2（輔助）** | F-C0032-001、F-D0047-xxx、F-A0021-001（潮汐） | C-B0024-001（30天觀測）、C-B0074-001/002（測站基本資料）、F-C0032-001、F-A0021-001（潮汐） |
+
+> 完整官方清單（80 筆，2026/8/25 核對）見 `https://opendata.cwa.gov.tw/apidoc/v1`（OpenAPI YAML）。舊資料中常見但**已不存在**（404）的 Data ID：O-A0013~19（逐時/3h/24h 雨量）、F-C0033-001（48h 雨量預報）、F-C0034-001、F-A0045-001（降雨雷達）、W-C0024-001、F-C0040-001（土石流）、O-C0010-001（河川水位）——開放資料平台無這些產品，需改抓 CWA 官網頁面（obscura）或新聞。
 
 ---
 
@@ -166,61 +168,106 @@ curl "${BASE_URL}/W-C0033-001?Authorization=${CWA_API_KEY}&format=JSON"
   - 包含：phenomena（陸上強風）、significance（特報）、validTime（有效時間）
 - **特點**：當有陸上強風特報時查詢，用於記錄陸上風災影響
 
-#### 4. 災害性天氣特報（W-C0033-003）
+#### 4. 災害性天氣特報（W-C0033-003 / W-C0033-002）⭐ 豪雨事件首選
 
-- **用途**：豪大雨特報等災害性天氣資訊（CAP 格式）
+- **用途**：豪大雨特報等災害性天氣資訊（W-C0033-003 為 CAP 格式，W-C0033-002 為純文字＋影響區域）
 - **回傳格式**：JSON
 - **呼叫方式**：
 ```bash
-curl "${BASE_URL}/W-C0033-003?Authorization=${CWA_API_KEY}&format=JSON"
+curl "${BASE_URL}/W-C0033-003?Authorization=${CWA_API_KEY}&format=JSON"   # CAP 格式
+curl "${BASE_URL}/W-C0033-002?Authorization=${CWA_API_KEY}&format=JSON"   # 純文字內容＋影響區域，較易解析
 ```
-- **主要欄位**：
+- **W-C0033-003 主要欄位**：
   - `records.info[].description`：災害說明（通常會提及颱風編號與影響）
   - `records.info[].parameter`：警報顏色、嚴重程度（如：severity_level、alert_color）
   - `records.info[].area`：警戒區域（區/鄉鎮級別）
-  - `records.info[].effective`：生效時間
-  - `records.info[].onset`：開始時間
-  - `records.info[].expires`：失效時間
-- **特點**：當有豪大雨特報時查詢，用於記錄降雨災情
+  - `records.info[].effective` / `onset` / `expires`：生效／開始／失效時間
+- **W-C0033-002 主要欄位**：
+  - `records.record[].datasetInfo.datasetDescription`：特報品名（如「大雨特報」）
+  - `records.record[].datasetInfo.validTime` / `issueTime` / `update`：有效與發布時間
+  - `records.record[].contents.content.contentText`：特報全文（純文字）
+  - `records.record[].hazardConditions.hazards.hazard[]`：phenomena（大雨/豪雨/強風…）、significance（特報/警報）、affectingArea
+- **特點**：**豪雨/大雨事件每次更新必查**，用於記錄降雨災情與警報升降級
 
-#### 5. 自動氣象站逐時資料（O-A0001-001 / O-A0002-001 / O-A0003-001）
+#### 5. 雨量觀測站資料（O-A0002-001）⭐ 豪雨事件雨量首選
 
-- **用途**：各測站的實際觀測資料（雨量、風速、氣溫、濕度、氣壓等）
+- **用途**：全臺 1300+ 自動雨量站，**每 10 分鐘更新**，含多重時間尺度累計雨量
+- **回傳格式**：JSON（約 1.2 MB；可用 `&StationName=高雄&StationName=屏東` 篩選）
+- **呼叫方式**：
+```bash
+curl "${BASE_URL}/O-A0002-001?Authorization=${CWA_API_KEY}&format=JSON"
+```
+- **主要欄位**（`records.Station[]`）：
+  - `StationName` / `StationId` / `ObsTime.DateTime` / `GeoInfo`（座標、鄉鎮、海拔）
+  - `RainfallElement.Now.Precipitation`：**本日 0 時至目前的累積雨量** ⚠️ 不是 1 小時雨量！
+  - `RainfallElement.Past10Min / Past1hr / Past3hr / Past6Hr / Past12hr / Past24hr / Past2days / Past3days`：各時間尺度累計（短延時強降雨看 Past1hr/Past3hr）
+- **特點**：**豪雨事件 P0**。短延時強降雨（時雨量 40/80mm 等）以 `Past1hr` 為準；災情累計雨量以 `Past24hr` / `Past3days` 為準；`Now` 不可標註成「1 小時雨量」
+
+#### 6. 自動氣象站資料（O-A0001-001 / O-A0003-001）
+
+- **用途**：O-A0001-001 為全測站**逐時**氣象資料；O-A0003-001 為 10 分鐘綜觀氣象
 - **回傳格式**：JSON
 - **呼叫方式**：
 ```bash
 curl "${BASE_URL}/O-A0001-001?Authorization=${CWA_API_KEY}&format=JSON"
-curl "${BASE_URL}/O-A0002-001?Authorization=${CWA_API_KEY}&format=JSON"
 curl "${BASE_URL}/O-A0003-001?Authorization=${CWA_API_KEY}&format=JSON"
 ```
-- **主要欄位**：
-  - `StationName`：測站名稱
-  - `Precipitation`：雨量
-  - `WindSpeed`：風速
-  - `PeakGustSpeed`：最大陣風
-  - `AirTemperature`：氣溫
-  - `RelativeHumidity`：濕度
-  - `AirPressure`：氣壓
-- **特點**：當需要記錄實際觀測資料時查詢，用於災情紀錄與預報驗證
+- **主要欄位**（`records.Station[].WeatherElement.Now`）：
+  - `Precipitation`：雨量（⚠️ 與 O-A0002-001 的 `Now` 同源，為**本日 0 時至目前累計**，非 1 小時雨量）
+  - `WindSpeed` / 陣風：風速（注意：部分站點回傳 None，結構為 `WeatherElement.Now.*`）
+  - `AirTemperature` / `RelativeHumidity` / `AirPressure`：氣溫／濕度／氣壓
+- **特點**：用於風速、氣壓、氣溫等災情紀錄；雨量請改用 O-A0002-001
+
+#### 7. 每日雨量（C-B0025-001）
+
+- **用途**：地面測站每日雨量（當年 1/1 起逐日，「T」=雨跡〈0.5mm、「X」=無紀錄/儀器故障）
+- **回傳格式**：JSON
+- **呼叫方式**：
+```bash
+curl "${BASE_URL}/C-B0025-001?Authorization=${CWA_API_KEY}&format=JSON"
+```
+- **主要欄位**：`records.location[].station`（StationID/StationName）＋ `stationObsTimes.stationObsTime[].{Date, weatherElements.Precipitation}`
+- **特點**：事件結束後補寫每日雨量總表時使用
+
+#### 8. 30 天觀測資料（C-B0024-001）
+
+- **用途**：地面測站近 30 天逐日氣象要素（氣壓、氣溫、濕度、風速、雨量、日照）
+- **回傳格式**：JSON
+- **呼叫方式**：
+```bash
+curl "${BASE_URL}/C-B0024-001?Authorization=${CWA_API_KEY}&format=JSON"
+```
+- **特點**：事件前後背景氣候資料（如「近 30 日第 N 大雨」比較），P2
 
 ---
 
 ### P2 輔助（可選查詢）
 
-#### 6. 今明 36 小時天氣預報（F-C0032-001）
+#### 9. 鄉鎮天氣預報（F-D0047-xxx）⭐ 豪雨事件預報首選
 
-- **用途**：鄉鎮級天氣預報（天氣現象、降雨機率）
+- **用途**：各縣鄉鎮級「未來 3 天／未來 1 週」預報（溫度、降水、降雨機率、風、天氣現象）
+- **回傳格式**：JSON
+- **Data ID 對照**：屏東 033/035、臺東 037/039、花蓮 041/043、高雄 065/067、臺南 077/079、連江 081/083、**全臺各鄉鎮 093**
+- **呼叫方式**：
+```bash
+curl "${BASE_URL}/F-D0047-033?Authorization=${CWA_API_KEY}&format=JSON"   # 屏東縣未來 3 天
+curl "${BASE_URL}/F-D0047-093?Authorization=${CWA_API_KEY}&format=JSON"   # 全臺各鄉鎮
+```
+- **主要欄位**：`records.Locations[].Location[]` → `WeatherElement[].{ElementName, Time[].{DataTime, ElementValue[]}}`（結構清晰，比 F-C0032-001 易解析）
+- **特點**：豪雨事件「未來天氣預報」章節首選
+
+#### 10. 今明 36 小時天氣預報（F-C0032-001）
+
+- **用途**：鄉鎮級 36 小時預報（天氣現象、降雨機率）
 - **回傳格式**：JSON
 - **呼叫方式**：
 ```bash
 curl "${BASE_URL}/F-C0032-001?Authorization=${CWA_API_KEY}&format=JSON"
 ```
-- **主要欄位**：
-  - `locationName`：鄉鎮名稱
-  - `weatherElement[].time[].parameter`：天氣現象、降雨機率（PoP）
-- **特點**：當需要了解鄉鎮級預報時查詢，**可選**
+- **主要欄位**：`records.location[].weatherElement[]`（⚠️ 子欄位結構與 F-D0047 不同，解析前請先 dump 一筆確認；若遇到解析失敗，改用 F-D0047-093）
+- **特點**：可選
 
-#### 7. 潮汐預報（F-A0021-001）
+#### 11. 潮汐預報（F-A0021-001）
 
 - **用途**：未來 1 個月潮汐預報（鄉鎮、大潮小潮、滿潮乾潮、時間、潮高）
 - **回傳格式**：JSON
@@ -232,6 +279,16 @@ curl "${BASE_URL}/F-A0021-001?Authorization=${CWA_API_KEY}&format=JSON"
   - `LocationName`：鄉鎮名稱
   - `Tide`：滿潮/乾潮
   - `TideHeights`：潮高
+
+#### 12. 測站基本資料（C-B0074-001 / C-B0074-002）
+
+- **用途**：有人／無人氣象測站清單（站號、站名、經緯度、海拔、狀態、起止日期）
+- **呼叫方式**：
+```bash
+curl "${BASE_URL}/C-B0074-002?Authorization=${CWA_API_KEY}&format=JSON"
+```
+- **主要欄位**：`records.data.stationStatus.station[]` → `StationID` / `StationName` / `StationLatitude/Longitude` / `StationAltitude` / `CountyName`
+- **特點**：無人氣象站（山區雨量站）的坐標對照，P2
 - **特點**：當颱風可能引發沿海風暴潮時查詢，**可選**
 
 ### 資料解析範例（Python）
@@ -278,6 +335,9 @@ def get_typhoon_data():
 5. **開發指南**：https://opendata.cwa.gov.tw/devManual/insrtuction
 6. **資料清單**：https://opendata.cwa.gov.tw/devManual/datalist
 7. **Swagger 線上文件**：https://opendata.cwa.gov.tw/dist/opendata-swagger.html
+8. **資料集清單權威來源**：`https://opendata.cwa.gov.tw/apidoc/v1`（OpenAPI YAML，含全部 80 個 Data ID、參數與枚舉值）；web 版資料清單頁為 SPA，直接爬 HTML 拿不到清單
+9. **雨量欄位語意**：O-A0001-001 / O-A0002-001 的 `Now.Precipitation` = **本日 0 時至目前累計**（非 1 小時雨量）；1 小時雨量請用 O-A0002-001 的 `Past1hr`（2026/8/25 根據官方資料集說明核實）
+10. **O-B0075-001（48 小時海況）JSON 回傳空**：2026/8/25 實測 `records` 為空，海況改看 CWA 官網頁面或新聞
 
 ---
 
