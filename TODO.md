@@ -89,7 +89,7 @@ GitHub Pages 提供靜態網站
 
 - [ ] **RSS 來源清單**：需確認可用且允許跨域的台灣新聞 RSS 源（第一版可先只吃 repo markdown，RSS 留 hook 後續加）。
 - [ ] **GitHub Pages 分支**：`gh-pages` 或 `docs`（待選；建議 Pages 分支只放靜態產物，不放 markdown 原文）。
-- [ ] **多語言**：目前 UI 字串內嵌在 `build/site.py`（無 i18n 層）；若需第二語言，先將 ~40 個 UI 字串收斂成字串表再切換（見 §七.4）。
+- [x] **多語言**：已實作繁中（預設）＋日文（`public/ja/`）；UI 字串收斂於 `build/i18n.py`（~70 key），加新語言只需在 STRINGS 加一組（DEV `11e04fb`）。
 
 ---
 
