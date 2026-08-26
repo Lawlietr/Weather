@@ -1,8 +1,9 @@
 # 🌦 Weather — 台灣天氣與災情總覽
 
-紀錄颱風動態與災情的 Markdown 倉儲，並以 build 腳本產出**純靜態網站**，已上線 GitHub Pages：
+紀錄颱風動態與災情的 Markdown 倉儲，並以 build 腳本產出**純靜態網站**，已上線 Cloudflare Pages（自訂域名，主要通道）＋ GitHub Pages：
 
-> 🌐 <https://lawlietr.github.io/Weather/>（繁中）｜<https://lawlietr.github.io/Weather/ja/>（日文）
+> 🌐 <https://weather.avpclub.eu.org/>（繁中）｜<https://weather.avpclub.eu.org/ja/>（日文）
+> 其他端點：<https://weather.avpclub.uk/>、<https://weather.larch.dpdns.org/>、<https://lawlietr.github.io/Weather/>（同一份內容）
 
 本站採**手動更新**、非即時，每頁標示「最後更新時間」。
 
@@ -24,6 +25,8 @@
   事件正文與 CWA 資料保留原文。
 - **輕量離線**：首頁零 JS、無外部 JS/CSS/追蹤、無地圖 CDN；日夜主題；mobile-first；
   全相對路徑，部署於任何子路徑皆可。
+- **LLM 友善**：build 同時產出 [`llms.txt`](https://weather.avpclub.eu.org/llms.txt)（站點索引＋事件清單）
+  與 `llms-full.txt`（全部事件全文），供 AI 助手直接讀取本站內容。
 - **優雅降級**：CWA 抓取失敗時以本機快取舊值＋警示呈現，build 不中斷；「無法取得」與「無資料」視覺區分。
 
 ## 快速開始
@@ -43,14 +46,16 @@ cd public && python3 -m http.server 8080
 
 ```
 weather/
-├── AGENTS.md       # 專案規範：檔案規則、CWA API 參考、網站設計原則
-├── WORKFLOW.md     # Runbook：更新／build／驗證／部署逐步流程（接手先看）
-├── TODO.md         # 網站構想、已定案事項、待辦
-├── README.md       # 本檔案
-├── 颱風/            # 颱風紀錄：颱風/{YYYY}/{MM}/{MMDD}_{NN}_{中文名}_{國際命名}.md
-├── 災情/            # 非颱風災情：災情/{YYYY}/{MM}/{MMDD}_{事件類型}_{事件名稱}.md
-├── build/          # build 腳本（site.py / cwa.py / i18n.py）；cwa_cache.json 已 gitignore
-└── public/         # build 產出（已 gitignore）：根目錄＝繁中、ja/＝日文
+├── AGENTS.md         # 專案規範：檔案規則、CWA API 參考、網站設計原則
+├── WORKFLOW.md       # Runbook：更新／build／驗證／部署逐步流程（接手先看）
+├── TODO.md           # 網站構想、已定案事項、待辦
+├── README.md         # 本檔案
+├── LICENSE           # 程式碼授權：GNU AGPLv3
+├── LICENSE-CONTENT   # 內容授權：CC BY-NC-SA 4.0（災情紀錄與網頁產出）
+├── 颱風/             # 颱風紀錄：颱風/{YYYY}/{MM}/{MMDD}_{NN}_{中文名}_{國際命名}.md
+├── 災情/             # 非颱風災情：災情/{YYYY}/{MM}/{MMDD}_{事件類型}_{事件名稱}.md
+├── build/            # build 腳本（site.py / cwa.py / i18n.py）；cwa_cache.json 已 gitignore
+└── public/           # build 產出（已 gitignore）：根目錄＝繁中、ja/＝日文、llms.txt／llms-full.txt
 ```
 
 ## 資料來源
@@ -66,6 +71,10 @@ weather/
 - **CWA API Key** 只存在本機執行環境：不寫進 build 輸出、不進任何 repo。
 - **公開 GitHub repo 只放 `public/` 靜態產物**：Markdown 原文、build 腳本、內部倉庫資訊一律不公開（部署流程見 `WORKFLOW.md` §6）。
 
-## 授權
+## 授權（雙授權）
 
-[MIT](LICENSE)
+- **程式碼**（`build/` 等）：[GNU AGPLv3](LICENSE)
+- **內容**（`災情/`、`颱風/` 紀錄及其網頁／`llms.txt`／`llms-full.txt` 產出）：
+  [CC BY-NC-SA 4.0（創用 CC 姓名標示-非商業性-相同方式分享）](LICENSE-CONTENT)
+  ——可自由分享與調修，但須註明出處、**不得商用**、衍生作品須以相同授權釋出。
+- 源自 CWA Open Data API 的氣象資料以中央氣象署官方條款為準，不為本專案授權範圍。

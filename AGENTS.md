@@ -1,6 +1,6 @@
-# Weather - Typhoon Tracking
+# Weather - 台灣天氣與災情總覽
 
-紀錄颱風動態與災情的 Markdown 倉儲，並附靜態網站 build（產出 `public/`，供 GitHub Pages 公開網站使用；見下方「網站專案」）。
+紀錄颱風動態與災情的 Markdown 倉儲，並附靜態網站 build（產出 `public/`、`llms.txt`、`llms-full.txt`；主要 host 於 Cloudflare Pages 自訂域名，另同步 GitHub Pages；見下方「網站專案」）。
 
 ## ⚠️ 時間意識（極度重要）
 
@@ -388,12 +388,12 @@ obscura --stealth fetch https://example.com --dump text
 
 ---
 
-## 網站專案（已上線：https://lawlietr.github.io/Weather/）
+## 網站專案（已上線：Cloudflare Pages `weather.*` 自訂域名 ×3 ＋ GitHub Pages https://lawlietr.github.io/Weather/）
 
 - **更新/部署工作流（runbook）**：`WORKFLOW.md`——接手者（agent 或人工）先看這個。
 - **構想與待辦**：`TODO.md`。
-- **build 入口**：`./build/build.sh`（產出 `public/`（繁中）與 `public/ja/`（日文）；CWA 資料 build 時本機抓取）。
-  公開網站 host 於 GitHub Pages，彙整氣象署天氣資訊與災情紀錄。
+- **build 入口**：`./build/build.sh`（產出 `public/`（繁中）與 `public/ja/`（日文）、`llms.txt`（LLM 索引）與 `llms-full.txt`（事件全文）；CWA 資料 build 時本機抓取）。
+  公開網站主要 host 於 Cloudflare Pages（自訂域名），另同步 GitHub Pages；彙整氣象署天氣資訊與災情紀錄。
 
 ### 多語言（i18n）
 
@@ -408,6 +408,8 @@ obscura --stealth fetch https://example.com --dump text
   - ⚠️ CWA API **不支援 CORS**（實測 `W-C0034-005` 回應無 `Access-Control-Allow-Origin` 標頭），故**前端無法直接呼叫**，氣象資料必須由本機 build 時抓取後寫入靜態 HTML。
 - **災情來源優先級**：repo 現有 `災情/` markdown → RSS → Obscura 抓取。每筆附**新聞來源**，僅給**少量摘要＋原連結**。
 - **非即時**：Pages 為靜態託管，採手動 build。首頁必須顯示「**最後更新時間**」（build 時寫入當下系統時間）。
+- **雙授權**：程式碼（`build/` 等）以 **GNU AGPLv3**（`LICENSE`）；內容（`災情/`、`颱風/` 紀錄及其網頁、`llms.txt`、`llms-full.txt` 產出）以 **CC BY-NC-SA 4.0**（`LICENSE-CONTENT`，不得商用）；CWA 資料以官方條款為準。
+- **LLM 友善產出**：build 必產 `llms.txt`（站點＋事件索引）與 `llms-full.txt`（全部事件繁中全文），canonical base URL 為 `https://weather.avpclub.eu.org`（`build/site.py` 之 `SITE_BASE`）。
 
 ### 技術架構
 
@@ -416,8 +418,10 @@ obscura --stealth fetch https://example.com --dump text
   ├── 讀 repo 災情 markdown → 災情資料（縣市/時間/分級/摘要）
   ├── 讀 RSS / Obscura       → 補即時新聞災情（附來源）〔待實作〕
   ├── 呼叫 CWA API（金鑰在本地）→ 氣象彙整
-  └── build 出靜態 HTML（含「最後更新時間」）→ git push 到 Pages 分支
-GitHub Pages 提供靜態網站
+  └── build 出靜態 HTML（含「最後更新時間」）
+        ├── wrangler pages deploy public → Cloudflare Pages（主要）
+        └── orphan gh-pages 分支 force push → GitHub Pages
+Cloudflare / GitHub 靜態託管提供公開網站
 ```
 
 ### 網站結構
@@ -430,3 +434,4 @@ GitHub Pages 提供靜態網站
 - **內部仓库**：`ssh://fg/lawliet/Weather.git`（Forgejo，內網 `192.168.1.124:222`，SSH Host `fg`，Identity `~/.ssh/id_rsa_gitea`）。
 - 目前開發與 commit **只推到內部 forgejo**。
 - **GitHub Pages**（公開，2026/8/26 已上線）：<https://lawlietr.github.io/Weather/>（繁中）＋ `/ja/`（日文）。只推 `public/` 靜態產物（orphan `gh-pages` 分支、不共享 history），Markdown 原文、build 腳本、內部倉庫資訊一律不公開。部署步驟見 `WORKFLOW.md` §6。
+- **Cloudflare Pages**（公開，2026/8/26 已上線，**主要更新通道**）：專案 `weather`，自訂域名 `weather.avpclub.eu.org`、`weather.avpclub.uk`、`weather.larch.dpdns.org`（CNAME 已建、proxied、自動 HTTPS）。更新只需 `npx wrangler pages deploy public --project-name weather`（憑證在 `~/.zshrc` 的 `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID`，不進 repo）。細節見 `WORKFLOW.md` §6。

@@ -384,10 +384,12 @@ __CONTENT__
 
 
 def github_icon_html(lang):
+    # 目前隱藏（display:none），但保留程式碼與 SVG：
+    # 未來設定 GITHUB_URL 並要去掉 style="display:none" 即可恢復顯示。
     if GITHUB_URL:
-        return (f'<a class="icon-btn" href="{GITHUB_URL}" target="_blank" rel="noopener" '
+        return (f'<a class="icon-btn" style="display:none" href="{GITHUB_URL}" target="_blank" rel="noopener" '
                 f'title="GitHub" aria-label="GitHub">{GITHUB_ICON_SVG}</a>')
-    return f'<span class="icon-btn" title="{t(lang, "github_pending")}" aria-label="GitHub">{GITHUB_ICON_SVG}</span>'
+    return f'<span class="icon-btn" style="display:none" title="{t(lang, "github_pending")}" aria-label="GitHub">{GITHUB_ICON_SVG}</span>'
 
 
 def lang_switch_html(lang, home_link):
@@ -595,6 +597,83 @@ def build_event_page(lang, ev, ts, depth):
     return content
 
 
+SITE_BASE = "https://weather.avpclub.eu.org"
+
+
+def build_llms_files(events, ts):
+    """產生 llms.txt（簡明索引）與 llms-full.txt（事件全文），供 LLM 讀取本站內容。
+
+    固定用繁中（default 語言路徑，即 public/ 根），因為事件正文皆為繁中原文。
+    """
+    base = SITE_BASE
+    active = [e for e in events if e["status"] == "active"]
+    ended = [e for e in events if e["status"] != "active"]
+    sev = {"red": "🔴 重大", "yellow": "🟡 警戒", "green": "🟢 一般"}
+
+    def link(e):
+        return f"{base}/{'/'.join(e['url'])}"
+
+    def heading(e):
+        status = "進行中" if e["status"] == "active" else "已結束"
+        return f"### {e['name']}（{status}・{sev.get(e['severity'], e['severity'])}）\n"
+
+    # --- llms.txt：索引 ---
+    lines = ["# 台灣天氣與災情總覽",
+             "",
+             f"> 記錄台灣目前與歷史上發生的颱風、低壓帶、豪雨等天氣事件與各縣市災情的純靜態網站。"
+             f"氣象資料來源為中央氣象署（CWA）Open Data API，災情來源為各縣市政府公告與新聞媒體。"
+             f"最後更新：{ts}。繁中為預設語言；`/ja/` 為日文介面（事件正文仍為繁中原文）。",
+             "",
+             "## 網站結構",
+             "",
+             f"- [首頁（氣象彙整＋各縣市災情總覽）]({base}/index.html)",
+             f"- [日文介面（UI 為日文，事件正文為繁中原文）]({base}/ja/index.html)",
+             "",
+             "- 所有事件列表（含已結束）見首頁側邊欄，本檔下方亦分列進行中／已結束。",
+             "",
+             "## 進行中的事件", ""]
+    if active:
+        for e in active:
+            lines += [f"- [{e['name']}]({link(e)})（{sev.get(e['severity'], e['severity'])}）"]
+    else:
+        lines.append("- （目前無進行中的事件）")
+    lines += ["", "## 已結束的事件", ""]
+    if ended:
+        for e in ended:
+            lines.append(f"- [{e['name']}]({link(e)})（{sev.get(e['severity'], e['severity'])}）")
+    else:
+        lines.append("- （尚無）")
+    lines += ["",
+              "## 資料說明",
+              "",
+              "- 每筆災情均附新聞來源與連結，並標注時間戳（格式：`YYYY/M/D HH:MM`）。",
+              "- 災害分級：🔴 重大／🟡 警戒／🟢 一般。",
+              "- 首頁的颱風軌跡、警報特報、雨量 TOP-10 等氣象資料由 build 時自 CWA API 抓取，非即時。",
+              "- 完整事件全文另見 `llms-full.txt`（同一網址下）。",
+              "",
+              "## 授權",
+              "",
+              "- 本內容（災情紀錄與彙整，含本檔）：CC BY-NC-SA 4.0（創用 CC 姓名標示-非商業性-相同方式分享 4.0 國際）——"
+              "可自由分享與調修，但須註明出處、不得商用、衍生作品須以相同授權釋出。",
+              "- 程式碼：GNU AGPLv3。",
+              "- 源自中央氣象署（CWA）Open Data API 的氣象資料以 CWA 官方條款為準。",
+              ""]
+    (OUT / "llms.txt").write_text("\n".join(lines), encoding="utf-8")
+
+    # --- llms-full.txt：全文 ---
+    full = ["# 台灣天氣與災情總覽（llms-full.txt）",
+            "",
+            f"最後更新：{ts}。本檔含全部事件的完整內容（繁中原文）。",
+            "",
+            "---", ""]
+    for e in events:
+        full += [heading(e),
+                 f"- 網頁：{link(e)}", "- 範圍：" + ("、".join(e["counties"]) or "未指定"),
+                 f"- 期間：{e['period']}", "- 摘要：" + e["summary"], ""]
+        full += ["### 內容", "", e["body"].rstrip(), "", "---", ""]
+    (OUT / "llms-full.txt").write_text("\n".join(full), encoding="utf-8")
+
+
 def main():
     if OUT.exists():
         for p in OUT.rglob("*"):
@@ -626,9 +705,11 @@ def main():
             out_path.parent.mkdir(parents=True, exist_ok=True)
             out_path.write_text(page, encoding="utf-8")
 
+    build_llms_files(events, ts)
+
     mode = cwa_ctx[3]
     src_note = {"live": "CWA live", "partial": "CWA partial（含舊資料）", "cache": "CWA 快取", "none": "CWA 無法取得"}[mode]
-    print(f"build 完成：{len(events)} 個事件（active {sum(1 for e in events if e['status']=='active')} / ended {sum(1 for e in events if e['status']!='active')}）｜{src_note}")
+    print(f"build 完成：{len(events)} 個事件（active {sum(1 for e in events if e['status']=='active')} / ended {sum(1 for e in events if e['status']!='active')}）｜{src_note}｜llms.txt + llms-full.txt 已產生")
     print(f"輸出：{OUT}")
     print(f"預覽：cd {OUT} && python3 -m http.server 8080")
 

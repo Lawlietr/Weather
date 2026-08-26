@@ -30,7 +30,7 @@
 ③ 驗證（見 §3 檢查清單）
 ④ git add / commit（訊息用繁體中文，簡述本次更新）
 ⑤ git push origin main（內部 Forgejo）
-⑥ 將 public/ 產物推到 GitHub Pages 分支（步驟見 §6）
+⑥ 將 public/ 產物推到公開託管：Cloudflare Pages（`npx wrangler pages deploy public --project-name weather`）＋ GitHub Pages orphan 分支（步驟見 §6）
 ```
 
 - 更新時間戳：檔案內時間戳與 `最後修改：` 欄位一律用**系統當前時間**，先 `date` 確認。
@@ -125,7 +125,7 @@ cd public && python3 -m http.server 8080
   - 站點：<https://lawlietr.github.io/Weather/>（繁中）、`/ja/`（日文）。
   - 公開 repo：`Lawlietr/Weather`（本機 remote 名 `github`）。**只收 `public/` 內容**：
     orphan `gh-pages` 分支、不與 main 共享 history（Markdown 原文、build 腳本、內部倉庫資訊一律不外流）。
-  - 更新推送（每次例行更新的最後一步）：
+  - 更新推送：
     ```bash
     ./build/build.sh
     TMP=$(mktemp -d) && rsync -a --delete --exclude '.DS_Store' public/ "$TMP/"
@@ -135,7 +135,19 @@ cd public && python3 -m http.server 8080
     rm -rf "$TMP"
     ```
     （每次在乾淨暫存目錄重做 orphan commit＋force push，簡潔且保證 gh-pages 只含 `public/`。）
-  - 後續可加 GitHub Actions 自動發布（見 §7）。
+
+- **Cloudflare Pages**（公開，2026/8/26 已上線，**主要更新通道**）：
+  - 專案：`weather`（子域名 `weather-9kb.pages.dev`），自訂域名 ×3（皆已掛上，proxied on、自動 HTTPS）：
+    - `weather.avpclub.eu.org`
+    - `weather.avpclub.uk`
+    - `weather.larch.dpdns.org`
+  - **更新只需一條指令**（不需再碰 DNS，CNAME 已固定指向專案）：
+    ```bash
+    npx -y wrangler@latest pages deploy public --project-name weather
+    ```
+    需環境變數 `CLOUDFLARE_API_TOKEN`＋`CLOUDFLARE_ACCOUNT_ID`（已設在 `~/.zshrc`，金鑰不進 repo）。
+  - 自訂域名 DNS 紀錄（如重建需重設）：三個 zone 各一筆 CNAME `weather.* → weather-9kb.pages.dev`（proxied on）。
+  - 與 GitHub Pages 為**同一份 `public/` 的平行託管**；兩边都要更新時，先 build 一次、再分別跑上面的兩個推送流程。
 
 ## 7. 未來：agent 自動更新 + GitHub Actions（設計意向，未實作）
 
