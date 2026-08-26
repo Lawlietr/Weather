@@ -388,7 +388,7 @@ obscura --stealth fetch https://example.com --dump text
 
 ---
 
-## 網站專案（已完成；剩 GitHub Pages 部署）
+## 網站專案（已上線：https://lawlietr.github.io/Weather/）
 
 - **更新/部署工作流（runbook）**：`WORKFLOW.md`——接手者（agent 或人工）先看這個。
 - **構想與待辦**：`TODO.md`。
@@ -429,4 +429,4 @@ GitHub Pages 提供靜態網站
 
 - **內部仓库**：`ssh://fg/lawliet/Weather.git`（Forgejo，內網 `192.168.1.124:222`，SSH Host `fg`，Identity `~/.ssh/id_rsa_gitea`）。
 - 目前開發與 commit **只推到內部 forgejo**。
-- **GitHub Pages**（公開）：只推 `public/` 靜態產物（orphan `gh-pages` 分支、不共享 history），Markdown 原文、build 腳本、內部倉庫資訊一律不公開。部署步驟見 `WORKFLOW.md` §6。
+- **GitHub Pages**（公開，2026/8/26 已上線）：<https://lawlietr.github.io/Weather/>（繁中）＋ `/ja/`（日文）。只推 `public/` 靜態產物（orphan `gh-pages` 分支、不共享 history），Markdown 原文、build 腳本、內部倉庫資訊一律不公開。部署步驟見 `WORKFLOW.md` §6。

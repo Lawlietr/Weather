@@ -30,7 +30,7 @@
 ③ 驗證（見 §3 檢查清單）
 ④ git add / commit（訊息用繁體中文，簡述本次更新）
 ⑤ git push origin main（內部 Forgejo）
-⑥ （僅當 GitHub 公開 repo 已建立時）將 public/ 產物推送到 Pages 分支
+⑥ 將 public/ 產物推到 GitHub Pages 分支（步驟見 §6）
 ```
 
 - 更新時間戳：檔案內時間戳與 `最後修改：` 欄位一律用**系統當前時間**，先 `date` 確認。
@@ -120,12 +120,22 @@ cd public && python3 -m http.server 8080
 
 ## 6. 部署
 
-- **內部**（目前唯一）：`git push origin main` → Forgejo（`ssh://fg/lawliet/Weather.git`）。
-- **GitHub Pages**（公開，準備中）：
-  - 公開 repo 只放 `public/` 內容（站點根目錄），build 產物已是相對路徑、可直接放子路徑。
-  - 分支方式：**orphan `gh-pages` 分支**只裝 `public/` 內容，不與 main 共享 history（避免 Markdown 原文、build 腳本、內部倉庫資訊外流）。
-  - 目前手動：本機 build → 推靜態產物到 Pages 分支。
-  - 後續可加 GitHub Actions（見 §7）。
+- **內部**：`git push origin main` → Forgejo（`ssh://fg/lawliet/Weather.git`）。
+- **GitHub Pages**（公開，2026/8/26 已上線）：
+  - 站點：<https://lawlietr.github.io/Weather/>（繁中）、`/ja/`（日文）。
+  - 公開 repo：`Lawlietr/Weather`（本機 remote 名 `github`）。**只收 `public/` 內容**：
+    orphan `gh-pages` 分支、不與 main 共享 history（Markdown 原文、build 腳本、內部倉庫資訊一律不外流）。
+  - 更新推送（每次例行更新的最後一步）：
+    ```bash
+    ./build/build.sh
+    TMP=$(mktemp -d) && rsync -a --delete --exclude '.DS_Store' public/ "$TMP/"
+    git -C "$TMP" init -q -b gh-pages && git -C "$TMP" add -A
+    git -C "$TMP" commit -q -m "site update: $(date +%Y/%m/%d)"
+    git -C "$TMP" push -f "https://github.com/Lawlietr/Weather.git" gh-pages
+    rm -rf "$TMP"
+    ```
+    （每次在乾淨暫存目錄重做 orphan commit＋force push，簡潔且保證 gh-pages 只含 `public/`。）
+  - 後續可加 GitHub Actions 自動發布（見 §7）。
 
 ## 7. 未來：agent 自動更新 + GitHub Actions（設計意向，未實作）
 

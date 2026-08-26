@@ -1,6 +1,9 @@
 # 🌦 Weather — 台灣天氣與災情總覽
 
-紀錄颱風動態與災情的 Markdown 倉儲，並以 build 腳本產出**純靜態網站**（供 GitHub Pages 公開網站使用）。
+紀錄颱風動態與災情的 Markdown 倉儲，並以 build 腳本產出**純靜態網站**，已上線 GitHub Pages：
+
+> 🌐 <https://lawlietr.github.io/Weather/>（繁中）｜<https://lawlietr.github.io/Weather/ja/>（日文）
+
 本站採**手動更新**、非即時，每頁標示「最後更新時間」。
 
 ## 專案組成

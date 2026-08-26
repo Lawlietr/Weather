@@ -133,6 +133,6 @@ GitHub Pages 提供靜態網站
 - [x] 為現有災情/颱風 markdown（4 篇）加 YAML front matter（`status`/`event`/`severity`/`counties`/`summary`/`sources`）。
 - [x] 建立 build 腳本（front matter 解析＋事件為中心首頁＋archive）。
 - [x] CWA 氣象總覽（`build/cwa.py`，build 時本機抓取）：颱風卡（永遠顯示，含靜態 SVG 軌跡＋15 m/s 風圈＋預報表）、警報/特報卡（無則整卡隱藏）、雨量站 TOP 10（有 active 事件展開、無則收合）。失敗降級：`build/cwa_cache.json` 快取＋「舊資料/快取/無法取得」警示，與「無資料」視覺區分。⚠️ Python 3.14 的 urllib 對 CWA 憑證鏈會 SSL 驗證失敗（Missing Subject Key Identifier），故改走 `curl` subprocess。
-- [ ] 設定 GitHub Pages 與推送流程（Pages 分支只放靜態產物；流程見 `WORKFLOW.md` §6）。
+- [x] 設定 GitHub Pages 與推送流程：2026/8/26 上線 <https://lawlietr.github.io/Weather/>（繁中）＋ `/ja/`（日文）；orphan `gh-pages` 分支只收 `public/`；例行更新推送指令見 `WORKFLOW.md` §6。
 - [ ] RSS 來源驗證與接入（可選，後續）。
 - [ ] 地圖標註功能：Leaflet + OSM，離線自託瓦片，見 §七。
