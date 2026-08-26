@@ -1,0 +1,505 @@
+"""CWA Open Data API：build 時本機抓取並渲染「氣象總覽」區塊。
+
+原則：
+- API Key 只從環境變數 CWA_API_KEY 讀取，絕不寫入任何輸出檔案。
+- 金鑰不支援 CORS，前端無法直接呼叫，所有資料都是 build 時寫死的靜態 HTML。
+- 失敗降級：build/cwa_cache.json（本地、gitignore）。每個來源獨立成功/失敗，
+  失敗的來源若快取有舊值則用舊值並標註「舊資料」。
+- 「抓不到」與「沒有」視覺區分：抓不到顯示警示 + 快取時間，不會跟「無颱風」混淆。
+
+回傳結構（2026/8/26 實測）：
+- W-C0034-005: records.TropicalCyclones.TropicalCyclone[]，Fix 欄位為
+  MovingSpeed/MovingDirection，風圈 Circle15ms/Circle25ms = {Radius: str}。
+- W-C0034-001: records.info[]（CAP），parameter = [{valueName,value}]，
+  description.typhoon-info 為 section 列表（含「警報類別」END/ACTIVE）。
+- W-C0033-002: records.record[]，validTime = {startTime,endTime}（無時區，+08:00），
+  contents.content = {contentLanguage,contentText}，
+  hazard[].info.affectedAreas.location[].locationName。
+- O-A0002-001: records.Station[]，GeoInfo.TownName/CountyName，值為字串。
+"""
+import json
+import os
+import re
+import subprocess
+import urllib.parse
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+TZ_TW = timezone(timedelta(hours=8))
+
+BASE = "https://opendata.cwa.gov.tw/api/v1/rest/datastore"
+CACHE = Path(__file__).resolve().parent / "cwa_cache.json"
+TIMEOUT = 60
+SOURCES = ("typhoons", "marine_alert", "reports", "rain")
+
+
+# ---------------------------------------------------------------- 抓取
+
+def _get_json(data_id, **params):
+    key = os.getenv("CWA_API_KEY")
+    if not key:
+        raise RuntimeError("CWA_API_KEY 未設定（請寫入 ~/.zshrc 或專案 .env）")
+    q = {"Authorization": key, "format": "JSON"}
+    q.update(params)
+    url = f"{BASE}/{data_id}?" + urllib.parse.urlencode(q)
+    # 用 curl 而非 urllib：Python 3.14 的 OpenSSL 對 CWA 憑證鏈會
+    # CERTIFICATE_VERIFY_FAILED（Missing Subject Key Identifier）。
+    p = subprocess.run(["curl", "-s", "--max-time", str(TIMEOUT), url],
+                       capture_output=True, text=True, timeout=TIMEOUT + 10)
+    if p.returncode != 0:
+        raise RuntimeError(f"{data_id}: curl 失敗（{p.returncode}）")
+    data = json.loads(p.stdout)
+    if data.get("success") == "false":
+        raise RuntimeError(f"{data_id}: success=false（檢查 API Key 或 Data ID）")
+    return data
+
+
+def _num(v):
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def fetch_typhoons():
+    """W-C0034-005 熱帶氣旋完整軌跡 + 預報。"""
+    d = _get_json("W-C0034-005")
+    tc = (d.get("records", {}).get("TropicalCyclones") or {})
+    lst = tc.get("TropicalCyclone", []) if isinstance(tc, dict) else tc
+    out = []
+    for c in lst:
+        out.append({
+            "name": c.get("CwaTyphoonName", ""),
+            "intl": c.get("TyphoonName", ""),
+            "no": c.get("CwaTdNo", ""),
+            "year": c.get("Year", ""),
+            "analysis": (c.get("AnalysisData") or {}).get("Fix", []),
+            "forecast": (c.get("ForecastData") or {}).get("Fix", []),
+        })
+    return out
+
+
+def _cap_param_dict(info):
+    """CAP parameter 列表 → dict。"""
+    out = {}
+    for p in info.get("parameter", []):
+        out[p.get("valueName", "")] = p.get("value", "")
+    return out
+
+
+def fetch_marine_alert():
+    """W-C0034-001 海上颱風警報（CAP）。回傳最新一筆（可能是解除）。"""
+    d = _get_json("W-C0034-001")
+    out = []
+    for i in d.get("records", {}).get("info", []):
+        param = _cap_param_dict(i)
+        ti = (i.get("description") or {}).get("typhoon-info", [])
+        if isinstance(ti, dict):
+            ti = [ti]
+        sections = {}
+        for block in ti if isinstance(ti, list) else []:
+            for s in block.get("section", []):
+                sections[s.get("title", "")] = s.get("value")
+        out.append({
+            "title": param.get("alert_title", i.get("headline", "")),
+            "severity": i.get("severity", ""),
+            "report_no": sections.get("警報報數", ""),
+            "category": sections.get("警報類別", ""),
+            "typhoon_name": sections.get("颱風名稱", ""),
+            "effective": i.get("effective", ""),
+        })
+    return out
+
+
+def fetch_reports():
+    """W-C0033-002 災害性天氣特報（純文字＋影響區域）。"""
+    d = _get_json("W-C0033-002")
+    out = []
+    for r in d.get("records", {}).get("record", []):
+        info = r.get("datasetInfo", {})
+        vt = info.get("validTime", {})
+        if isinstance(vt, dict):
+            valid = f'{vt.get("startTime", "")} ~ {vt.get("endTime", "")}'
+        else:
+            valid = vt
+        content = (r.get("contents") or {}).get("content", {})
+        if isinstance(content, dict):
+            content = content.get("contentText", "")
+        elif isinstance(content, list):
+            content = content[0].get("contentText", "") if content else ""
+        haz = (r.get("hazardConditions") or {}).get("hazards", {})
+        hz = haz.get("hazard", []) if isinstance(haz, dict) else haz
+        if isinstance(hz, dict):
+            hz = [hz]
+        phen, areas = [], []
+        for h in hz:
+            ih = h.get("info", h)
+            phen.append(ih.get("phenomena", ""))
+            for loc in (ih.get("affectedAreas") or {}).get("location", []):
+                nm = loc.get("locationName", "")
+                if nm and nm not in areas:
+                    areas.append(nm)
+        out.append({
+            "name": info.get("datasetDescription", ""),
+            "valid": valid,
+            "issue": info.get("issueTime", ""),
+            "content": content,
+            "phenomena": [p for p in phen if p],
+            "areas": areas,
+        })
+    return out
+
+
+def fetch_rain():
+    """O-A0002-001 雨量站。Now.Precipitation = 本日 0 時至目前累計（非 1 小時）。"""
+    d = _get_json("O-A0002-001")
+    out = []
+    for s in d.get("records", {}).get("Station", []):
+        el = s.get("RainfallElement", {})
+        now = _num((el.get("Now") or {}).get("Precipitation")) or 0.0
+        p1 = _num((el.get("Past1hr") or {}).get("Precipitation")) or 0.0
+        p24 = _num((el.get("Past24hr") or {}).get("Precipitation")) or 0.0
+        if now <= 0 and p24 <= 0:
+            continue
+        geo = s.get("GeoInfo", {})
+        out.append({
+            "name": s.get("StationName", ""),
+            "county": geo.get("CountyName", ""),
+            "township": geo.get("TownName", ""),
+            "obs": (s.get("ObsTime") or {}).get("DateTime", ""),
+            "now": now,
+            "p1hr": p1,
+            "p24hr": p24,
+        })
+    out.sort(key=lambda x: x["now"], reverse=True)
+    return out[:10]
+
+
+def load_snapshot():
+    """回傳 (data, errors, stale, mode)。
+    mode: live（全部成功）/ partial（部分成功）/ cache（全敗用快取）/ none（全敗無快取）
+    """
+    fetchers = {"typhoons": fetch_typhoons, "marine_alert": fetch_marine_alert,
+                "reports": fetch_reports, "rain": fetch_rain}
+    data, errors = {}, {}
+    for name, fn in fetchers.items():
+        try:
+            data[name] = fn()
+        except Exception as e:
+            errors[name] = str(e)
+    cached = None
+    try:
+        cached = json.loads(CACHE.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    stale = {}
+    if errors and cached:
+        for k in list(errors):
+            v = cached.get("data", {}).get(k)
+            if v is not None:
+                data[k] = v
+                stale[k] = cached.get("saved_at", "")
+    now = datetime.now().strftime("%Y/%m/%d %H:%M")
+    if not errors:
+        mode = "live"
+    elif data:
+        mode = "partial"
+    elif cached:
+        data, errors, mode = cached.get("data", {}), {}, "cache"
+    else:
+        mode = "none"
+    if data:
+        try:
+            CACHE.write_text(json.dumps({"saved_at": now, "data": data}, ensure_ascii=False),
+                             encoding="utf-8")
+        except Exception:
+            pass
+    return data, errors, stale, mode
+
+
+# ---------------------------------------------------------------- 工具
+
+def _t(s):
+    """ISO / 'YYYY-MM-DD HH:MM:SS' → 2026/8/26 18:00（無時區視為 +08:00）。"""
+    if not s:
+        return "—"
+    s = s.strip().replace("Z", "+00:00")
+    try:
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(TZ_TW)  # 統一轉 +08:00 顯示
+        return dt.strftime("%Y/%m/%d %H:%M")
+    except ValueError:
+        m = re.match(r"(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})", s)
+        if m:
+            return f"{m.group(1)}/{int(m.group(2))}/{int(m.group(3))} {m.group(4)}:{m.group(5)}"
+        return s
+
+
+def _classify(wind_ms):
+    if wind_ms is None:
+        return "—"
+    if wind_ms >= 51.0:
+        return "超強颱風"
+    if wind_ms >= 41.5:
+        return "強颱風"
+    if wind_ms >= 32.7:
+        return "猛烈颱風"
+    if wind_ms >= 24.5:
+        return "中度颱風"
+    if wind_ms >= 13.9:
+        return "輕度颱風"
+    return "熱帶性低氣壓"
+
+
+def _pos(fix):
+    lat, lon = _num(fix.get("CoordinateLatitude")), _num(fix.get("CoordinateLongitude"))
+    if lat is None or lon is None:
+        return "—"
+    return f"{lat:.1f}°N {lon:.1f}°E"
+
+
+def _radius(fix, key):
+    v = fix.get(key)
+    if isinstance(v, dict):
+        return _num(v.get("Radius"))
+    return _num(v)
+
+
+# ---------------------------------------------------------------- SVG 軌跡圖
+
+LON0, LON1, LAT0, LAT1 = 115, 130, 16, 31
+W, H = 540, 480
+PX_PER_KM = (W / (LON1 - LON0)) / 101.0  # 約 23°N 處 1° 經度 ≈ 101 km
+
+
+def _px(lon, lat):
+    x = (lon - LON0) / (LON1 - LON0) * W
+    y = (LAT1 - lat) / (LAT1 - LAT0) * H
+    return x, y
+
+
+# 簡化台灣外廓（經度, 緯度），由北順時針
+TAIWAN = [
+    (121.53, 25.29), (121.80, 25.15), (121.98, 25.02), (121.95, 24.75),
+    (121.85, 24.40), (121.75, 24.10), (121.60, 23.80), (121.50, 23.50),
+    (121.40, 23.20), (121.20, 22.90), (121.00, 22.55), (120.90, 22.35),
+    (120.85, 22.05), (120.75, 21.95), (120.55, 22.00), (120.35, 22.10),
+    (120.15, 22.25), (120.05, 22.45), (120.10, 22.75), (120.25, 23.05),
+    (120.30, 23.45), (120.55, 23.85), (120.60, 24.05), (120.55, 24.30),
+    (120.65, 24.75), (120.75, 24.95), (121.00, 25.05), (121.35, 25.15),
+]
+CITIES = [("台北", 121.56, 25.03), ("台中", 120.67, 24.15),
+          ("高雄", 120.30, 22.62), ("花蓮", 121.61, 23.99), ("台東", 121.15, 22.75)]
+
+
+def typhoon_svg(cyclone):
+    """單一氣旋：分析軌跡（實線）+ 預報（虛線）+ 最新位置 15 m/s 風圈。"""
+    a, f = cyclone["analysis"], cyclone["forecast"]
+    grid = []
+    lon = LON0 + 2
+    while lon < LON1:
+        x, _ = _px(lon, LAT0)
+        grid.append(f'<line x1="{x:.0f}" y1="0" x2="{x:.0f}" y2="{H}" stroke="var(--line)" stroke-width="0.5" opacity="0.5"/>')
+        lon += 2
+    lat = LAT0 + 2
+    while lat < LAT1:
+        _, y = _px(LON0, lat)
+        grid.append(f'<line x1="0" y1="{y:.0f}" x2="{W}" y2="{y:.0f}" stroke="var(--line)" stroke-width="0.5" opacity="0.5"/>')
+        lat += 2
+    tai = " ".join(f"{_px(lo, la)[0]:.0f},{_px(lo, la)[1]:.0f}" for lo, la in TAIWAN)
+    cities = "".join(
+        f'<circle cx="{_px(lo, la)[0]:.0f}" cy="{_px(lo, la)[1]:.0f}" r="2" fill="var(--muted)"/>'
+        f'<text x="{_px(lo, la)[0] + 5:.0f}" y="{_px(lo, la)[1] + 3:.0f}" font-size="10" fill="var(--muted)">{n}</text>'
+        for n, lo, la in CITIES)
+    parts = [f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="{cyclone["name"]} 路徑圖">{"".join(grid)}'
+             f'<polygon points="{tai}" fill="var(--chip-bg)" stroke="var(--muted)" stroke-width="1.5"/>{cities}']
+    # 分析軌跡（實線）
+    an_pts = []
+    for fix in a:
+        lo, la = _num(fix.get("CoordinateLongitude")), _num(fix.get("CoordinateLatitude"))
+        if lo is None or la is None:
+            continue
+        an_pts.append((fix, lo, la))
+    if an_pts:
+        pts = " ".join(f"{_px(lo, la)[0]:.0f},{_px(lo, la)[1]:.0f}" for _, lo, la in an_pts)
+        parts.append(f'<polyline points="{pts}" fill="none" stroke="var(--accent)" stroke-width="2"/>')
+        for fix, lo, la in an_pts:
+            x, y = _px(lo, la)
+            parts.append(f'<circle cx="{x:.0f}" cy="{y:.0f}" r="3" fill="var(--accent)"/>')
+        # 最新位置：15 m/s 風圈 + 紅點 + 名稱
+        lf = an_pts[-1][0]
+        x, y = _px(an_pts[-1][1], an_pts[-1][2])
+        r15 = _radius(lf, "Circle15ms")
+        if r15:
+            parts.append(f'<circle cx="{x:.0f}" cy="{y:.0f}" r="{r15 * PX_PER_KM:.0f}" '
+                         f'fill="none" stroke="var(--red)" stroke-width="1" stroke-dasharray="4 3" opacity="0.7"/>')
+        parts.append(f'<circle cx="{x:.0f}" cy="{y:.0f}" r="5" fill="var(--red)"/>')
+        parts.append(f'<text x="{x + 8:.0f}" y="{y - 8:.0f}" font-size="12" font-weight="bold" fill="var(--red)">'
+                     f'{cyclone["name"]}（最新）</text>')
+    # 預報（虛線，接在最新分析點後）
+    fc_pts = []
+    for fix in f:
+        lo, la = _num(fix.get("CoordinateLongitude")), _num(fix.get("CoordinateLatitude"))
+        if lo is None or la is None:
+            continue
+        fc_pts.append((fix, lo, la))
+    if fc_pts and an_pts:
+        sx, sy = _px(an_pts[-1][1], an_pts[-1][2])
+        pts = f"{sx:.0f},{sy:.0f} " + " ".join(f"{_px(lo, la)[0]:.0f},{_px(lo, la)[1]:.0f}" for _, lo, la in fc_pts)
+        parts.append(f'<polyline points="{pts}" fill="none" stroke="var(--yellow)" stroke-width="1.5" stroke-dasharray="6 4"/>')
+        for fix, lo, la in fc_pts:
+            x, y = _px(lo, la)
+            parts.append(f'<circle cx="{x:.0f}" cy="{y:.0f}" r="3" fill="none" stroke="var(--yellow)" stroke-width="1.5"/>')
+    parts.append(
+        f'<g font-size="10" fill="var(--muted)">'
+        f'<line x1="12" y1="{H-30}" x2="32" y2="{H-30}" stroke="var(--accent)" stroke-width="2"/><text x="36" y="{H-27}">分析軌跡</text>'
+        f'<line x1="96" y1="{H-30}" x2="116" y2="{H-30}" stroke="var(--yellow)" stroke-width="1.5" stroke-dasharray="5 3"/><text x="120" y="{H-27}">預報路徑</text>'
+        f'<circle cx="186" cy="{H-30}" r="4" fill="none" stroke="var(--red)" stroke-dasharray="3 2"/><text x="195" y="{H-27}">15 m/s 暴風半徑</text>'
+        f'</g></svg>')
+    return "".join(parts)
+
+
+# ---------------------------------------------------------------- 區塊渲染
+
+def render_typhoon_card(typhoons, stale_at=None):
+    """颱風卡永遠顯示：無資料時顯示「無活動中熱帶氣旋」。"""
+    tag = f'　<span class="muted">（舊資料：{stale_at}）</span>' if stale_at else ""
+    if not typhoons:
+        return f"""
+<div class="card cwa-card">
+<h3>颱風動態　<span class="meta">CWA W-C0034-005{tag}</span></h3>
+<p>目前無活動中熱帶氣旋（西北太平洋及南海）。</p>
+</div>"""
+    blocks = []
+    for c in typhoons:
+        a, f = c["analysis"], c["forecast"]
+        if not a:
+            continue
+        last = a[-1]
+        wind = _num(last.get("MaxWindSpeed"))
+        gust = _num(last.get("MaxGustSpeed"))
+        pressure = last.get("Pressure", "—")
+        move = f'{last.get("MovingDirection", "—")} 方向移動，{last.get("MovingSpeed", "—")} km/h'
+        if f:
+            rows = []
+            for fx in f:
+                h = _num(fx.get("ForecastHour")) or 0
+                try:
+                    t = (datetime.fromisoformat(fx["InitialTime"]) + timedelta(hours=h)).strftime("%m/%d %H:%M")
+                except (KeyError, ValueError):
+                    t = f'+{int(h)}h'
+                rows.append(f'<tr><td>{t}</td><td>{_pos(fx)}</td>'
+                            f'<td>{_num(fx.get("MaxWindSpeed")):.1f} m/s</td><td>{fx.get("Pressure", "—")} hPa</td></tr>')
+            rows = "".join(rows)
+        else:
+            rows = '<tr><td colspan="4" class="muted">（無預報資料）</td></tr>'
+        no = f'　<span class="muted">（{c.get("year","")} 第{c.get("no","")} 號）</span>' if c.get("no") else ""
+        blocks.append(f"""
+<div class="typhoon-row">
+<div class="map">{typhoon_svg(c)}</div>
+<div class="typhoon-info">
+<h4 style="margin:0 0 6px">{c['name']}{no}　<span class="muted">{c.get('intl','')}</span></h4>
+<p style="margin:4px 0"><b>最新觀測</b>（{_t(last.get('DateTime'))}）：{_pos(last)}｜{_classify(wind)}｜最大風速 {wind:.1f} m/s｜陣風 {gust if gust is not None else '—'} m/s｜氣壓 {pressure} hPa｜{move}</p>
+<h4 style="margin:10px 0 4px">未來預報</h4>
+<table><tr><th>時間</th><th>位置</th><th>最大風速</th><th>氣壓</th></tr>{rows}</table>
+</div>
+</div>""")
+    return f"""
+<div class="card cwa-card">
+<h3>颱風動態　<span class="meta">CWA W-C0034-005{tag}</span></h3>
+{"".join(blocks) or '<p class="muted">（有氣旋紀錄但無分析資料）</p>'}
+</div>"""
+
+
+def _sev_color(name, phenomena):
+    text = name + "".join(phenomena)
+    if any(k in text for k in ("豪雨", "極端", "強豪雨")):
+        return "sev-red"
+    if any(k in text for k in ("大雨", "強風")):
+        return "sev-yellow"
+    return "sev-green"
+
+
+def render_alert_card(marine, reports, stale_at=None):
+    """警報/特報卡：皆無 → 整張卡隱藏（回傳空字串）。"""
+    items = []
+    for m in marine:
+        if not m.get("title"):
+            continue
+        lifted = "解除" in m["title"] or m.get("category") == "END"
+        cls = "sev-green" if lifted else "sev-red"
+        label = "海上颱風警報"
+        items.append(f'<div class="alert-item"><span class="badge {cls}">{label}</span>　'
+                     f'<b>{m["title"]}</b>'
+                     + (f'（第 {m["report_no"]} 報）' if m.get("report_no") else "")
+                     + (f'｜颱風：{m["typhoon_name"]}' if m.get("typhoon_name") else "")
+                     + f'<div class="meta">生效 {_t(m.get("effective"))}</div></div>')
+    for r in reports:
+        if not r.get("name"):
+            continue
+        cls = _sev_color(r["name"], r["phenomena"])
+        phen = "、".join(r["phenomena"])
+        body = ""
+        if r.get("content"):
+            body = f'<details><summary class="muted">查看特報全文</summary><pre class="report-text">{r["content"].strip()}</pre></details>'
+        items.append(f'<div class="alert-item"><span class="badge {cls}">{r["name"]}</span>　'
+                     f'<b>{phen}</b>　'
+                     f'<span class="meta">發布 {_t(r["issue"])}｜有效 {_t(r["valid"])}</span>'
+                     + (f'<div>影響區域：{"、".join(r["areas"])}</div>' if r["areas"] else "") + body + '</div>')
+    if not items:
+        return ""
+    tag = f'　<span class="muted">（舊資料：{stale_at}）</span>' if stale_at else ""
+    return f"""
+<div class="card cwa-card">
+<h3>警報與特報　<span class="meta">CWA W-C0034-001 / W-C0033-002{tag}</span></h3>
+{"".join(items)}
+</div>"""
+
+
+def render_rain_card(rain, has_active_event, stale_at=None):
+    """雨量站 TOP 10：有 active 事件時展開；無事件時收合。
+    ⚠️ Now = 本日 0 時至目前累計（非 1 小時雨量）。"""
+    if not rain:
+        return ""
+    tag = f'　<span class="muted">（舊資料：{stale_at}）</span>' if stale_at else ""
+    rows = "".join(
+        f'<tr><td>{s["name"]}</td><td>{s["county"]}{s["township"]}</td><td>{s["now"]:,.0f}</td>'
+        f'<td>{s["p1hr"]:,.0f}</td><td>{s["p24hr"]:,.0f}</td></tr>'
+        for s in rain)
+    obs = rain[0].get("obs", "")
+    table = f"""<table><tr><th>雨量站</th><th>縣市/鄉鎮</th><th>本日累計 (mm)</th><th>近 1 小時 (mm)</th><th>近 24 小時 (mm)</th></tr>{rows}</table>
+<p class="meta">「本日累計」= 當日 0 時至觀測時間（{_t(obs)}）；短延時強降雨請看「近 1 小時」。CWA O-A0002-001，每 10 分鐘更新。</p>"""
+    inner = table if has_active_event else f'<details><summary>當日累計雨量 TOP 10（點開）</summary>{table}</details>'
+    return f"""
+<div class="card cwa-card">
+<h3>雨量觀測站 TOP 10{tag}</h3>
+{inner}
+</div>"""
+
+
+def cwa_section_html(data, errors, stale, mode, has_active_event):
+    """回傳「氣象總覽」section 的 HTML（mode=none 時只有警示）。"""
+    if mode == "none":
+        why = next(iter(errors.values()), "未知錯誤") if errors else "未知錯誤"
+        return f"""
+<section class="cwa">
+<h2>氣象總覽（中央氣象署）</h2>
+<div class="card cwa-card cwa-fail">本次 build 無法取得 CWA 資料，且無可用快取。<br>
+<span class="meta">{why}。設定 CWA_API_KEY 後重新 build。</span></div>
+</section>"""
+    parts = []
+    if mode == "partial":
+        bad = "、".join(sorted(errors))
+        parts.append(f'<div class="cwa-warn">⚠️ 本次 build 部分 CWA 資料來源無法取得（{bad}），以下含舊資料。</div>')
+    elif mode == "cache":
+        parts.append('<div class="cwa-warn">⚠️ 本次 build 無法連線 CWA API，以下為上次成功抓取之快取資料。</div>')
+    parts.append(render_typhoon_card(data.get("typhoons", []), stale.get("typhoons")))
+    parts.append(render_alert_card(data.get("marine_alert", []), data.get("reports", []),
+                                   stale.get("marine_alert", stale.get("reports"))))
+    parts.append(render_rain_card(data.get("rain", []), has_active_event, stale.get("rain")))
+    return f"""
+<section class="cwa">
+<h2>氣象總覽（中央氣象署）</h2>
+{"".join(p for p in parts if p)}
+</section>"""

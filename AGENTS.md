@@ -387,9 +387,11 @@ obscura --stealth fetch https://example.com --dump text
 
 ---
 
-## 網站專案（構想階段，尚未實作）
+## 網站專案（已建立，開發中）
 
-完整構想見 `TODO.md`。目標是建立一個給大眾使用的公開網站（host 於 GitHub Pages），彙整氣象署天氣資訊與災情新聞。
+- **更新/部署工作流（runbook）**：`WORKFLOW.md`——接手者（agent 或人工）先看這個。
+- **完整構想與待拍板事項**：`TODO.md`。
+- **build 入口**：`./build/build.sh`（產出 `public/`；CWA 資料 build 時本機抓取）。目標是建立一個給大眾使用的公開網站（host 於 GitHub Pages），彙整氣象署天氣資訊與災情新聞。
 
 ### 核心原則
 

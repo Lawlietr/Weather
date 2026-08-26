@@ -1,5 +1,16 @@
+---
+status: ended
+event: 颱風白海豚（DOLPHIN）— 2026 年第 13 號
+severity: yellow
+counties: []
+period: 2026/7/27–8/10
+summary: 7/30 達超強颱風 60 m/s（895 hPa，今年風王候選）；8/10 登陸浙江減弱，8/9 23:30 解除台灣海警，無直接登陸台灣
+sources: [中央氣象署 API]
+---
+
 # 🌀 颱風白海豚（DOLPHIN）- 2026年第13號
 
+最後修改：2026/8/26 16:35（補 front matter）
 最後修改：2026/8/10 11:30
 
 > **資料來源**：

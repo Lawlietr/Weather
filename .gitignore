@@ -1,1 +1,6 @@
 .env
+.DS_Store
+# build 產物與環境（Pages 推送時另行處理，不進 main）
+public/
+build/.venv/
+build/cwa_cache.json
