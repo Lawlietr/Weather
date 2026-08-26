@@ -384,3 +384,39 @@ obscura --stealth fetch https://example.com --dump text
 - 多語句 JS 需包 IIFE：`(function(){ ... })()`
 - SSRF 保護會阻擋 private network，需加 `--allow-private-network`
 - Docker 容器未運行時：`docker run -d --name obscura -p 3000:3000 h4ckf0r0day/obscura mcp --http --port 3000 --host 0.0.0.0`
+
+---
+
+## 網站專案（構想階段，尚未實作）
+
+完整構想見 `TODO.md`。目標是建立一個給大眾使用的公開網站（host 於 GitHub Pages），彙整氣象署天氣資訊與災情新聞。
+
+### 核心原則
+
+- **手動更新（人工 / LLM 驅動）**：不自動排程，使用者手動 build 並推送。
+- **金鑰不外洩**：CWA API Key 全程只存在本機執行環境，不寫進任何輸出檔案，不進 repo、不進公開網站。
+  - ⚠️ CWA API **不支援 CORS**（實測 `W-C0034-005` 回應無 `Access-Control-Allow-Origin` 標頭），故**前端無法直接呼叫**，氣象資料必須由本機 build 時抓取後寫入靜態 HTML。
+- **災情來源優先級**：repo 現有 `災情/` markdown → RSS → Obscura 抓取。每筆附**新聞來源**，僅給**少量摘要＋原連結**。
+- **非即時**：Pages 為靜態託管，採手動 build。首頁必須顯示「**最後更新時間**」（build 時寫入當下系統時間）。
+
+### 技術架構
+
+```
+本機（手動執行）
+  ├── 讀 repo 災情 markdown → 災情資料（縣市/時間/分級/摘要）
+  ├── 讀 RSS / Obscura       → 補即時新聞災情（附來源）
+  ├── 呼叫 CWA API（金鑰在本地）→ 氣象彙整
+  └── build 出靜態 HTML（含「最後更新時間」）→ git push 到 Pages 分支
+GitHub Pages 提供靜態網站
+```
+
+### 網站結構
+
+- **首頁**：氣象彙整（颱風軌跡/警報特報/雨量/風力）＋ 各縣市災情總覽（依縣市分組，每組內按時間倒序，最新在最上）。
+- **各縣市子頁（選用）**：該縣市災情按時間倒序。
+
+### 部署與分支
+
+- **內部仓库**：`ssh://fg/lawliet/Weather.git`（Forgejo，內網 `192.168.1.124:222`，SSH Host `fg`，Identity `~/.ssh/id_rsa_gitea`）。
+- 目前開發與 commit **只推到內部 forgejo**。
+- **GitHub Pages 僅在網站做好後才推送**（公開）。兩者分開，避免機敏資料與未成品提前公開。
