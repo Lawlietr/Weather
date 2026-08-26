@@ -4,3 +4,4 @@
 public/
 build/.venv/
 build/cwa_cache.json
+build/__pycache__/
