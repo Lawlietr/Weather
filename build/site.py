@@ -17,6 +17,9 @@ from pathlib import Path
 import cwa
 from urllib.parse import quote
 
+import i18n
+from i18n import t, LANGS, DEFAULT_LANG
+
 try:
     import markdown
 except ImportError:
@@ -45,7 +48,7 @@ COUNTY_ALIAS = {
     "蘭嶼": "台東縣", "龜山島": "新北市", "東港": "屏東縣",
     "枋寮": "屏東縣", "萬丹": "屏東縣", "新園": "屏東縣", "舊泰武": "屏東縣",
 }
-SEV_LABEL = {"red": ("🔴 重大", "sev-red"), "yellow": ("🟡 警戒", "sev-yellow"), "green": ("🟢 一般", "sev-green")}
+SEV_KEY = {"red": ("sev_red", "sev-red"), "yellow": ("sev_yellow", "sev-yellow"), "green": ("sev_green", "sev-green")}
 
 # TODO: 提供 GitHub 倉庫網址後填入（空值時 icon 為無效連結佔位）
 GITHUB_URL = ""
@@ -66,7 +69,7 @@ color-scheme:dark;}
 --head-bg:#263238;--table-head:#f7edd0;--ph-bg:#fff8e1;--ph-line:#c9a227;--ph-ink:#6d5410;
 color-scheme:light;}
 *{box-sizing:border-box}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;color:var(--ink);background:var(--bg);line-height:1.7;font-size:16px}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei","Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic","Meiryo",sans-serif;color:var(--ink);background:var(--bg);line-height:1.7;font-size:16px}
 /* 版面：左側欄 + 右側內容（內容置中） */
 .layout{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
 .sidebar{background:var(--side-bg);border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow-y:auto;padding:16px 10px}
@@ -93,6 +96,11 @@ header.site h1{font-size:1.1rem;margin:0;flex:1;min-width:0;white-space:nowrap;o
 .updated{color:#b0bec5;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .icon-btn{background:none;border:none;border-radius:8px;color:inherit;padding:6px;display:inline-flex;cursor:pointer;line-height:0;flex:none}
 .icon-btn:hover{background:rgba(255,255,255,.15)}
+.lang-switch{display:inline-flex;gap:2px;flex:none}
+.lang-switch a,.lang-switch .on{padding:2px 9px;border-radius:6px;font-size:.78rem;line-height:1.6}
+.lang-switch a{color:#b0bec5}
+.lang-switch a:hover{text-decoration:none;background:rgba(255,255,255,.15)}
+.lang-switch .on{background:rgba(255,255,255,.18);color:#fff;font-weight:700}
 #nav-toggle{display:none}
 [data-theme="dark"] .icon-moon{display:none}
 [data-theme="light"] .icon-sun{display:none}
@@ -334,7 +342,7 @@ def load_events():
 
 # 用 __X__ 佔位符 + replace，避免 CSS/JS 大括號與 format 衝突
 PAGE_TMPL = """<!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="__LANG__">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -352,20 +360,21 @@ __NAV__
 <header class="site">
 <div class="site-bar">
 <button id="nav-toggle" class="icon-btn" aria-label="開啟事件清單"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
-<h1><a href="__HOME_LINK__" style="color:#fff;text-decoration:none">🌦 台灣天氣與災情總覽</a></h1>
+<h1><a href="__HOME_LINK__" style="color:#fff;text-decoration:none">__TITLE__</a></h1>
+<span class="lang-switch">__LANG_SWITCH__</span>
 __GITHUB__
 <button id="theme-toggle" class="icon-btn" aria-label="切換日夜主題">
 <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M1 12h2m18 0h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
 <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
 </button>
 </div>
-<div class="site-bar updated-bar"><span class="updated">最後更新：__TS__（手動更新，非即時）</span></div>
+<div class="site-bar updated-bar"><span class="updated">__UPDATED__</span></div>
 </header>
 <main class="wrap">
 __CONTENT__
 </main>
 <footer><div class="wrap">
-<p>本頁內容彙整自中央氣象署公開資料與新聞媒體公開報導，每筆災情請點入來源連結查證原文；官方資訊以中央氣象署與各縣市政府公告為準。本頁採手動更新，資訊可能落後。</p>
+<p>__FOOTER__</p>
 </div></footer>
 </div>
 </div>
@@ -374,19 +383,38 @@ __CONTENT__
 </html>"""
 
 
-def github_icon_html():
+def github_icon_html(lang):
     if GITHUB_URL:
         return (f'<a class="icon-btn" href="{GITHUB_URL}" target="_blank" rel="noopener" '
                 f'title="GitHub" aria-label="GitHub">{GITHUB_ICON_SVG}</a>')
-    return f'<span class="icon-btn" title="GitHub（網址待提供）" aria-label="GitHub">{GITHUB_ICON_SVG}</span>'
+    return f'<span class="icon-btn" title="{t(lang, "github_pending")}" aria-label="GitHub">{GITHUB_ICON_SVG}</span>'
 
 
-def build_nav(events, home_link, base, current_url, groups):
+def lang_switch_html(lang, home_link):
+    """語言切換：目前語言顯示實心標籤，其餘為連結（跳回該語言首頁）。"""
+    # home_link = 目前頁 → 目前語言根頁；base_root = 目前語言根目錄前綴
+    base_root = home_link[: -len("index.html")] if home_link.endswith("index.html") else home_link
+    items = []
+    for l in LANGS:
+        label = t(l, "lang_self")
+        if l == lang:
+            items.append(f'<span class="on">{label}</span>')
+        elif l == DEFAULT_LANG:
+            # 預設語言在根目錄；非預設語言頁需多上一層（ja/ 是根目錄子目錄）
+            href = base_root + ("index.html" if i18n.is_default(lang) else "../index.html")
+        else:
+            href = base_root + f"{l}/index.html"
+        if l != lang:
+            items.append(f'<a href="{href}">{label}</a>')
+    return "".join(items)
+
+
+def build_nav(lang, events, home_link, base, current_url, groups):
     """左側事件導覽。base：從目前頁到根目錄的前綴（首頁為空字串）；
     groups：首頁「各縣市災情」的縣名集合（決定 side bar 二層清單的錨點是否有效）。"""
     parts = ['<nav>']
     cls = " nav-current" if current_url == "__home__" else ""
-    parts.append(f'<a class="nav-item{cls}" href="{home_link}">🏠 總覽</a>')
+    parts.append(f'<a class="nav-item{cls}" href="{home_link}">{t(lang, "nav_home")}</a>')
 
     def item(e):
         cls = " nav-current" if current_url == "/".join(e["url"]) else ""
@@ -401,13 +429,13 @@ def build_nav(events, home_link, base, current_url, groups):
                 href = f'{base}index.html#{quote(c, safe="")}'
                 items.append(f'<a class="nav-item nav-subitem" href="{href}">{c}</a>')
             else:
-                items.append(f'<span class="nav-item nav-subitem muted" title="目前無該縣市的災情紀錄">{c}</span>')
+                items.append(f'<span class="nav-item nav-subitem muted" title="{t(lang, "nav_no_county")}">{c}</span>')
         return f'<div class="nav-counties">{"".join(items)}</div>'
 
     active = [e for e in events if e["status"] == "active"]
     ended = [e for e in events if e["status"] != "active"]
     if active:
-        parts.append('<div class="nav-group">目前事件</div>')
+        parts.append(f'<div class="nav-group">{t(lang, "nav_active")}</div>')
         # 主 active 事件（與首頁 hero 一致）加二層收合的縣市清單
         if active[0].get("counties"):
             e = active[0]
@@ -420,24 +448,27 @@ def build_nav(events, home_link, base, current_url, groups):
         else:
             parts += [item(e) for e in active]
     if ended:
-        parts.append('<div class="nav-group">過去事件</div>')
+        parts.append(f'<div class="nav-group">{t(lang, "nav_ended")}</div>')
         parts += [item(e) for e in ended]
     parts.append('</nav>')
     return "".join(parts)
 
 
-def render_page(title, ts, home_link, nav_html, content):
+def render_page(lang, title, ts, home_link, nav_html, content):
     page = PAGE_TMPL
-    for k, v in (("__TITLE__", title), ("__TS__", ts), ("__HOME_LINK__", home_link),
-                 ("__GITHUB__", github_icon_html()), ("__NAV__", nav_html),
+    for k, v in (("__LANG__", lang), ("__TITLE__", title), ("__HOME_LINK__", home_link),
+                 ("__UPDATED__", t(lang, "updated", ts=ts)),
+                 ("__LANG_SWITCH__", lang_switch_html(lang, home_link)),
+                 ("__GITHUB__", github_icon_html(lang)), ("__NAV__", nav_html),
+                 ("__FOOTER__", t(lang, "footer")),
                  ("__CSS__", CSS), ("__JS__", JS), ("__CONTENT__", content)):
         page = page.replace(k, v)
     return page
 
 
-def badge(sev):
-    label, cls = SEV_LABEL.get(sev, SEV_LABEL["green"])
-    return f'<span class="badge {cls}">{label}</span>'
+def badge(lang, sev):
+    key, cls = SEV_KEY.get(sev, SEV_KEY["green"])
+    return f'<span class="badge {cls}">{t(lang, key)}</span>'
 
 
 def inline_html(text):
@@ -479,14 +510,14 @@ def compute_groups(events):
     return ordered
 
 
-def chip_html(county, groups):
+def chip_html(lang, county, groups):
     """hero 縣市 chip：有對應區塊 → 錨點連結；無 → 純文字。"""
     if county in groups:
-        return f'<a class="chip chip-link" href="#{quote(county, safe="")}" title="跳到{county}災情">{county}</a>'
-    return f'<span class="chip" title="目前無該縣市的災情紀錄">{county}</span>'
+        return f'<a class="chip chip-link" href="#{quote(county, safe="")}" title="{t(lang, "chip_jump", county=county)}">{county}</a>'
+    return f'<span class="chip" title="{t(lang, "nav_no_county")}">{county}</span>'
 
 
-def build_home(events, ts, groups, cwa_ctx):
+def build_home(lang, events, ts, groups, cwa_ctx):
     active = [e for e in events if e["status"] == "active"]
     ended = [e for e in events if e["status"] != "active"]
     parts = []
@@ -495,30 +526,30 @@ def build_home(events, ts, groups, cwa_ctx):
     if active:
         main_ev = active[0]
         latest = main_ev["rows"][-6:][::-1]
-        chips = "".join(chip_html(c, groups) for c in main_ev["counties"])
+        chips = "".join(chip_html(lang, c, groups) for c in main_ev["counties"])
         src = "、".join(main_ev["sources"])
         parts.append(f"""
 <section class="card hero sev-{main_ev['severity']}">
-<h2 style="border:none">{badge(main_ev['severity'])}　<a href="{'/'.join(main_ev['url'])}">{main_ev["name"]}</a></h2>
-<p class="meta">{("影響期間：" + main_ev["period"] + "　") if main_ev["period"] else ""}資料來源：{src}</p>
+<h2 style="border:none">{badge(lang, main_ev['severity'])}　<a href="{'/'.join(main_ev['url'])}">{main_ev["name"]}</a></h2>
+<p class="meta">{(t(lang, "hero_period", p=main_ev["period"]) + "　") if main_ev["period"] else ""}{t(lang, "hero_source", src=src)}</p>
 <p>{main_ev["summary"]}</p>
 <div class="chips">{chips}</div>
-<h3 style="font-size:1rem;margin:14px 0 4px">最新進展</h3>
-<ul class="timeline">{''.join(row_html(r) for r in latest) or '<li class="muted">（無災情表格資料）</li>'}</ul>
-<a class="hero-cta" href="{'/'.join(main_ev['url'])}">查看完整事件紀錄 →</a>
+<h3 style="font-size:1rem;margin:14px 0 4px">{t(lang, "hero_latest")}</h3>
+<ul class="timeline">{''.join(row_html(r) for r in latest) or f'<li class="muted">{t(lang, "hero_no_rows")}</li>'}</ul>
+<a class="hero-cta" href="{'/'.join(main_ev['url'])}">{t(lang, "hero_cta")}</a>
 </section>""")
         # 其他 active 事件
         for e in active[1:]:
             parts.append(f"""
 <section class="card hero sev-{e['severity']}">
-<h2 style="border:none">{badge(e['severity'])}　<a href="{'/'.join(e['url'])}">{e["name"]}</a></h2>
+<h2 style="border:none">{badge(lang, e['severity'])}　<a href="{'/'.join(e['url'])}">{e["name"]}</a></h2>
 <p>{e["summary"]}</p>
 </section>""")
     else:
-        parts.append('<section class="card hero"><h2 style="border:none;margin-top:0">目前無重大氣象事件</h2><p>無進行中的災情事件；如有異動將手動更新後呈現。</p></section>')
+        parts.append(f'<section class="card hero"><h2 style="border:none;margin-top:0">{t(lang, "no_event_title")}</h2><p>{t(lang, "no_event_body")}</p></section>')
 
     # 2. CWA 氣象總覽（build 時本機抓取，金鑰不出現在輸出）
-    parts.append(cwa.cwa_section_html(*cwa_ctx, has_active_event=bool(active)))
+    parts.append(cwa.cwa_section_html(lang, *cwa_ctx, has_active_event=bool(active)))
 
     # 3. 各縣市災情（跨事件，依縣分組，最新在最上；卡片帶 id 供錨點跳轉）
     if groups:
@@ -528,32 +559,34 @@ def build_home(events, ts, groups, cwa_ctx):
             news_html = news_list_html([r for _, _, r in lst])
             blocks.append(f"""
 <div class="card county-card" id="{quote(county, safe='')}" style="padding:12px 16px">
-<h3 style="margin:4px 0;font-size:1rem">{county}　<span class="muted">（最新 {len(lst)} 筆）</span>　<a href="#top" class="muted" style="float:right">↑ 回頂端</a></h3>
+<h3 style="margin:4px 0;font-size:1rem">{county}　<span class="muted">（{t(lang, "county_latest", n=len(lst))}）</span>　<a href="#top" class="muted" style="float:right">{t(lang, "back_to_top")}</a></h3>
 {news_html}
 <ul class="timeline">{rows_html}</ul>
 </div>""")
-        parts.append('<section><h2>各縣市災情</h2>' + "".join(blocks) + "</section>")
+        parts.append(f'<section><h2>{t(lang, "county_section")}</h2>' + "".join(blocks) + "</section>")
 
     # 4. 過去事件封存（active / ended 均可瀏覽）
     if ended:
         lis = []
         for e in ended:
-            lis.append(f"""<li>{badge(e['severity'])}　<a href="{'/'.join(e['url'])}">{e["name"]}</a>
+            lis.append(f"""<li>{badge(lang, e['severity'])}　<a href="{'/'.join(e['url'])}">{e["name"]}</a>
 <span class="meta">{("（" + e["period"] + "）") if e["period"] else ""}</span><br><span class="meta">{e["summary"]}</span></li>""")
-        parts.append('<section><h2>過去事件封存</h2><ul class="archive-list">' + "".join(lis) + "</ul></section>")
+        parts.append(f'<section><h2>{t(lang, "archive_title")}</h2><ul class="archive-list">' + "".join(lis) + "</ul></section>")
 
     return "".join(parts)
 
 
-def build_event_page(ev, ts, depth):
+def build_event_page(lang, ev, ts, depth):
     home_link = "../" * depth + "index.html"
     body_html = markdown.markdown(ev["body"], extensions=["tables", "sane_lists"])
     chips = "".join(f'<span class="chip">{c}</span>' for c in ev["counties"])
-    status = "目前事件" if ev["status"] == "active" else "已封存事件"
+    status = t(lang, "status_active" if ev["status"] == "active" else "status_ended")
+    note = f'<p class="meta">{t(lang, "content_note")}</p>' if not i18n.is_default(lang) else ""
     content = f"""
-<a class="backlink" href="{home_link}">← 返回總覽</a>
+<a class="backlink" href="{home_link}">{t(lang, "back_home")}</a>
 <section class="card hero sev-{ev['severity']}" style="padding:12px 18px">
-{badge(ev['severity'])}　<span class="meta">{status}</span>
+{badge(lang, ev['severity'])}　<span class="meta">{status}</span>
+{note}
 {"<div class='chips'>" + chips + '</div>' if chips else ''}
 </section>
 <div class="event-content">
@@ -575,20 +608,23 @@ def main():
     groups = compute_groups(events)
     cwa_ctx = cwa.load_snapshot()
 
-    home = render_page("台灣天氣與災情總覽", ts, "index.html",
-                       build_nav(events, "index.html", "", "__home__", groups),
-                       build_home(events, ts, groups, cwa_ctx))
-    (OUT / "index.html").write_text(home, encoding="utf-8")
+    for lang in LANGS:
+        outdir = OUT if i18n.is_default(lang) else OUT / lang
+        outdir.mkdir(parents=True, exist_ok=True)
+        home = render_page(lang, t(lang, "site_title"), ts, "index.html",
+                           build_nav(lang, events, "index.html", "", "__home__", groups),
+                           build_home(lang, events, ts, groups, cwa_ctx))
+        (outdir / "index.html").write_text(home, encoding="utf-8")
 
-    for e in events:
-        depth = len(e["rel"]) - 1  # 檔案所在目錄層數
-        base = "../" * depth
-        page = render_page(e["name"], ts, base + "index.html",
-                           build_nav(events, base + "index.html", base, "/".join(e["url"]), groups),
-                           build_event_page(e, ts, depth))
-        out_path = OUT.joinpath(*e["rel"])
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        out_path.write_text(page, encoding="utf-8")
+        for e in events:
+            depth = len(e["rel"]) - 1  # 檔案所在目錄層數
+            base = "../" * depth
+            page = render_page(lang, e["name"], ts, base + "index.html",
+                               build_nav(lang, events, base + "index.html", base, "/".join(e["url"]), groups),
+                               build_event_page(lang, e, ts, depth))
+            out_path = outdir.joinpath(*e["rel"])
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            out_path.write_text(page, encoding="utf-8")
 
     mode = cwa_ctx[3]
     src_note = {"live": "CWA live", "partial": "CWA partial（含舊資料）", "cache": "CWA 快取", "none": "CWA 無法取得"}[mode]
