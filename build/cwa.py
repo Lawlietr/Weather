@@ -25,6 +25,9 @@ import urllib.parse
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import i18n
+from i18n import t
+
 TZ_TW = timezone(timedelta(hours=8))
 
 BASE = "https://opendata.cwa.gov.tw/api/v1/rest/datastore"
@@ -237,19 +240,20 @@ def _t(s):
 
 
 def _classify(wind_ms):
+    """回傳 i18n key；由呼叫端以 t(lang, key) 翻譯。"""
     if wind_ms is None:
-        return "—"
+        return None
     if wind_ms >= 51.0:
-        return "超強颱風"
+        return "ty_cat_super"
     if wind_ms >= 41.5:
-        return "強颱風"
+        return "ty_cat_strong"
     if wind_ms >= 32.7:
-        return "猛烈颱風"
+        return "ty_cat_vstrong"
     if wind_ms >= 24.5:
-        return "中度颱風"
+        return "ty_cat_mod"
     if wind_ms >= 13.9:
-        return "輕度颱風"
-    return "熱帶性低氣壓"
+        return "ty_cat_weak"
+    return "ty_cat_td"
 
 
 def _pos(fix):
@@ -289,11 +293,12 @@ TAIWAN = [
     (120.30, 23.45), (120.55, 23.85), (120.60, 24.05), (120.55, 24.30),
     (120.65, 24.75), (120.75, 24.95), (121.00, 25.05), (121.35, 25.15),
 ]
-CITIES = [("台北", 121.56, 25.03), ("台中", 120.67, 24.15),
-          ("高雄", 120.30, 22.62), ("花蓮", 121.61, 23.99), ("台東", 121.15, 22.75)]
+CITIES = [("city_taipei", 121.56, 25.03), ("city_taichung", 120.67, 24.15),
+          ("city_kaoxiong", 120.30, 22.62), ("city_hualien", 121.61, 23.99),
+          ("city_taitung", 121.15, 22.75)]
 
 
-def typhoon_svg(cyclone):
+def typhoon_svg(lang, cyclone):
     """單一氣旋：分析軌跡（實線）+ 預報（虛線）+ 最新位置 15 m/s 風圈。"""
     a, f = cyclone["analysis"], cyclone["forecast"]
     grid = []
@@ -310,9 +315,9 @@ def typhoon_svg(cyclone):
     tai = " ".join(f"{_px(lo, la)[0]:.0f},{_px(lo, la)[1]:.0f}" for lo, la in TAIWAN)
     cities = "".join(
         f'<circle cx="{_px(lo, la)[0]:.0f}" cy="{_px(lo, la)[1]:.0f}" r="2" fill="var(--muted)"/>'
-        f'<text x="{_px(lo, la)[0] + 5:.0f}" y="{_px(lo, la)[1] + 3:.0f}" font-size="10" fill="var(--muted)">{n}</text>'
+        f'<text x="{_px(lo, la)[0] + 5:.0f}" y="{_px(lo, la)[1] + 3:.0f}" font-size="10" fill="var(--muted)">{t(lang, n)}</text>'
         for n, lo, la in CITIES)
-    parts = [f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="{cyclone["name"]} 路徑圖">{"".join(grid)}'
+    parts = [f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="{cyclone["name"]}">{"".join(grid)}'
              f'<polygon points="{tai}" fill="var(--chip-bg)" stroke="var(--muted)" stroke-width="1.5"/>{cities}']
     # 分析軌跡（實線）
     an_pts = []
@@ -336,7 +341,7 @@ def typhoon_svg(cyclone):
                          f'fill="none" stroke="var(--red)" stroke-width="1" stroke-dasharray="4 3" opacity="0.7"/>')
         parts.append(f'<circle cx="{x:.0f}" cy="{y:.0f}" r="5" fill="var(--red)"/>')
         parts.append(f'<text x="{x + 8:.0f}" y="{y - 8:.0f}" font-size="12" font-weight="bold" fill="var(--red)">'
-                     f'{cyclone["name"]}（最新）</text>')
+                     f'{t(lang, "latest_tag", name=cyclone["name"])}</text>')
     # 預報（虛線，接在最新分析點後）
     fc_pts = []
     for fix in f:
@@ -353,23 +358,23 @@ def typhoon_svg(cyclone):
             parts.append(f'<circle cx="{x:.0f}" cy="{y:.0f}" r="3" fill="none" stroke="var(--yellow)" stroke-width="1.5"/>')
     parts.append(
         f'<g font-size="10" fill="var(--muted)">'
-        f'<line x1="12" y1="{H-30}" x2="32" y2="{H-30}" stroke="var(--accent)" stroke-width="2"/><text x="36" y="{H-27}">分析軌跡</text>'
-        f'<line x1="96" y1="{H-30}" x2="116" y2="{H-30}" stroke="var(--yellow)" stroke-width="1.5" stroke-dasharray="5 3"/><text x="120" y="{H-27}">預報路徑</text>'
-        f'<circle cx="186" cy="{H-30}" r="4" fill="none" stroke="var(--red)" stroke-dasharray="3 2"/><text x="195" y="{H-27}">15 m/s 暴風半徑</text>'
+        f'<line x1="12" y1="{H-30}" x2="32" y2="{H-30}" stroke="var(--accent)" stroke-width="2"/><text x="36" y="{H-27}">{t(lang, "legend_analysis")}</text>'
+        f'<line x1="96" y1="{H-30}" x2="116" y2="{H-30}" stroke="var(--yellow)" stroke-width="1.5" stroke-dasharray="5 3"/><text x="120" y="{H-27}">{t(lang, "legend_forecast")}</text>'
+        f'<circle cx="186" cy="{H-30}" r="4" fill="none" stroke="var(--red)" stroke-dasharray="3 2"/><text x="195" y="{H-27}">{t(lang, "legend_wind")}</text>'
         f'</g></svg>')
     return "".join(parts)
 
 
 # ---------------------------------------------------------------- 區塊渲染
 
-def render_typhoon_card(typhoons, stale_at=None):
+def render_typhoon_card(lang, typhoons, stale_at=None):
     """颱風卡永遠顯示：無資料時顯示「無活動中熱帶氣旋」。"""
-    tag = f'　<span class="muted">（舊資料：{stale_at}）</span>' if stale_at else ""
+    tag = f'　<span class="muted">{t(lang, "stale_tag", ts=stale_at)}</span>' if stale_at else ""
     if not typhoons:
         return f"""
 <div class="card cwa-card">
-<h3>颱風動態　<span class="meta">CWA W-C0034-005{tag}</span></h3>
-<p>目前無活動中熱帶氣旋（西北太平洋及南海）。</p>
+<h3>{t(lang, "typhoon_title")}　<span class="meta">CWA W-C0034-005{tag}</span></h3>
+<p>{t(lang, "typhoon_none")}</p>
 </div>"""
     blocks = []
     for c in typhoons:
@@ -380,35 +385,38 @@ def render_typhoon_card(typhoons, stale_at=None):
         wind = _num(last.get("MaxWindSpeed"))
         gust = _num(last.get("MaxGustSpeed"))
         pressure = last.get("Pressure", "—")
-        move = f'{last.get("MovingDirection", "—")} 方向移動，{last.get("MovingSpeed", "—")} km/h'
+        move = t(lang, "moving", dir=last.get("MovingDirection", "—"),
+                 speed=last.get("MovingSpeed", "—"))
         if f:
             rows = []
             for fx in f:
                 h = _num(fx.get("ForecastHour")) or 0
                 try:
-                    t = (datetime.fromisoformat(fx["InitialTime"]) + timedelta(hours=h)).strftime("%m/%d %H:%M")
+                    tstr = (datetime.fromisoformat(fx["InitialTime"]) + timedelta(hours=h)).strftime("%m/%d %H:%M")
                 except (KeyError, ValueError):
-                    t = f'+{int(h)}h'
-                rows.append(f'<tr><td>{t}</td><td>{_pos(fx)}</td>'
+                    tstr = f'+{int(h)}h'
+                rows.append(f'<tr><td>{tstr}</td><td>{_pos(fx)}</td>'
                             f'<td>{_num(fx.get("MaxWindSpeed")):.1f} m/s</td><td>{fx.get("Pressure", "—")} hPa</td></tr>')
             rows = "".join(rows)
         else:
-            rows = '<tr><td colspan="4" class="muted">（無預報資料）</td></tr>'
-        no = f'　<span class="muted">（{c.get("year","")} 第{c.get("no","")} 號）</span>' if c.get("no") else ""
+            rows = f'<tr><td colspan="4" class="muted">{t(lang, "no_fc")}</td></tr>'
+        no = t(lang, "typhoon_no", year=c.get("year", ""), no=c.get("no", "")) if c.get("no") else ""
+        no = f'　<span class="muted">{no}</span>' if no else ""
+        cat = t(lang, _classify(wind)) if _classify(wind) else "—"
         blocks.append(f"""
 <div class="typhoon-row">
-<div class="map">{typhoon_svg(c)}</div>
+<div class="map">{typhoon_svg(lang, c)}</div>
 <div class="typhoon-info">
 <h4 style="margin:0 0 6px">{c['name']}{no}　<span class="muted">{c.get('intl','')}</span></h4>
-<p style="margin:4px 0"><b>最新觀測</b>（{_t(last.get('DateTime'))}）：{_pos(last)}｜{_classify(wind)}｜最大風速 {wind:.1f} m/s｜陣風 {gust if gust is not None else '—'} m/s｜氣壓 {pressure} hPa｜{move}</p>
-<h4 style="margin:10px 0 4px">未來預報</h4>
-<table><tr><th>時間</th><th>位置</th><th>最大風速</th><th>氣壓</th></tr>{rows}</table>
+<p style="margin:4px 0">{t(lang, "obs_line", ts=_t(last.get('DateTime')), pos=_pos(last), cat=cat, w=f"{wind:.1f}" if wind is not None else "—", g=gust if gust is not None else '—', p=pressure, move=move)}</p>
+<h4 style="margin:10px 0 4px">{t(lang, "future_fc")}</h4>
+<table><tr><th>{t(lang, "th_time")}</th><th>{t(lang, "th_pos")}</th><th>{t(lang, "th_wind")}</th><th>{t(lang, "th_pressure")}</th></tr>{rows}</table>
 </div>
 </div>""")
     return f"""
 <div class="card cwa-card">
-<h3>颱風動態　<span class="meta">CWA W-C0034-005{tag}</span></h3>
-{"".join(blocks) or '<p class="muted">（有氣旋紀錄但無分析資料）</p>'}
+<h3>{t(lang, "typhoon_title")}　<span class="meta">CWA W-C0034-005{tag}</span></h3>
+{"".join(blocks) or f'<p class="muted">{t(lang, "typhoon_nodata")}</p>'}
 </div>"""
 
 
@@ -421,7 +429,7 @@ def _sev_color(name, phenomena):
     return "sev-green"
 
 
-def render_alert_card(marine, reports, stale_at=None):
+def render_alert_card(lang, marine, reports, stale_at=None):
     """警報/特報卡：皆無 → 整張卡隱藏（回傳空字串）。"""
     items = []
     for m in marine:
@@ -429,12 +437,11 @@ def render_alert_card(marine, reports, stale_at=None):
             continue
         lifted = "解除" in m["title"] or m.get("category") == "END"
         cls = "sev-green" if lifted else "sev-red"
-        label = "海上颱風警報"
-        items.append(f'<div class="alert-item"><span class="badge {cls}">{label}</span>　'
+        items.append(f'<div class="alert-item"><span class="badge {cls}">{t(lang, "marine_badge")}</span>　'
                      f'<b>{m["title"]}</b>'
-                     + (f'（第 {m["report_no"]} 報）' if m.get("report_no") else "")
-                     + (f'｜颱風：{m["typhoon_name"]}' if m.get("typhoon_name") else "")
-                     + f'<div class="meta">生效 {_t(m.get("effective"))}</div></div>')
+                     + (t(lang, "report_no", n=m["report_no"]) if m.get("report_no") else "")
+                     + (f'｜{t(lang, "typhoon_label", n=m["typhoon_name"])}' if m.get("typhoon_name") else "")
+                     + f'<div class="meta">{t(lang, "effective", ts=_t(m.get("effective")))}</div></div>')
     for r in reports:
         if not r.get("name"):
             continue
@@ -442,64 +449,66 @@ def render_alert_card(marine, reports, stale_at=None):
         phen = "、".join(r["phenomena"])
         body = ""
         if r.get("content"):
-            body = f'<details><summary class="muted">查看特報全文</summary><pre class="report-text">{r["content"].strip()}</pre></details>'
+            body = f'<details><summary class="muted">{t(lang, "view_full")}</summary><pre class="report-text">{r["content"].strip()}</pre></details>'
         items.append(f'<div class="alert-item"><span class="badge {cls}">{r["name"]}</span>　'
                      f'<b>{phen}</b>　'
-                     f'<span class="meta">發布 {_t(r["issue"])}｜有效 {_t(r["valid"])}</span>'
-                     + (f'<div>影響區域：{"、".join(r["areas"])}</div>' if r["areas"] else "") + body + '</div>')
+                     f'<span class="meta">{t(lang, "issued", ts=_t(r["issue"]))}｜{t(lang, "valid", ts=_t(r["valid"]))}</span>'
+                     + (f'<div>{t(lang, "affected", a="、".join(r["areas"]))}</div>' if r["areas"] else "") + body + '</div>')
     if not items:
         return ""
-    tag = f'　<span class="muted">（舊資料：{stale_at}）</span>' if stale_at else ""
+    tag = f'　<span class="muted">{t(lang, "stale_tag", ts=stale_at)}</span>' if stale_at else ""
     return f"""
 <div class="card cwa-card">
-<h3>警報與特報　<span class="meta">CWA W-C0034-001 / W-C0033-002{tag}</span></h3>
+<h3>{t(lang, "alert_title")}　<span class="meta">CWA W-C0034-001 / W-C0033-002{tag}</span></h3>
 {"".join(items)}
 </div>"""
 
 
-def render_rain_card(rain, has_active_event, stale_at=None):
+def render_rain_card(lang, rain, has_active_event, stale_at=None):
     """雨量站 TOP 10：有 active 事件時展開；無事件時收合。
     ⚠️ Now = 本日 0 時至目前累計（非 1 小時雨量）。"""
     if not rain:
         return ""
-    tag = f'　<span class="muted">（舊資料：{stale_at}）</span>' if stale_at else ""
+    tag = f'　<span class="muted">{t(lang, "stale_tag", ts=stale_at)}</span>' if stale_at else ""
     rows = "".join(
         f'<tr><td>{s["name"]}</td><td>{s["county"]}{s["township"]}</td><td>{s["now"]:,.0f}</td>'
         f'<td>{s["p1hr"]:,.0f}</td><td>{s["p24hr"]:,.0f}</td></tr>'
         for s in rain)
     obs = rain[0].get("obs", "")
-    table = f"""<table><tr><th>雨量站</th><th>縣市/鄉鎮</th><th>本日累計 (mm)</th><th>近 1 小時 (mm)</th><th>近 24 小時 (mm)</th></tr>{rows}</table>
-<p class="meta">「本日累計」= 當日 0 時至觀測時間（{_t(obs)}）；短延時強降雨請看「近 1 小時」。CWA O-A0002-001，每 10 分鐘更新。</p>"""
-    inner = table if has_active_event else f'<details><summary>當日累計雨量 TOP 10（點開）</summary>{table}</details>'
+    table = f"""<table><tr><th>{t(lang, "rain_th_station")}</th><th>{t(lang, "rain_th_area")}</th><th>{t(lang, "rain_th_today")}</th><th>{t(lang, "rain_th_1h")}</th><th>{t(lang, "rain_th_24h")}</th></tr>{rows}</table>
+<p class="meta">{t(lang, "rain_note", ts=_t(obs))}</p>"""
+    inner = table if has_active_event else f'<details><summary>{t(lang, "rain_details")}</summary>{table}</details>'
     return f"""
 <div class="card cwa-card">
-<h3>雨量觀測站 TOP 10{tag}</h3>
+<h3>{t(lang, "rain_title")}{tag}</h3>
 {inner}
 </div>"""
 
 
-def cwa_section_html(data, errors, stale, mode, has_active_event):
+def cwa_section_html(lang, data, errors, stale, mode, has_active_event):
     """回傳「氣象總覽」section 的 HTML（mode=none 時只有警示）。"""
+    note = f'<p class="meta">{t(lang, "cwa_data_note")}</p>' if t(lang, "cwa_data_note") else ""
     if mode == "none":
         why = next(iter(errors.values()), "未知錯誤") if errors else "未知錯誤"
         return f"""
 <section class="cwa">
-<h2>氣象總覽（中央氣象署）</h2>
-<div class="card cwa-card cwa-fail">本次 build 無法取得 CWA 資料，且無可用快取。<br>
-<span class="meta">{why}。設定 CWA_API_KEY 後重新 build。</span></div>
+<h2>{t(lang, "cwa_title")}</h2>
+<div class="card cwa-card cwa-fail">{t(lang, "cwa_fail")}<br>
+<span class="meta">{t(lang, "cwa_fail_fix", why=why)}</span></div>
 </section>"""
     parts = []
     if mode == "partial":
         bad = "、".join(sorted(errors))
-        parts.append(f'<div class="cwa-warn">⚠️ 本次 build 部分 CWA 資料來源無法取得（{bad}），以下含舊資料。</div>')
+        parts.append(f'<div class="cwa-warn">{t(lang, "cwa_warn_partial", bad=bad)}</div>')
     elif mode == "cache":
-        parts.append('<div class="cwa-warn">⚠️ 本次 build 無法連線 CWA API，以下為上次成功抓取之快取資料。</div>')
-    parts.append(render_typhoon_card(data.get("typhoons", []), stale.get("typhoons")))
-    parts.append(render_alert_card(data.get("marine_alert", []), data.get("reports", []),
+        parts.append(f'<div class="cwa-warn">{t(lang, "cwa_warn_cache")}</div>')
+    parts.append(render_typhoon_card(lang, data.get("typhoons", []), stale.get("typhoons")))
+    parts.append(render_alert_card(lang, data.get("marine_alert", []), data.get("reports", []),
                                    stale.get("marine_alert", stale.get("reports"))))
-    parts.append(render_rain_card(data.get("rain", []), has_active_event, stale.get("rain")))
+    parts.append(render_rain_card(lang, data.get("rain", []), has_active_event, stale.get("rain")))
     return f"""
 <section class="cwa">
-<h2>氣象總覽（中央氣象署）</h2>
+<h2>{t(lang, "cwa_title")}</h2>
+{note}
 {"".join(p for p in parts if p)}
 </section>"""
