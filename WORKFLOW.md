@@ -84,7 +84,9 @@ EOF
 # ③ 金鑰零外洩（兩項都應為 0）
 grep -rc "Authorization=" public/ | grep -v ":0" || echo "OK: 無 Authorization"
 grep -rc "$CWA_API_KEY" public/ build/cwa_cache.json | grep -v ":0" || echo "OK: 無金鑰值"
-# ④ 瀏覽器預覽（重點：首頁 Hero、CWA 區塊、手機寬度、兩套主題）
+# ④ 雙語言輸出確認（兩套根頁都存在、語言切換連結正確）
+ls public/index.html public/ja/index.html
+# ⑤ 瀏覽器預覽（重點：首頁 Hero、CWA 區塊、手機寬度、兩套主題、/ja/ 版）
 cd public && python3 -m http.server 8080
 ```
 
@@ -119,8 +121,9 @@ cd public && python3 -m http.server 8080
 ## 6. 部署
 
 - **內部**（目前唯一）：`git push origin main` → Forgejo（`ssh://fg/lawliet/Weather.git`）。
-- **GitHub Pages**（公開，尚未建立）：
+- **GitHub Pages**（公開，準備中）：
   - 公開 repo 只放 `public/` 內容（站點根目錄），build 產物已是相對路徑、可直接放子路徑。
+  - 分支方式：**orphan `gh-pages` 分支**只裝 `public/` 內容，不與 main 共享 history（避免 Markdown 原文、build 腳本、內部倉庫資訊外流）。
   - 目前手動：本機 build → 推靜態產物到 Pages 分支。
   - 後續可加 GitHub Actions（見 §7）。
 

@@ -1,6 +1,6 @@
 # Weather - Typhoon Tracking
 
-紀錄颱風動態與災情的 markdown 倉儲。
+紀錄颱風動態與災情的 Markdown 倉儲，並附靜態網站 build（產出 `public/`，供 GitHub Pages 公開網站使用；見下方「網站專案」）。
 
 ## ⚠️ 時間意識（極度重要）
 
@@ -74,6 +74,7 @@
 ## Git
 
 - 預設分支：`main`（原 `master` 已更名）
+- 功能開發在 `DEV` 分支，**經使用者確認後才合併回 `main`**
 - 無 CI、無 lint/test 指令
 
 ---
@@ -387,11 +388,18 @@ obscura --stealth fetch https://example.com --dump text
 
 ---
 
-## 網站專案（已建立，開發中）
+## 網站專案（已完成；剩 GitHub Pages 部署）
 
 - **更新/部署工作流（runbook）**：`WORKFLOW.md`——接手者（agent 或人工）先看這個。
-- **完整構想與待拍板事項**：`TODO.md`。
-- **build 入口**：`./build/build.sh`（產出 `public/`；CWA 資料 build 時本機抓取）。目標是建立一個給大眾使用的公開網站（host 於 GitHub Pages），彙整氣象署天氣資訊與災情新聞。
+- **構想與待辦**：`TODO.md`。
+- **build 入口**：`./build/build.sh`（產出 `public/`（繁中）與 `public/ja/`（日文）；CWA 資料 build 時本機抓取）。
+  公開網站 host 於 GitHub Pages，彙整氣象署天氣資訊與災情紀錄。
+
+### 多語言（i18n）
+
+- 預設語言 **zh-Hant**（`public/` 根目錄）、第二語言 **ja**（`public/ja/`）；頁首有語言切換。
+- 所有 UI 字串收斂在 `build/i18n.py`（`STRINGS` 表＋`t()` 三級回退）；**加新語言＝在 `STRINGS` 加一組 dict**，不改模板。
+- **內容不翻譯**：事件 Markdown 正文、CWA 資料（颱風名、雨量站名、特報全文）全語言保留中文原文；非預設語言頁面以 `content_note` / `cwa_data_note` 提示。
 
 ### 核心原則
 
@@ -406,7 +414,7 @@ obscura --stealth fetch https://example.com --dump text
 ```
 本機（手動執行）
   ├── 讀 repo 災情 markdown → 災情資料（縣市/時間/分級/摘要）
-  ├── 讀 RSS / Obscura       → 補即時新聞災情（附來源）
+  ├── 讀 RSS / Obscura       → 補即時新聞災情（附來源）〔待實作〕
   ├── 呼叫 CWA API（金鑰在本地）→ 氣象彙整
   └── build 出靜態 HTML（含「最後更新時間」）→ git push 到 Pages 分支
 GitHub Pages 提供靜態網站
@@ -421,4 +429,4 @@ GitHub Pages 提供靜態網站
 
 - **內部仓库**：`ssh://fg/lawliet/Weather.git`（Forgejo，內網 `192.168.1.124:222`，SSH Host `fg`，Identity `~/.ssh/id_rsa_gitea`）。
 - 目前開發與 commit **只推到內部 forgejo**。
-- **GitHub Pages 僅在網站做好後才推送**（公開）。兩者分開，避免機敏資料與未成品提前公開。
+- **GitHub Pages**（公開）：只推 `public/` 靜態產物（orphan `gh-pages` 分支、不共享 history），Markdown 原文、build 腳本、內部倉庫資訊一律不公開。部署步驟見 `WORKFLOW.md` §6。
