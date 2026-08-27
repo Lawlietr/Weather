@@ -4,7 +4,9 @@ name: Build & Deploy
 #   - workflow_dispatch：手動點「Run workflow」（Actions 不穩時的手動備援）
 #   - schedule：固定排程自動更新（UTC 時區，見下方 cron）
 #   - push main：main 變動時重建（可選，目前註解掉以避免噪音）
-on:
+# 註："on" 必須加引號。YAML 1.1 把未加引號的 on 解成布林 true，
+# 會導致 GitHub 無法正確註冊 schedule（排程因此永不觸發）。
+"on":
   workflow_dispatch: {}
   schedule:
     # 每 2 小時一次（UTC，共 12 次/天）。GitHub Actions 排程固定按 UTC 計算，
