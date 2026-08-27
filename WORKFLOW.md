@@ -123,6 +123,8 @@ cd public && python3 -m http.server 8080
 
 ## 6. 部署
 
+> ⚡ 手動更新請直接看 `MANUAL_UPDATE.md`，部署用 `build/deploy.sh`（一支指令 build + 推 CF 與 GitHub Pages）。
+
 - **內部**：`git push origin main` → Forgejo（`ssh://fg/lawliet/Weather.git`）。
 - **GitHub Pages**（公開，2026/8/26 已上線）：
   - 站點：<https://lawlietr.github.io/Weather/>（繁中）、`/ja/`（日文）。
@@ -152,7 +154,13 @@ cd public && python3 -m http.server 8080
   - 自訂域名 DNS 紀錄（如重建需重設）：三個 zone 各一筆 CNAME `weather.* → weather-9kb.pages.dev`（proxied on）。
   - 與 GitHub Pages 為**同一份 `public/` 的平行託管**；兩边都要更新時，先 build 一次、再分別跑上面的兩個推送流程。
 
-## 7. 未來：agent 自動更新 + GitHub Actions（設計意向，未實作）
+## 7. 排程與自動更新
+
+- **手動**：`MANUAL_UPDATE.md`（改 markdown → `./build/deploy.sh` → 上線）。
+- **GitHub Actions**：在 GitHub 伺服器上排程（一天 4～6 次），不依賴本機開著；金鑰放 GitHub Secret。設計意向見原 §7（未實作）。
+- **cron（unix）**：本機或 Ubuntu LXC/VM 排 `build/deploy.sh`。需該機器常醒著。金鑰與 git 憑證需設在該環境。
+- **更新 agent**：負責「查 CWA API/新聞 → 更新 markdown → build → push」。
+  輸入就是本文件 §1～§3；agent 不需懂解析細節，照 check 清單驗收即可。
 
 - **更新 agent**：負責「查 CWA API/新聞 → 更新 markdown → build → push」。
   輸入就是本文件 §1～§3；agent 不需懂解析細節，照 check 清單驗收即可。
