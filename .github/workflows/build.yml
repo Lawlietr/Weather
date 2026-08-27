@@ -1,16 +1,20 @@
-name: Site Deploy
+name: Build & Deploy
 
 # 觸發方式：
 #   - workflow_dispatch：手動點「Run workflow」（Actions 不穩時的手動備援）
 #   - schedule：固定排程自動更新（UTC 時區，見下方 cron）
-#
+#   - push main：main 變動時重建（可選，目前註解掉以避免噪音）
 # 註："on" 必須加引號。YAML 1.1 把未加引號的 on 解成布林 true，
 # 會導致 GitHub 無法正確註冊 schedule（排程因此永不觸發）。
 "on":
   workflow_dispatch: {}
   schedule:
-    # 測試用：每分鐘。確認後改回偶數 UTC 時。
-    - cron: '* * * * *'
+    # 每 2 小時一次（UTC，共 12 次/天）。GitHub Actions 排程固定按 UTC 計算，
+    # 故逐小時列出偶數時區，等同台灣時間每 2 小時自動部署。
+    - cron: '0 0,2,4,6,8,10,12,14,16,18,20,22 * * *'
+    # 等價簡寫：cron: '0 */2 * * *'
+  # push:
+  #   branches: [main]
 
 # 推 gh-pages 需要寫入 contents 的權限
 permissions:
@@ -29,6 +33,7 @@ jobs:
           python-version: '3.12'
 
       - name: Build（抓 CWA + 產出 public/）
+        # build/build.sh 自動建 venv、裝 markdown；CWA 走 curl 子進程（避開 Python 3.14 SSL 問題）
         run: bash build/build.sh
         env:
           CWA_API_KEY: ${{ secrets.CWA_API_KEY }}
@@ -45,12 +50,14 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: 部署到 Cloudflare Pages（主要通道）
+        # 與本機 deploy.sh 相同的 wrangler 指令，憑證取自 Actions Secret
         run: npx -y wrangler@latest pages deploy public --project-name weather
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: 部署到 GitHub Pages（orphan gh-pages，私有 mirror）
+        # 改用 git orphan push 取代 peaceiris，避免觸發 GitHub Pages 內建 workflow 造成迴圈
         run: |
           TMP="$(mktemp -d)"
           rsync -a --delete --exclude '.DS_Store' ./public/ "$TMP/"
