@@ -3,18 +3,23 @@
 > **讀者**：接手本專案的 agent 或人工操作者。
 > **定位**：「怎麼做」的逐步流程。專案規範（檔案格式、CWA API 結構、設計原則）在
 > `AGENTS.md` 與 `TODO.md`，本文件不重複，只引用。
-> 最後更新：2026/8/26
+> 最後更新：2026/8/27
+> 
+> **環境現況（2026/8/27）**：GitHub repo `Lawlietr/Weather` **已設為私有**；`CWA_API_KEY`、
+> `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID` 已存入 **GitHub Actions Secrets**。公開網站由
+> **Cloudflare Pages** 提供；GitHub Pages 已轉私有 mirror。
 
 ---
 
 ## 0. 環境設定（接手時先跑一次）
 
-1. 確認 `CWA_API_KEY` 在環境變數中：
+1. 確認金鑰在環境變數中：
    ```bash
-   python3 -c "import os; print('OK' if os.getenv('CWA_API_KEY') else 'MISSING')"
+   python3 -c "import os; [print(k, 'OK' if os.getenv(k) else 'MISSING') for k in ('CWA_API_KEY','CLOUDFLARE_API_TOKEN','CLOUDFLARE_ACCOUNT_ID')]"
    ```
-   若 MISSING：請使用者寫入 `~/.zshrc`（`export CWA_API_KEY="..."`）或專案 `.env`
-   （需在 `cwa.py` 加載入邏輯）。**金鑰絕不可 commit。**
+   若 MISSING：請使用者寫入 `~/.zshrc`（`export ...="..."`）或專案 `.env`（需在 `cwa.py` 加載入邏輯）。
+   **手動路徑金鑰絕不可 commit。** 排程/CI 路徑的金鑰則存於 **GitHub Actions Secrets**
+   （`gh secret list --repo Lawlietr/Weather` 檢視），不寫進程式碼。
 2. Python ≥ 3.14 環境即可；`build/build.sh` 會自動建 venv 並安裝唯一相依 `markdown`。
 3. 試跑一次確認 pipeline 通：
    ```bash

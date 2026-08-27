@@ -405,8 +405,8 @@ obscura --stealth fetch https://example.com --dump text
 
 ### 核心原則
 
-- **手動更新（人工 / LLM 驅動）**：不自動排程，使用者手動 build 並推送。
-- **金鑰不外洩**：CWA API Key 全程只存在本機執行環境，不寫進任何輸出檔案，不進 repo、不進公開網站。
+- **混合更新**：平常由 **GitHub Actions 排程**（一天 4～6 次，`.github/workflows/build.yml`）自動 build＋部署；Actions 不穩或需新增災情時，由人工/LLM 手動 build＋部署（`MANUAL_UPDATE.md`）。災情新聞仍需人工把關，**不自動推 RSS**。
+- **金鑰管理**：CWA API Key、Cloudflare 憑證同時存在兩處：(1) **本機環境**（手動 build/deploy，`~/.zshrc`）；(2) **GitHub Actions Secrets**（排程/CI 用，加密儲存）。全程**不寫進任何輸出檔案、不進 `public/`、不進網站**。
   - ⚠️ CWA API **不支援 CORS**（實測 `W-C0034-005` 回應無 `Access-Control-Allow-Origin` 標頭），故**前端無法直接呼叫**，氣象資料必須由本機 build 時抓取後寫入靜態 HTML。
 - **災情來源優先級**：repo 現有 `災情/` markdown → RSS → Obscura 抓取。每筆附**新聞來源**，僅給**少量摘要＋原連結**。
 - **非即時**：Pages 為靜態託管，採手動 build。首頁必須顯示「**產生時間**」（build 時寫入當下系統時間，i18n key `updated`）。
@@ -417,14 +417,15 @@ obscura --stealth fetch https://example.com --dump text
 ### 技術架構
 
 ```
-本機（手動執行）
-  ├── 讀 repo 災情 markdown → 災情資料（縣市/時間/分級/摘要）
-  ├── 讀 RSS / Obscura       → 補即時新聞災情（附來源）〔待實作〕
-  ├── 呼叫 CWA API（金鑰在本地）→ 氣象彙整（typhoon_svg 繪製 build/taiwan_geo.py 輪廓）
+GitHub Actions（排程/CI，主力）
+  ├── CWA_API_KEY / CLOUDFLARE_* 來自 GitHub Secrets
+  ├── 讀 repo 災情 markdown → 災情資料
+  ├── 呼叫 CWA API → 氣象彙整（typhoon_svg 繪製 build/taiwan_geo.py 輪廓）
   └── build 出靜態 HTML（含「產生時間」）
-        ├── wrangler pages deploy public → Cloudflare Pages（主要）
-        └── orphan gh-pages 分支 force push → GitHub Pages
-Cloudflare / GitHub 靜態託管提供公開網站
+        ├── wrangler pages deploy public → Cloudflare Pages（主要，公開）
+        └── orphan gh-pages 分支 force push → GitHub Pages（私有 repo，僅限有權限者）
+本機（手動/備援）：`./build/deploy.sh`（流程同上，金鑰取自本機環境）
+Cloudflare 靜態託管提供公開網站
 ```
 
 ### 網站結構
@@ -435,6 +436,7 @@ Cloudflare / GitHub 靜態託管提供公開網站
 ### 部署與分支
 
 - **內部仓库**：`ssh://fg/lawliet/Weather.git`（Forgejo，內網 `192.168.1.124:222`，SSH Host `fg`，Identity `~/.ssh/id_rsa_gitea`）。
-- 目前開發與 commit **只推到內部 forgejo**。
-- **GitHub Pages**（公開，2026/8/26 已上線）：<https://lawlietr.github.io/Weather/>（繁中）＋ `/ja/`（日文）。只推 `public/` 靜態產物（orphan `gh-pages` 分支、不共享 history），Markdown 原文、build 腳本、內部倉庫資訊一律不公開。部署步驟見 `WORKFLOW.md` §6。
-- **Cloudflare Pages**（公開，2026/8/26 已上線，**主要更新通道**）：專案 `weather`，自訂域名 `weather.avpclub.eu.org`、`weather.avpclub.uk`、`weather.larch.dpdns.org`（CNAME 已建、proxied、自動 HTTPS）。更新只需 `npx wrangler pages deploy public --project-name weather`（憑證在 `~/.zshrc` 的 `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID`，不進 repo）。細節見 `WORKFLOW.md` §6。
+- **GitHub**：`https://github.com/Lawlietr/Weather`，**已設為私有**（2026/8/27）。開發與 commit **同時推到 Forgejo 與 GitHub**（保持同步）。build 腳本、`災情/` Markdown 原文、金鑰（存於 Actions Secrets）現存於此私有 repo。
+- **GitHub Pages**：**已轉為私有**（2026/8/27，隨 repo 轉私有）。`<https://lawlietr.github.io/Weather/>`（繁中）＋ `/ja/`（日文）現**僅限有 repo 讀取權限者可見**。只推 `public/` 靜態產物（orphan `gh-pages` 分支、不共享 history）。部署步驟見 `WORKFLOW.md` §6。
+  - ⚠️ 公開網站已改由 **Cloudflare Pages** 提供；GitHub Pages 僅作私有 mirror。
+- **Cloudflare Pages**（公開，2026/8/26 已上線，**主要更新通道兼公開網站**）：專案 `weather`，自訂域名 `weather.avpclub.eu.org`、`weather.avpclub.uk`、`weather.larch.dpdns.org`（CNAME 已建、proxied、自動 HTTPS）。更新只需 `npx wrangler pages deploy public --project-name weather`（憑證在 `~/.zshrc` 或 GitHub Actions Secrets，不進 repo）。細節見 `WORKFLOW.md` §6。
