@@ -1,0 +1,144 @@
+{
+  "$schema": "https://weather.avpclub.eu.org/rss_sources.schema.json",
+  "description": "台灣新聞 RSS 來源清單。供 build 流程（RSS 第二優先災情來源）與協助的 agent 讀取，減少重覆調查。",
+  "updated": "2026-08-27",
+  "usage_notes": [
+    "優先級（priority）依『災情相關度』排序：high = 天氣/災情新聞最常見；medium = 補充；low = 一般。",
+    "status 說明：verified = 已實測可用；failed = 實測失效（勿呼叫）；pending = 待復查。",
+    "格式：rss20 = 用 <item>；atom = 用 <entry>。解析器需兩種都相容。",
+    "build 時批次抓取；單一來源 404/超時不中斷 build，跳過並記 warning（沿用 CWA 失敗降級設計）。",
+    "只保留近期且與『當前活動事件』相關的條目（時間過濾，避免舊聞混入）。每筆附原連結，僅給摘要。"
+  ],
+  "sources": [
+    {
+      "name": "中央社 CNA",
+      "domain": "cna.com.tw",
+      "language": "zh-Hant",
+      "format": "rss20",
+      "status": "verified",
+      "priority": "high",
+      "disaster_relevance": "最高（官方通訊社，社會/地方/國際災情即時）",
+      "urls": [
+        { "category": "社會",   "url": "https://feeds.feedburner.com/rsscna/social" },
+        { "category": "地方",   "url": "https://feeds.feedburner.com/rsscna/local" },
+        { "category": "生活",   "url": "https://feeds.feedburner.com/rsscna/lifehealth" },
+        { "category": "國際",   "url": "https://feeds.feedburner.com/rsscna/intworld" },
+        { "category": "政治",   "url": "https://feeds.feedburner.com/rsscna/politics" },
+        { "category": "兩岸",   "url": "https://feeds.feedburner.com/rsscna/mainland" },
+        { "category": "產經",   "url": "https://feeds.feedburner.com/rsscna/finance" },
+        { "category": "科技",   "url": "https://feeds.feedburner.com/rsscna/technology" },
+        { "category": "運動",   "url": "https://feeds.feedburner.com/rsscna/sport" },
+        { "category": "文化",   "url": "https://feeds.feedburner.com/rsscna/culture" },
+        { "category": "娛樂",   "url": "https://feeds.feedburner.com/rsscna/stars" }
+      ],
+      "notes": "Feedburner 多分類獨立。災情優先抓『社會』＋『地方』兩檔。"
+    },
+    {
+      "name": "自由時報 LTN",
+      "domain": "news.ltn.com.tw",
+      "language": "zh-Hant",
+      "format": "rss20",
+      "status": "verified",
+      "priority": "high",
+      "disaster_relevance": "高（社會/地方/即時全都有）",
+      "urls": [
+        { "category": "社會",   "url": "https://news.ltn.com.tw/rss/society.xml" },
+        { "category": "地方",   "url": "https://news.ltn.com.tw/rss/local.xml" },
+        { "category": "即時",   "url": "https://news.ltn.com.tw/rss/all.xml" },
+        { "category": "政治",   "url": "https://news.ltn.com.tw/rss/politics.xml" }
+      ],
+      "notes": "檔頭有 BOM（﻿），解析時需去除。項目數較少（社會檔約 7 則）。"
+    },
+    {
+      "name": "台視 TTV",
+      "domain": "ttv.com.tw",
+      "language": "zh-Hant",
+      "format": "rss20",
+      "status": "verified",
+      "priority": "high",
+      "disaster_relevance": "高（無線電視社會新聞，項目多）",
+      "urls": [
+        { "category": "全部", "url": "https://www.ttv.com.tw/rss/rss.xml" }
+      ],
+      "notes": "約 40 則，含社會/即時。"
+    },
+    {
+      "name": "公視新聞網 PTS",
+      "domain": "news.pts.org.tw",
+      "language": "zh-Hant",
+      "format": "atom",
+      "status": "verified",
+      "priority": "high",
+      "disaster_relevance": "高（官方背景，社會/國際災情）",
+      "urls": [
+        { "category": "全部", "url": "https://about.pts.org.tw/rss/XML/newsfeed.xml" }
+      ],
+      "notes": "⚠️ Atom 格式（用 <entry> 非 <item>），解析器需雙格式相容。"
+    },
+    {
+      "name": "新頭殼 newtalk",
+      "domain": "newtalk.tw",
+      "language": "zh-Hant",
+      "format": "rss20",
+      "status": "verified",
+      "priority": "medium",
+      "disaster_relevance": "中（科技/產業/環境，含部分氣候/環境災情）",
+      "urls": [
+        { "category": "全部", "url": "http://newtalk.tw/rss_news.php" }
+      ],
+      "notes": "約 100 則，項目多。"
+    },
+    {
+      "name": "關鍵評論網 The News Lens",
+      "domain": "thenewsnews.tw",
+      "language": "zh-Hant",
+      "format": "rss20",
+      "status": "verified",
+      "priority": "medium",
+      "disaster_relevance": "中（政策/評論/深度分析）",
+      "urls": [
+        { "category": "全部", "url": "https://feeds.feedburner.com/TheNewsLens" }
+      ],
+      "notes": "Feedburner。適合政策背景與深度分析。"
+    },
+    {
+      "name": "民報 People News",
+      "domain": "peoplenews.tw",
+      "language": "zh-Hant",
+      "format": "rss20",
+      "status": "verified",
+      "priority": "medium",
+      "disaster_relevance": "中（社會/民生）",
+      "urls": [
+        { "category": "全部", "url": "https://www.peoplenews.tw/feed" }
+      ],
+      "notes": "⚠️ 域名是 peoplenews.tw，非 minmax.tw（minmax 連線被封）。"
+    },
+    {
+      "name": "報導者 The Reporter",
+      "domain": "twreporter.org",
+      "language": "zh-Hant",
+      "format": "rss20",
+      "status": "verified",
+      "priority": "medium",
+      "disaster_relevance": "中（調查報導/公共議題，即時性較低）",
+      "urls": [
+        { "category": "全部", "url": "https://www.twreporter.org/a/rss2.xml" }
+      ],
+      "notes": "非營利深度調查，項目數較少。"
+    }
+  ],
+  "failed_sources": [
+    { "name": "中天新聞 CTi", "domain": "ettv.com.tw", "status": "failed", "reason": "全站封鎖本環境（首頁/新聞頁均 000 連線失敗，DNS 正常）。RSS 端點亦取不到。Obscura 抓取大概率也失敗。", "checked": "2026-08-27" },
+    { "name": "風傳媒 storm.mg", "domain": "storm.mg", "status": "pending", "reason": "/feed、/feeds、/rss.xml 均回 HTML 或 404，RSS 疑似已移除。但風傳媒是颱風/災情最重要新媒體之一，建議日後重測。", "checked": "2026-08-27" },
+    { "name": "聯合報 udn", "domain": "feed.udn.com", "status": "failed", "reason": "DNS 無法解析，Feed 端點已停用。", "checked": "2026-08-27" },
+    { "name": "中國時報 CTS", "domain": "cts.com.tw", "status": "failed", "reason": "RSS 端點回 HTTP 410（永久移除）。", "checked": "2026-08-27" },
+    { "name": "華視 CTS", "domain": "cts.com.tw", "status": "failed", "reason": "RSS 端點回 HTTP 410。", "checked": "2026-08-27" },
+    { "name": "鏡新聞 Mirrormedia", "domain": "mirrormedia.mobi", "status": "failed", "reason": "DNS 無法解析，域名已停用。", "checked": "2026-08-27" },
+    { "name": "公民新聞 PeoPo", "domain": "peopo.org", "status": "failed", "reason": "RSS 端點回 HTTP 404。", "checked": "2026-08-27" },
+    { "name": "東森 EBC", "domain": "ebc.net.tw", "status": "failed", "reason": "RSS 端點回 HTTP 404。", "checked": "2026-08-27" },
+    { "name": "三立 SETTV", "domain": "settv.com.tw", "status": "failed", "reason": "RSS 端點回 HTTP 500。", "checked": "2026-08-27" },
+    { "name": "頭家日報", "domain": "townhead.com.tw", "status": "failed", "reason": "DNS 無法解析，已停運。", "checked": "2026-08-27" },
+    { "name": "鉅亨 JNTW", "domain": "jntw.com.tw", "status": "failed", "reason": "DNS 無法解析，已停用。", "checked": "2026-08-27" }
+  ]
+}

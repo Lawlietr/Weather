@@ -53,7 +53,7 @@
 
 2. **災情來源優先級**
    - **① repo 現有 markdown 優先**：`災情/{YYYY}/{MM}/*.md` 已整理的災情檔案。
-   - **② RSS 訂閱源**：補 repo 尚未整理的新聞（如中央社、聯合、自由、民視 RSS）。
+   - **② RSS 訂閱源**：補 repo 尚未整理的新聞。來源清單見 `build/rss_sources.json`（已驗證：中央社、自由時報、台視、公視、新頭殼、關鍵評論、民報、報導者；勿呼叫失效的中天、聯合報、中國時報等）。
    - **③ Obscura 抓取**：RSS 沒有又確實需要時才用。
    - 每筆災情**必須附新聞來源**，僅提供**少量摘要＋原新聞連結**，詳細內容由使用者自行點進原連結。
 
@@ -118,7 +118,7 @@ Cloudflare Pages 提供公開網站
 
 ### 尚未定案
 
-- [ ] **RSS 來源清單**：需確認可用且允許跨域的台灣新聞 RSS 源（第一版可先只吃 repo markdown，RSS 留 hook 後續加）。
+- [x] **RSS 來源清單**：已實測並建立 `build/rss_sources.json`（2026/8/27）。已驗證可用 8 家／21 個分類網址（中央社、自由時報、台視、公視、新頭殼、關鍵評論、民報、報導者）；失效勿呼叫 11 家（中天全站封鎖、聯合報、中國時報、華視、鏡新聞、公民新聞、東森、三立、頭家日報、鉅亨）；待復查：風傳媒（颱風/災情最重要新媒體，RSS 疑似移除）。build 抓取災情時一律讀此檔，不要自行查或寫死 URL。見 `AGENTS.md`「新聞 RSS 來源清單」。
 - [x] **GitHub Pages 分支**：定案 **orphan `gh-pages` 分支**，只裝 `public/` 靜態產物、不與 main 共享 history（2026/8/26 定案；流程見 `WORKFLOW.md` §6）。
 - [x] **多語言**：已實作繁中（預設）＋日文（`public/ja/`）；UI 字串收斂於 `build/i18n.py`（~70 key），加新語言只需在 `STRINGS` 加一組 dict（§七.4 如實作）。
 
@@ -173,5 +173,5 @@ Cloudflare Pages 提供公開網站
 - [x] 雙授權：程式碼 GNU AGPLv3（`LICENSE`）＋內容 CC BY-NC-SA 4.0（`LICENSE-CONTENT`，2026/8/26 由 MIT 改訂；公開 repo 只收 `public/` 靜態產物，無 MIT 歷史痕跡）。
 - [x] LLM 友善產出：build 產 `llms.txt`（索引）＋ `llms-full.txt`（事件全文），含授權聲明段。
 - [x] **本地 cron 備用**（`build/deploy-cron.sh`，`LOCAL_CRON.md`）：Actions 異常時手動開啟，每 2 小時 build＋部署，**預設不啟用**；金鑰在 `build/deploy.env`（gitignore、600）。Forgejo 與 GitHub 兩邊代碼保持同步。
-- [ ] RSS 來源驗證與接入（可選，後續）。
+- [x] **RSS 來源驗證與接入**（2026/8/27 完成調查）：實測後建立 `build/rss_sources.json`（8 家可用／21 分類、11 家失效、風傳媒待復查）。build 抓取災情時讀此檔。下一步：在 build 流程中實作批次抓取邏輯（相容 rss20/atom、降級、時間過濾）。
 - [ ] 地圖標註功能：Leaflet + OSM，離線自託瓦片，見 §七。
