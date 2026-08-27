@@ -50,8 +50,8 @@ COUNTY_ALIAS = {
 }
 SEV_KEY = {"red": ("sev_red", "sev-red"), "yellow": ("sev_yellow", "sev-yellow"), "green": ("sev_green", "sev-green")}
 
-# TODO: 提供 GitHub 倉庫網址後填入（空值時 icon 為無效連結佔位）
-GITHUB_URL = ""
+# GitHub 倉庫網址（顯示於首頁右上角 icon）
+GITHUB_URL = "https://weather.avpclub.eu.org"
 
 GITHUB_ICON_SVG = ('<svg viewBox="0 0 16 16" width="20" height="20" fill="currentColor" aria-hidden="true">'
                    '<path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>')
@@ -384,12 +384,11 @@ __CONTENT__
 
 
 def github_icon_html(lang):
-    # 目前隱藏（display:none），但保留程式碼與 SVG：
-    # 未來設定 GITHUB_URL 並要去掉 style="display:none" 即可恢復顯示。
+    # 右上角 GitHub icon。GITHUB_URL 非空時為可點擊連結，並顯示。
     if GITHUB_URL:
-        return (f'<a class="icon-btn" style="display:none" href="{GITHUB_URL}" target="_blank" rel="noopener" '
+        return (f'<a class="icon-btn" href="{GITHUB_URL}" target="_blank" rel="noopener" '
                 f'title="GitHub" aria-label="GitHub">{GITHUB_ICON_SVG}</a>')
-    return f'<span class="icon-btn" style="display:none" title="{t(lang, "github_pending")}" aria-label="GitHub">{GITHUB_ICON_SVG}</span>'
+    return f'<span class="icon-btn" title="{t(lang, "github_pending")}" aria-label="GitHub">{GITHUB_ICON_SVG}</span>'
 
 
 def lang_switch_html(lang, home_link):
