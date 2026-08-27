@@ -100,7 +100,7 @@ cd public && python3 -m http.server 8080
 | 需要爬 CWA 官網頁面（API 沒有該產品） | 用 Obscura（設定見 AGENTS.md「Obscura 無頭瀏覽器工具」）。 |
 | SSL 錯誤 `CERTIFICATE_VERIFY_FAILED` | 已知問題（見 §5），build 已改走 curl；若你改動 `cwa.py` 的 `_get_json`，**不要改回 urllib**。 |
 
-## 5. 已知陷阱（2026/8/26 實測確認）
+## 5. 已知陷阱（2026/8/26–8/27 實測確認）
 
 1. **Python 3.14 的 urllib 對 CWA 憑證鏈 SSL 驗證失敗**（Missing Subject Key Identifier）→
    `build/cwa.py` 的 `_get_json` 用 `curl` subprocess，維持現狀。
@@ -109,6 +109,9 @@ cd public && python3 -m http.server 8080
      移動欄位是 `MovingSpeed/MovingDirection`；風圈 `Circle15ms/Circle25ms = {Radius: str}`。
    - `W-C0034-001`：CAP `parameter = [{valueName, value}]`；「解除」狀態看
      `typhoon-info` sections 的「警報類別」`END`（`alert_title` 含「解除」亦可）。
+     ⚠️ 警報**全文不在 `typhoon-info`**（那裡只有「警報報數／警報類別／颱風編號」
+     等元數據），實際內文在 `description.section[]`（命名與位置、強度與半徑、
+     移速與預測、颱風動態、警戒區域及事項…等 8 個 section）。
    - `W-C0033-002`：`validTime = {startTime, endTime}`（無時區，視同 +08:00）；
      影響區域在 `hazard[].info.affectedAreas.location[].locationName`。
    - `O-A0002-001`：`Now.Precipitation` = **本日 0 時至目前累計**（不是 1 小時雨量）；

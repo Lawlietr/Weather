@@ -140,17 +140,18 @@ curl "${BASE_URL}/W-C0034-005?Authorization=${CWA_API_KEY}&format=JSON"
 
 #### 2. 海上颱風警報（W-C0034-001）
 
-- **用途**：CAP 格式的颱風警報資訊（警報報數、颱風編號、強度、位置、預測、警戒區域）
+- **用途**：CAP 格式的颱風警報資訊（警報標題、顏色、嚴重程度、警報報數、颱風編號、警戒區域）＋完整警報內文
 - **回傳格式**：JSON
 - **呼叫方式**：
 ```bash
 curl "${BASE_URL}/W-C0034-001?Authorization=${CWA_API_KEY}&format=JSON"
 ```
 - **主要欄位**：
-  - `records.info[0].description.typhoon-info`：颱風基本資料（分析數據、預測數據）
-  - `records.info[0].parameter`：警報標題、顏色、嚴重程度
+  - `records.info[0].parameter`：警報標題（`alert_title`）、顏色（`alert_color`）、嚴重程度（`severity_level`）
+  - `records.info[0].description.typhoon-info[].section[]`：颱風基本資料，但**僅元數據**（「警報報數」「警報類別」「颱風編號」「颱風資訊」），無實際內文
+  - `records.info[0].description.section[]`：**實際警報全文**（「命名與位置」「強度與半徑」「移速與預測」「颱風動態」「警戒區域及事項」「大雨/強風特報」「注意事項」等），需由此處讀取
   - `records.info[0].area`：警戒區域多邊形座標
-- **特點**：提供警報顏色與警戒區域，**每次更新都必須查詢**
+- **特點**：提供警報顏色、警戒區域與完整內文，**每次更新都必須查詢**（全文在 `description.section`，不在 `typhoon-info`）
 
 ---
 
