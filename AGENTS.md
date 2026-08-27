@@ -408,7 +408,8 @@ obscura --stealth fetch https://example.com --dump text
 - **金鑰不外洩**：CWA API Key 全程只存在本機執行環境，不寫進任何輸出檔案，不進 repo、不進公開網站。
   - ⚠️ CWA API **不支援 CORS**（實測 `W-C0034-005` 回應無 `Access-Control-Allow-Origin` 標頭），故**前端無法直接呼叫**，氣象資料必須由本機 build 時抓取後寫入靜態 HTML。
 - **災情來源優先級**：repo 現有 `災情/` markdown → RSS → Obscura 抓取。每筆附**新聞來源**，僅給**少量摘要＋原連結**。
-- **非即時**：Pages 為靜態託管，採手動 build。首頁必須顯示「**最後更新時間**」（build 時寫入當下系統時間）。
+- **非即時**：Pages 為靜態託管，採手動 build。首頁必須顯示「**產生時間**」（build 時寫入當下系統時間，i18n key `updated`）。
+  - ⚠️ 用「產生時間」而非「最後更新」：build 每次都會改這個時間戳，但它只代表「網頁何時生成」，**不等於氣象／災情資料已更新**（資料新鮮度改看各 CWA section 與事件的時間戳）。用「最後更新」會誤導一般使用者。
 - **雙授權**：程式碼（`build/` 等）以 **GNU AGPLv3**（`LICENSE`）；內容（`災情/`、`颱風/` 紀錄及其網頁、`llms.txt`、`llms-full.txt` 產出）以 **CC BY-NC-SA 4.0**（`LICENSE-CONTENT`，不得商用）；CWA 資料以官方條款為準。
 - **LLM 友善產出**：build 必產 `llms.txt`（站點＋事件索引）與 `llms-full.txt`（全部事件繁中全文），canonical base URL 為 `https://weather.avpclub.eu.org`（`build/site.py` 之 `SITE_BASE`）。
 
@@ -419,7 +420,7 @@ obscura --stealth fetch https://example.com --dump text
   ├── 讀 repo 災情 markdown → 災情資料（縣市/時間/分級/摘要）
   ├── 讀 RSS / Obscura       → 補即時新聞災情（附來源）〔待實作〕
   ├── 呼叫 CWA API（金鑰在本地）→ 氣象彙整
-  └── build 出靜態 HTML（含「最後更新時間」）
+  └── build 出靜態 HTML（含「產生時間」）
         ├── wrangler pages deploy public → Cloudflare Pages（主要）
         └── orphan gh-pages 分支 force push → GitHub Pages
 Cloudflare / GitHub 靜態託管提供公開網站
