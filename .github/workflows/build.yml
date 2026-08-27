@@ -55,8 +55,14 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: 部署到 GitHub Pages（orphan gh-pages，私有 mirror）
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./public
-          publish_branch: gh-pages
+        # 改用 git orphan push 取代 peaceiris，避免觸發 GitHub Pages 內建 workflow 造成迴圈
+        run: |
+          TMP="$(mktemp -d)"
+          rsync -a --delete --exclude '.DS_Store' ./public/ "$TMP/"
+          git -C "$TMP" init -q -b gh-pages
+          git -C "$TMP" config user.name "github-actions[bot]"
+          git -C "$TMP" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C "$TMP" add -A
+          git -C "$TMP" commit -q -m "site update: $(date +%Y/%m/%d %H:%M UTC)"
+          git -C "$TMP" push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" gh-pages
+          rm -rf "$TMP"
