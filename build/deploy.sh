@@ -14,6 +14,7 @@
 #
 # 需要環境變數（在 ~/.zshrc / ~/.bashrc 已設定）：
 #   CWA_API_KEY、CLOUDFLARE_API_TOKEN、CLOUDFLARE_ACCOUNT_ID
+# 選用：GH_PAT（GitHub 個人存取憑證，用於推私有 GitHub Pages mirror；留空則跳過）
 #
 # 金鑰一律不進 repo、不寫進任何輸出檔案。
 # ============================================================
@@ -25,6 +26,12 @@ cd "$REPO_ROOT"
 
 CF_PROJECT="weather"
 GH_REPO="https://github.com/Lawlietr/Weather.git"
+# GitHub Pages 為私有 repo，推送需憑證。若環境變數 GH_PAT 有值，
+# 自動改走 x-access-token 驗證（手動與 cron 部署皆適用）。
+GH_PUSH="$GH_REPO"
+if [ -n "${GH_PAT:-}" ]; then
+  GH_PUSH="https://x-access-token:${GH_PAT}@github.com/Lawlietr/Weather.git"
+fi
 
 BUILD_ONLY=0
 NO_CF=0
@@ -98,7 +105,7 @@ if [ "$NO_GH" -ne 1 ]; then
   git -C "$TMP" init -q -b gh-pages
   git -C "$TMP" add -A
   git -C "$TMP" commit -q -m "site update: $(date +%Y/%m/%d)"
-  git -C "$TMP" push -f "$GH_REPO" gh-pages
+  git -C "$TMP" push -f "$GH_PUSH" gh-pages
   rm -rf "$TMP"
 else
   echo

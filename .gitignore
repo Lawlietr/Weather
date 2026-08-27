@@ -7,3 +7,6 @@ build/cwa_cache.json
 build/__pycache__/
 .wrangler/
 build/_geo_cache_*.json
+# 本地 cron 備用：金鑰與日誌（不進 repo）
+build/deploy.env
+build/logs/

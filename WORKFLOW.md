@@ -5,9 +5,9 @@
 > `AGENTS.md` 與 `TODO.md`，本文件不重複，只引用。
 > 最後更新：2026/8/27
 > 
-> **環境現況（2026/8/27）**：GitHub repo `Lawlietr/Weather` **已設為私有**；`CWA_API_KEY`、
+> **環境現況（2026/8/27）**：GitHub repo `Lawlietr/Weather` **已設為公開**（原私有）；`CWA_API_KEY`、
 > `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID` 已存入 **GitHub Actions Secrets**。公開網站由
-> **Cloudflare Pages** 提供；GitHub Pages 已轉私有 mirror。
+> **Cloudflare Pages** 提供；GitHub Pages 已轉公開 mirror。Forgejo 與 GitHub **main 同步**（`git push origin main && git push github main`）。
 
 ---
 
@@ -162,8 +162,10 @@ cd public && python3 -m http.server 8080
 ## 7. 排程與自動更新
 
 - **手動**：`MANUAL_UPDATE.md`（改 markdown → `./build/deploy.sh` → 上線）。
-- **GitHub Actions**：在 GitHub 伺服器上排程（一天 4～6 次），不依賴本機開著；金鑰放 GitHub Secret。設計意向見原 §7（未實作）。
-- **cron（unix）**：本機或 Ubuntu LXC/VM 排 `build/deploy.sh`。需該機器常醒著。金鑰與 git 憑證需設在該環境。
+- **GitHub Actions**：在 GitHub 伺服器上排程（**每 2 小時一次**，`cron: '0 0,2,4,6,8,10,12,14,16,18,20,22 * * *'` UTC），不依賴本機開著；金鑰放 GitHub Secret。
+- **cron（unix，本地備用）**：本機或 Ubuntu LXC/VM 排 `build/deploy-cron.sh`，作為 **GitHub Actions 異常時的備用**，**每 2 小時一次**（預設「不啟用」）。
+  - **預設「不啟用」**：cron 工作項目未安裝，僅 Actions 異常時手動 `bash build/cron-enable.sh` 開啟；Actions 復原後 `bash build/cron-disable.sh` 停用。完整說明見 `LOCAL_CRON.md`。
+  - 金鑰在 `build/deploy.env`（gitignore、600，由 `build/deploy-cron.sh` 載入；cron 不載入 `.zshrc`）；需該機器常醒著。
 - **更新 agent**：負責「查 CWA API/新聞 → 更新 markdown → build → push」。
   輸入就是本文件 §1～§3；agent 不需懂解析細節，照 check 清單驗收即可。
 
@@ -174,8 +176,7 @@ cd public && python3 -m http.server 8080
      金鑰完全不碰 GitHub。
   2. **CI 跑 build**：build 在 Actions 執行，`CWA_API_KEY` 放 GitHub secret。
      輸出仍靜態、金鑰不進產物，但金鑰會出現在 CI 環境——權衡後再定。
-  3. **定時排程（cron）**：自動每週/每日 build。⚠️ 與現行「手動更新」原則衝突，
-     啟用前需重新拍板 TODO.md 的核心原則。
+  3. **定時排程（cron）**：已定案——本地 cron 備用（`build/deploy-cron.sh`，每 2 小時、預設不啟用）＋ GitHub Actions 排程（每 2 小時 UTC），見上方。核心原則已拍板（`TODO.md` §二.1、`LOCAL_CRON.md`）。
 
 ---
 

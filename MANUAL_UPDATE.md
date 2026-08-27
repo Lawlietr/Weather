@@ -8,11 +8,12 @@
 > ./build/deploy.sh
 > ```
 >
-> **環境現況（2026/8/27）**：GitHub repo `Lawlietr/Weather` **已設為私有**；
+> **環境現況（2026/8/27）**：GitHub repo `Lawlietr/Weather` **已設為公開**（原私有）；
 > `CWA_API_KEY`、`CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID` 已同時存在
 > **本機環境**（本指南用）與 **GitHub Actions Secrets**（排程用）。公開網站由
-> **Cloudflare Pages** 提供；GitHub Pages 已轉私有 mirror（`lawlietr.github.io/Weather/`
-> 現僅限有 repo 讀取權限者可見）。
+> **Cloudflare Pages** 提供；GitHub Pages 已轉公開 mirror（`lawlietr.github.io/Weather/`
+> 現為公開，目前 404）。Forgejo 與 GitHub **main 同步**；Actions 與本地 cron 備用
+> 均**每 2 小時**一次（本地 cron 預設不啟用，見 `LOCAL_CRON.md`）。
 
 ---
 

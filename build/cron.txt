@@ -1,0 +1,5 @@
+# Weather 本地自動部署（GitHub Actions 備用）
+# 安裝：bash build/cron-enable.sh      移除：bash build/cron-disable.sh
+# 排程：台灣時間每 2 小時一次（一天 12 次）。本機 cron 按本地時區（Asia/Taipei）計算。
+# 實際執行 build/deploy-cron.sh（載入金鑰、build、推 CF / GitHub Pages、寫日誌）
+0 */2 * * * /bin/bash /root/opencode-stuffs/Weather/build/deploy-cron.sh # weather-deploy-cron
