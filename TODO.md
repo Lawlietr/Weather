@@ -168,7 +168,7 @@ Cloudflare Pages 提供公開網站
 - [x] CWA 氣象總覽（`build/cwa.py`，build 時本機抓取）：颱風卡（永遠顯示，含靜態 SVG 軌跡＋15 m/s 風圈＋預報表）、警報/特報卡（無則整卡隱藏）、雨量站 TOP 10（有 active 事件展開、無則收合）。失敗降級：`build/cwa_cache.json` 快取＋「舊資料/快取/無法取得」警示，與「無資料」視覺區分。⚠️ Python 3.14 的 urllib 對 CWA 憑證鏈會 SSL 驗證失敗（Missing Subject Key Identifier），故改走 `curl` subprocess。
 - [x] 設定 GitHub Pages 與推送流程：2026/8/26 上線 <https://lawlietr.github.io/Weather/>（繁中）＋ `/ja/`（日文）；orphan `gh-pages` 分支只收 `public/`；例行更新推送指令見 `WORKFLOW.md` §6。
 - [x] **GitHub repo 轉為公開（2026/8/27，原私有）**＋金鑰存入 **GitHub Actions Secrets**（`CWA_API_KEY`、`CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`）；公開網站改由 Cloudflare Pages 提供。Forgejo 與 GitHub **main 同步**（`git push origin main && git push github main`）。
-- [x] **GitHub Actions workflow 排程**（`.github/workflows/build.yml`）：`workflow_dispatch` 手動＋`schedule` **每 2 小時一次**（`cron: '0 0,2,4,6,8,10,12,14,16,18,20,22 * * *'` UTC）；跑 build＋wrangler deploy＋gh-pages push。首次排程尚未實際跑過（皆為手動驗證）。
+- [x] **GitHub Actions workflow 排程**（`.github/workflows/build.yml`）：`workflow_dispatch` 手動＋`schedule` **每 2 小時一次**（`cron: '0 0,2,4,6,8,10,12,14,16,18,20,22 * * *'` UTC）；跑 build＋wrangler deploy＋git orphan push gh-pages（移除 peaceiris 避免迴圈，2026/8/27 修正）。
 - [x] 設定 Cloudflare Pages 與自訂域名（2026/8/26，**主要更新通道**）：專案 `weather`，域名 `weather.avpclub.eu.org`／`weather.avpclub.uk`／`weather.larch.dpdns.org`（CNAME 皆指向 `weather-9kb.pages.dev`、proxied）；更新只需 `npx wrangler pages deploy public --project-name weather`。
 - [x] 雙授權：程式碼 GNU AGPLv3（`LICENSE`）＋內容 CC BY-NC-SA 4.0（`LICENSE-CONTENT`，2026/8/26 由 MIT 改訂；公開 repo 只收 `public/` 靜態產物，無 MIT 歷史痕跡）。
 - [x] LLM 友善產出：build 產 `llms.txt`（索引）＋ `llms-full.txt`（事件全文），含授權聲明段。

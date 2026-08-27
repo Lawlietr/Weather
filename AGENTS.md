@@ -406,7 +406,7 @@ obscura --stealth fetch https://example.com --dump text
 ### 核心原則
 
 - **混合更新**：平常由 **GitHub Actions 排程**（一天 4～6 次，`.github/workflows/build.yml`）自動 build＋部署；Actions 不穩或需新增災情時，由人工/LLM 手動 build＋部署（`MANUAL_UPDATE.md`）。災情新聞仍需人工把關，**不自動推 RSS**。
-  - ⚠️ **Actions 排程**（`.github/workflows/build.yml`）：build → wrangler 部署 Cloudflare → peaceiris 推 GitHub Pages。排程 `cron: '0 0,2,4,6,8,10,12,14,16,18,20,22 * * *'`（UTC，每 2 小時）。首次排程尚未實際跑過（2026/8/27 才設定，皆為手動 `workflow_dispatch` 驗證）。若 Actions 偶發失敗，99% 是 Cloudflare token 又限區域或失效（runner IP 撞上地域限制 code 9109），去後台重開 token 更新 Secret 即可；或改用本地 cron 備用（`LOCAL_CRON.md`）。
+  - ⚠️ **Actions 排程**（`.github/workflows/build.yml`）：build → wrangler 部署 Cloudflare → git orphan push 推 GitHub Pages（2026/8/27 修正：移除 peaceiris 避免觸發 Pages 內建 workflow 造成迴圈）。排程 `cron: '0 0,2,4,6,8,10,12,14,16,18,20,22 * * *'`（UTC，每 2 小時）。若 Actions 偶發失敗，99% 是 Cloudflare token 又限區域或失效（runner IP 撞上地域限制 code 9109），去後台重開 token 更新 Secret 即可；或改用本地 cron 備用（`LOCAL_CRON.md`）。
 - **金鑰管理**：CWA API Key、Cloudflare 憑證同時存在多處：(1) **本機環境**（手動 build/deploy，`~/.zshrc`）；(2) **GitHub Actions Secrets**（排程/CI 用，加密儲存）；(3) **`build/deploy.env`**（本地 cron 備用，gitignore、600，由 `deploy-cron.sh` 載入；cron 不載入 `.zshrc`）。全程**不寫進任何輸出檔案、不進 `public/`、不進網站**。
   - ⚠️ CWA API **不支援 CORS**（實測 `W-C0034-005` 回應無 `Access-Control-Allow-Origin` 標頭），故**前端無法直接呼叫**，氣象資料必須由本機 build 時抓取後寫入靜態 HTML。
 - **災情來源優先級**：repo 現有 `災情/` markdown → RSS → Obscura 抓取。每筆附**新聞來源**，僅給**少量摘要＋原連結**。
