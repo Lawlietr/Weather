@@ -11,7 +11,7 @@ name: Build & Deploy
   schedule:
     # 每 2 小時一次（UTC，共 12 次/天）。GitHub Actions 排程固定按 UTC 計算，
     # 故逐小時列出偶數時區，等同台灣時間每 2 小時自動部署。
-    - cron: '0 0,2,4,6,8,10,12,14,16,18,20,22 * * *'
+    - cron: '* * * * *'
     # 等價簡寫：cron: '0 */2 * * *'
   # push:
   #   branches: [main]
