@@ -406,6 +406,7 @@ obscura --stealth fetch https://example.com --dump text
 ### 核心原則
 
 - **混合更新**：平常由 **GitHub Actions 排程**（一天 4～6 次，`.github/workflows/build.yml`）自動 build＋部署；Actions 不穩或需新增災情時，由人工/LLM 手動 build＋部署（`MANUAL_UPDATE.md`）。災情新聞仍需人工把關，**不自動推 RSS**。
+  - ⚠️ **Actions 排程已驗證可用**（2026/8/27，run `33052934468` success）：build → wrangler 部署 Cloudflare → peaceiris 推 GitHub Pages 全過。排程 `cron: 0 0,6,12,18 * * *`（UTC = 台灣 00/08/14/20，一天 4 次）。若 Actions 偶發失敗，99% 是 Cloudflare token 又限區域或失效，去後台重開 token 更新 Secret 即可。
 - **金鑰管理**：CWA API Key、Cloudflare 憑證同時存在兩處：(1) **本機環境**（手動 build/deploy，`~/.zshrc`）；(2) **GitHub Actions Secrets**（排程/CI 用，加密儲存）。全程**不寫進任何輸出檔案、不進 `public/`、不進網站**。
   - ⚠️ CWA API **不支援 CORS**（實測 `W-C0034-005` 回應無 `Access-Control-Allow-Origin` 標頭），故**前端無法直接呼叫**，氣象資料必須由本機 build 時抓取後寫入靜態 HTML。
 - **災情來源優先級**：repo 現有 `災情/` markdown → RSS → Obscura 抓取。每筆附**新聞來源**，僅給**少量摘要＋原連結**。
@@ -423,7 +424,7 @@ GitHub Actions（排程/CI，主力）
   ├── 呼叫 CWA API → 氣象彙整（typhoon_svg 繪製 build/taiwan_geo.py 輪廓）
   └── build 出靜態 HTML（含「產生時間」）
         ├── wrangler pages deploy public → Cloudflare Pages（主要，公開）
-        └── orphan gh-pages 分支 force push → GitHub Pages（私有 repo，僅限有權限者）
+        └── orphan gh-pages 分支 force push → GitHub Pages（私有 repo，備用 mirror）
 本機（手動/備援）：`./build/deploy.sh`（流程同上，金鑰取自本機環境）
 Cloudflare 靜態託管提供公開網站
 ```
@@ -437,6 +438,6 @@ Cloudflare 靜態託管提供公開網站
 
 - **內部仓库**：`ssh://fg/lawliet/Weather.git`（Forgejo，內網 `192.168.1.124:222`，SSH Host `fg`，Identity `~/.ssh/id_rsa_gitea`）。
 - **GitHub**：`https://github.com/Lawlietr/Weather`，**已設為私有**（2026/8/27）。開發與 commit **同時推到 Forgejo 與 GitHub**（保持同步）。build 腳本、`災情/` Markdown 原文、金鑰（存於 Actions Secrets）現存於此私有 repo。
-- **GitHub Pages**：**已轉為私有**（2026/8/27，隨 repo 轉私有）。`<https://lawlietr.github.io/Weather/>`（繁中）＋ `/ja/`（日文）現**僅限有 repo 讀取權限者可見**。只推 `public/` 靜態產物（orphan `gh-pages` 分支、不共享 history）。部署步驟見 `WORKFLOW.md` §6。
-  - ⚠️ 公開網站已改由 **Cloudflare Pages** 提供；GitHub Pages 僅作私有 mirror。
+- **GitHub Pages**：**已轉為私有**（2026/8/27，隨 repo 轉私有），且目前為 **404**（備用 mirror，非必需）。GitHub Actions 已把預設分支設為 `main`（原 orphan `gh-pages` 為預設分支，導致 Actions 看不到 workflow），`gh-pages` 分支因此不再自動重建、Pages 設定回 404。若日後想救回 GitHub Pages，需把預設分支改回 `gh-pages`（代價：Actions 按鈕又會藏起來，需在 Actions 頁面手動切 `main`）。只推 `public/` 靜態產物（orphan `gh-pages` 分支、不共享 history）。部署步驟見 `WORKFLOW.md` §6。
+  - ⚠️ 公開網站已改由 **Cloudflare Pages** 提供；GitHub Pages 僅作私有 mirror，**以 Cloudflare 為主**，404 不影響公開使用。
 - **Cloudflare Pages**（公開，2026/8/26 已上線，**主要更新通道兼公開網站**）：專案 `weather`，自訂域名 `weather.avpclub.eu.org`、`weather.avpclub.uk`、`weather.larch.dpdns.org`（CNAME 已建、proxied、自動 HTTPS）。更新只需 `npx wrangler pages deploy public --project-name weather`（憑證在 `~/.zshrc` 或 GitHub Actions Secrets，不進 repo）。細節見 `WORKFLOW.md` §6。
