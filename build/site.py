@@ -679,7 +679,9 @@ def main():
             if p.is_file():
                 p.unlink()
     OUT.mkdir(parents=True, exist_ok=True)
-    ts = datetime.datetime.now().strftime("%Y/%-m/%-d %H:%M")
+    # 固定使用台灣時間（UTC+8），不依賴執行 build 機器的本地時區
+    # （GitHub Actions runner 跑在 UTC，用 datetime.now() 會慢 8 小時）。
+    ts = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).strftime("%Y/%-m/%-d %H:%M")
     events = load_events()
     if not events:
         sys.exit("找不到任何含 front matter 的事件檔案")

@@ -422,10 +422,12 @@ obscura --stealth fetch https://example.com --dump text
 
 - **混合更新**：平常由 **GitHub Actions 排程**（一天 4～6 次，`.github/workflows/build.yml`）自動 build＋部署；Actions 不穩或需新增災情時，由人工/LLM 手動 build＋部署（`MANUAL_UPDATE.md`）。災情新聞仍需人工把關，**不自動推 RSS**。
   - ⚠️ **Actions 排程**（`.github/workflows/build.yml`）：build → wrangler 部署 Cloudflare → git orphan push 推 GitHub Pages（2026/8/27 修正：移除 peaceiris 避免觸發 Pages 內建 workflow 造成迴圈）。排程 `cron: '0 0,2,4,6,8,10,12,14,16,18,20,22 * * *'`（UTC，每 2 小時）。若 Actions 偶發失敗，99% 是 Cloudflare token 又限區域或失效（runner IP 撞上地域限制 code 9109），去後台重開 token 更新 Secret 即可；或改用本地 cron 備用（`LOCAL_CRON.md`）。
+  - ⚠️ **排程不觸發先查 GitHub status**（2026/8/27 實測）：Actions 排程曾**完全不觸發**，但手動 `workflow_dispatch` 正常、檔案 cron 語法也正確——查 `https://www.githubstatus.com/` 發現是 GitHub 端 incident「**Actions scheduled runs delayed**」（Database primary 故障＋上游 event 處理問題，8/26–8/27 多起）。這是 **GitHub 服務／儲存庫層級問題，不是本 repo 檔案問題**：改名／重建 workflow／改每分鐘 cron 測試都無解。若排程突然不動，**先查 status 頁**，GitHub 修復後會自動恢復，不用動檔案。
 - **金鑰管理**：CWA API Key、Cloudflare 憑證同時存在多處：(1) **本機環境**（手動 build/deploy，`~/.zshrc`）；(2) **GitHub Actions Secrets**（排程/CI 用，加密儲存）；(3) **`build/deploy.env`**（本地 cron 備用，gitignore、600，由 `deploy-cron.sh` 載入；cron 不載入 `.zshrc`）。全程**不寫進任何輸出檔案、不進 `public/`、不進網站**。
   - ⚠️ CWA API **不支援 CORS**（實測 `W-C0034-005` 回應無 `Access-Control-Allow-Origin` 標頭），故**前端無法直接呼叫**，氣象資料必須由本機 build 時抓取後寫入靜態 HTML。
 - **災情來源優先級**：repo 現有 `災情/` markdown → RSS → Obscura 抓取。每筆附**新聞來源**，僅給**少量摘要＋原連結**。
-- **非即時**：Pages 為靜態託管，採手動 build。首頁必須顯示「**產生時間**」（build 時寫入當下系統時間，i18n key `updated`）。
+- **非即時**：Pages 為靜態託管，採手動 build。首頁必須顯示「**產生時間**」（i18n key `updated`）。時間由 `build/site.py` 第 684 行產生：`ts = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8)))`，**固定使用 UTC+8 台灣時間，不依賴執行 build 機器的本地時區**。
+  - ⚠️ **產生時間時區陷阱**：不要改回 `datetime.now()`（不帶時區）。它取的是**執行端本地時鐘**——本機（`Asia/Taipei`）build 時間正確，但 **GitHub Actions runner 跑在 UTC**，會把時間顯示得**慢 8 小時**（2026/8/27 曾發生：Actions 部署的產生時間比台灣時間慢 8 小時）。手動部署若發現右上角時間錯誤，多半是 Actions（UTC）跑的，下次或本機 build 即為台灣時間。
   - ⚠️ 用「產生時間」而非「最後更新」：build 每次都會改這個時間戳，但它只代表「網頁何時生成」，**不等於氣象／災情資料已更新**（資料新鮮度改看各 CWA section 與事件的時間戳）。用「最後更新」會誤導一般使用者。
 - **雙授權**：程式碼（`build/` 等）以 **GNU AGPLv3**（`LICENSE`）；內容（`災情/`、`颱風/` 紀錄及其網頁、`llms.txt`、`llms-full.txt` 產出）以 **CC BY-NC-SA 4.0**（`LICENSE-CONTENT`，不得商用）；CWA 資料以官方條款為準。
 - **LLM 友善產出**：build 必產 `llms.txt`（站點＋事件索引）與 `llms-full.txt`（全部事件繁中全文），canonical base URL 為 `https://weather.avpclub.eu.org`（`build/site.py` 之 `SITE_BASE`）。
