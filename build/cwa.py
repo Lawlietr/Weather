@@ -27,6 +27,7 @@ from pathlib import Path
 
 import i18n
 from i18n import t
+from taiwan_geo import ISLANDS
 
 TZ_TW = timezone(timedelta(hours=8))
 
@@ -293,16 +294,8 @@ def _px(lon, lat):
     return x, y
 
 
-# 簡化台灣外廓（經度, 緯度），由北順時針
-TAIWAN = [
-    (121.53, 25.29), (121.80, 25.15), (121.98, 25.02), (121.95, 24.75),
-    (121.85, 24.40), (121.75, 24.10), (121.60, 23.80), (121.50, 23.50),
-    (121.40, 23.20), (121.20, 22.90), (121.00, 22.55), (120.90, 22.35),
-    (120.85, 22.05), (120.75, 21.95), (120.55, 22.00), (120.35, 22.10),
-    (120.15, 22.25), (120.05, 22.45), (120.10, 22.75), (120.25, 23.05),
-    (120.30, 23.45), (120.55, 23.85), (120.60, 24.05), (120.55, 24.30),
-    (120.65, 24.75), (120.75, 24.95), (121.00, 25.05), (121.35, 25.15),
-]
+# 台灣輪廓：本島＋澎湖／金門／馬祖／蘭嶼／綠島，各自獨立多邊形。
+# 來源見 build/taiwan_geo.py（Natural Earth 1:10m + g0v/twgeojson 馬祖）。
 CITIES = [("city_taipei", 121.56, 25.03), ("city_taichung", 120.67, 24.15),
           ("city_kaoxiong", 120.30, 22.62), ("city_hualien", 121.61, 23.99),
           ("city_taitung", 121.15, 22.75)]
@@ -322,13 +315,17 @@ def typhoon_svg(lang, cyclone):
         _, y = _px(LON0, lat)
         grid.append(f'<line x1="0" y1="{y:.0f}" x2="{W}" y2="{y:.0f}" stroke="var(--line)" stroke-width="0.5" opacity="0.5"/>')
         lat += 2
-    tai = " ".join(f"{_px(lo, la)[0]:.0f},{_px(lo, la)[1]:.0f}" for lo, la in TAIWAN)
+    # 本島與各離島各自獨立 polygon；每島可能含多個 ring
+    tai = "".join(
+        f'<polygon points="{" ".join(f"{_px(lo, la)[0]:.0f},{_px(lo, la)[1]:.0f}" for lo, la in ring)}" '
+        f'fill="var(--chip-bg)" stroke="var(--muted)" stroke-width="1.5"/>'
+        for _, rings in ISLANDS for ring in rings if len(ring) >= 3)
     cities = "".join(
         f'<circle cx="{_px(lo, la)[0]:.0f}" cy="{_px(lo, la)[1]:.0f}" r="2" fill="var(--muted)"/>'
         f'<text x="{_px(lo, la)[0] + 5:.0f}" y="{_px(lo, la)[1] + 3:.0f}" font-size="10" fill="var(--muted)">{t(lang, n)}</text>'
         for n, lo, la in CITIES)
     parts = [f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="{cyclone["name"]}">{"".join(grid)}'
-             f'<polygon points="{tai}" fill="var(--chip-bg)" stroke="var(--muted)" stroke-width="1.5"/>{cities}']
+             f"{tai}{cities}"]
     # 分析軌跡（實線）
     an_pts = []
     for fix in a:

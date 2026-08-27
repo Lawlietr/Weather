@@ -5,30 +5,32 @@
 
 ---
 
-## ⭐ 最高優先：改進台灣輪廓（構想，**尚未實作**，2026/8/27 記）
+## ⭐ 最高優先：改進台灣輪廓（**已實作**，2026/8/27 記）
 
 > 現況：颱風動態的靜態 SVG（`build/cwa.py` 的 `typhoon_svg()`）把台灣畫成**手寫的 26 點簡化多邊形 `TAIWAN`**（`cwa.py` 第 288 行），加上線性矩形投影 `_px()`，輪廓很粗糙、不像真實台灣。
 > 本項目標：讓輪廓「可識別」即可，不用無限逼真。工程不大——本質只是**換掉 `TAIWAN` 這串座標**，投影、城市點、軌跡線全都不用動。
 
 ### 範圍與規格（已定）
 
-1. **包含區域**：台灣本島 ＋ 澎湖、金門、馬祖、蘭嶼、綠島（共 5 個離島群／島）。
-2. **精度**：使用**簡化的海岸線座標**，能看出「台灣本島＋各離島」的相對位置即可，不用細到每海湾、每岬角。
-3. **授權／來源**：優先 MIT／公有領域資料（g0v/twgeojson、Natural Earth），標明出處。
+1. **包含區域**：台灣本島 ＋ 澎湖、金門、馬祖、蘭嶼、綠島（共 5 個離島群／島）。✅ 全部包含。
+2. **精度**：使用**簡化的海岸線座標**，能看出「台灣本島＋各離島」的相對位置即可。✅ 本島 66 點＋離島共 48 點，總 114 點。
+3. **授權／來源**：Natural Earth 1:10m（公有領域）＋ g0v/twgeojson（MIT），已標明出處。✅
 
-### 建議做法
+### 實作結果（2026/8/27）
 
-- **資料來源**：Natural Earth 1:10m 海岸線（公有領域）或 g0v/twgeojson（台灣行政疆界，已 `d3.simplify`，MIT）。對 540×480 小圖，簡化後幾百～上千點即夠。
-- **座標處理**：把 GeoJSON 邊界座標（`lon, lat`）抽成 `TAIWAN` 列表；離島以各自閉合多邊形分別畫（一個 `<polygon>` 一島），避免用本島凸包把海峽包進來。
-- **程式碼改動**：`typhoon_svg()` 改讀新 `TAIWAN`（或從 GeoJSON 解析），`_px()` 投影不動。可考慮保留本島＋離島為多個 polygon。
-- **驗證**：重 build 後預覽 `public/index.html` 的颱風卡，確認本島＋5 離島群可識別、SVG 大小可接受。
+- **新增資料產生器**：`build/make_taiwan_geo.py`（含純 Python Douglas–Peucker 簡化，零相依）。
+- **新增靜態資料**：`build/taiwan_geo.py`（`ISLANDS = [(i18n key, [(lon,lat),...]], ...]`，本島與各離島各自獨立 polygon）。
+- **資料來源**：
+  - 本島／澎湖／金門／蘭嶼／綠島 → Natural Earth 1:10m `ne_10m_admin_0_countries` 的 Taiwan feature（MultiPolygon，8 個 polygon，面積由大到小自動判別身分）。
+  - 馬祖（連江縣）→ Natural Earth **不包含**，改取 g0v/twgeojson `twCounty2010.geo.json` 的 連江縣。
+- **程式碼改動**：
+  - `cwa.py` 移除手寫 `TAIWAN`，`typhoon_svg()` 改迴圈繪製 `ISLANDS` 中每個 ring（本島＋5 離島群各一 `<polygon>`，多 ring 離島如澎湖/馬祖仍正確）。
+  - `_px()` 投影、城市點、軌跡線、預報、風圈**全未更動**。
+- **驗證**：重 build 成功（`build.sh` → `public/`，4 事件／CWA live）。`public/index.html` 颱風卡 SVG 含 11 個 polygon；用 cairosvg 轉 PNG 預覽確認本島＋澎湖＋金門＋馬祖＋蘭嶼＋綠島均可識別，輪廓明顯像台灣。
+- **快取**：產生器把原始 GeoJSON 快取於 `build/_geo_cache_*.json`（已加入 `.gitignore`，不進 repo）。
+- **重跑方式**：修改輪廓只改產生器後執行 `python3 build/make_taiwan_geo.py`；最終資料 `taiwan_geo.py` 為靜態、可離線使用，**不要手改**。
 
-### 工作量預估
-
-- 省事版（g0v/twgeojson 縣級）：約 30 分鐘，輪廓立刻像台灣。
-- 精細版（Natural Earth 1:10m + 簡化 + 離島處理）：約 1–2 小時，細節明顯變好。
-
-> ⚠️ 屬程式碼改動，**不在「氣象＋部署」範圍內**，需使用者點頭再實作。
+> ✅ 已透過使用者審核（build 成功、輪廓可識別）。未 commit。
 
 ---
 

@@ -6,3 +6,4 @@ build/.venv/
 build/cwa_cache.json
 build/__pycache__/
 .wrangler/
+build/_geo_cache_*.json
