@@ -99,16 +99,26 @@ def fetch_marine_alert():
         ti = (i.get("description") or {}).get("typhoon-info", [])
         if isinstance(ti, dict):
             ti = [ti]
-        sections = {}
+        meta = {}
         for block in ti if isinstance(ti, list) else []:
             for s in block.get("section", []):
-                sections[s.get("title", "")] = s.get("value")
+                meta[s.get("title", "")] = s.get("value")
+        # 實際警報全文位於 description.section（命名與位置、強度與半徑…等 8 個 section）
+        content_sections = (i.get("description") or {}).get("section", [])
+        if isinstance(content_sections, dict):
+            content_sections = [content_sections]
+        content = "\n".join(
+            f"【{s.get('title', '')}】{s.get('value', '')}"
+            for s in content_sections
+            if s.get("title") and s.get("value")
+        )
         out.append({
             "title": param.get("alert_title", i.get("headline", "")),
             "severity": i.get("severity", ""),
-            "report_no": sections.get("警報報數", ""),
-            "category": sections.get("警報類別", ""),
-            "typhoon_name": sections.get("颱風名稱", ""),
+            "report_no": meta.get("警報報數", ""),
+            "category": meta.get("警報類別", ""),
+            "typhoon_name": meta.get("颱風名稱", ""),
+            "content": content,
             "effective": i.get("effective", ""),
         })
     return out
@@ -437,11 +447,15 @@ def render_alert_card(lang, marine, reports, stale_at=None):
             continue
         lifted = "解除" in m["title"] or m.get("category") == "END"
         cls = "sev-green" if lifted else "sev-red"
+        body = ""
+        if m.get("content"):
+            body = f'<details><summary class="muted">{t(lang, "view_full")}</summary><pre class="report-text">{m["content"].strip()}</pre></details>'
         items.append(f'<div class="alert-item"><span class="badge {cls}">{t(lang, "marine_badge")}</span>　'
                      f'<b>{m["title"]}</b>'
                      + (t(lang, "report_no", n=m["report_no"]) if m.get("report_no") else "")
                      + (f'｜{t(lang, "typhoon_label", n=m["typhoon_name"])}' if m.get("typhoon_name") else "")
-                     + f'<div class="meta">{t(lang, "effective", ts=_t(m.get("effective")))}</div></div>')
+                     + f'<div class="meta">{t(lang, "effective", ts=_t(m.get("effective")))}</div>'
+                     + body + '</div>')
     for r in reports:
         if not r.get("name"):
             continue
