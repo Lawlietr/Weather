@@ -521,18 +521,64 @@ def news_list_html(rows):
     return f'<ul class="news-list">{"".join(items)}</ul>' if items else ""
 
 
+PINNED_BOTTOM = {"中國大陸": 1, "其他": 2}  # 這兩組固定在「各縣市災情」最底部
+_CN_HOURS = (("凌晨", 4), ("清晨", 6), ("上午", 8), ("中午", 12), ("下午", 14),
+             ("傍晚", 17), ("晚間", 20), ("夜間", 22))
+
+
+def parse_row_time(s, fallback_mtime):
+    """解析災情行的「日期時間」欄位 → datetime（只用於排序，不顯示）。
+    常見格式：2026/7/10 05:30、2026/7/11、2026/7/11 下午、2026/7/12 凌晨4時、2026/7/24～25（取首日）。
+    解析失敗時回退到事件檔 mtime。"""
+    fallback = datetime.datetime.fromtimestamp(fallback_mtime)
+    m = re.search(r"(20\d{2})/(\d{1,2})/(\d{1,2})", s or "")
+    if not m:
+        return fallback
+    try:
+        base = datetime.datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+    except ValueError:
+        return fallback
+    tm = re.search(r"(\d{1,2}):(\d{2})", s)
+    if tm:
+        try:
+            return base + datetime.timedelta(hours=int(tm.group(1)), minutes=int(tm.group(2)))
+        except ValueError:
+            pass
+    h = re.search(r"(\d{1,2})\s*時", s)  # 例：凌晨4時、下午3時
+    if h:
+        try:
+            return base + datetime.timedelta(hours=int(h.group(1)))
+        except ValueError:
+            pass
+    for word, hour in _CN_HOURS:
+        if word in (s or ""):
+            return base + datetime.timedelta(hours=hour)
+    return base
+
+
 def compute_groups(events):
-    """跨事件依縣分組（最新 8 筆/縣）。回傳 {縣名: [(idx, ev, row), ...]}，順序：active 縣市優先。"""
+    """跨事件依縣分組（最新 8 筆/縣）。回傳 {縣名: [(idx, ev, row), ...]}。
+
+    排序規則：
+    - 縣內：依該筆災情行的日期時間（parse_row_time）倒序，最新在上；
+    - 縣間：依該縣「最新一筆災情」的時間倒序——哪縣剛有新災情，哪縣就浮到最上；
+    - 「中國大陸」「其他」固定在最底部（本站以台灣縣市與周圍島嶼為優先）。
+    """
     by_county = {}
     for e in events:
         for idx, r in enumerate(e["rows"]):
             c = find_county(r) or "其他"
+            r["rowtime"] = parse_row_time(r["time"], e["mtime"])
             by_county.setdefault(c, []).append((idx, e, r))
-    active_counties = {c for e in events if e["status"] == "active" for c in e["counties"]}
-    items = {c: sorted(lst, key=lambda x: (x[1]["mtime"], x[0]), reverse=True)[:8]
+    items = {c: sorted(lst, key=lambda x: (x[2]["rowtime"], x[1]["mtime"], x[0]), reverse=True)[:8]
              for c, lst in by_county.items()}
-    ordered = dict(sorted(items.items(), key=lambda x: (0 if x[0] in active_counties else 1, x[0])))
-    return ordered
+
+    def order_key(kv):
+        c, lst = kv
+        latest = max(r["rowtime"] for _, _, r in by_county[c])
+        return (PINNED_BOTTOM.get(c, 0), -latest.timestamp(), c)
+
+    return dict(sorted(items.items(), key=order_key))
 
 
 def chip_html(lang, county, groups):
