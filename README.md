@@ -51,8 +51,8 @@ weather/
 ├── WORKFLOW.md       # Runbook：更新／build／驗證／部署逐步流程（接手先看）
 ├── TODO.md           # 未完成待辦（RSS 抓取、地圖標註）
 ├── README.md         # 本檔案
-├── LICENSE           # 程式碼授權：GNU AGPLv3
-├── LICENSE-CONTENT   # 內容授權：CC BY-NC-SA 4.0（災情紀錄與網頁產出）
+├── LICENSE           # 網站專案程式碼授權：GNU AGPLv3（僅限網站專案）
+├── LICENSE-CONTENT   # 網站內容授權：CC BY-NC-SA 4.0（僅限網站專案發布內容）
 ├── 颱風/             # 颱風紀錄：颱風/{YYYY}/{MM}/{MMDD}_{NN}_{中文名}_{國際命名}.md
 ├── 災情/             # 非颱風災情：災情/{YYYY}/{MM}/{MMDD}_{事件類型}_{事件名稱}.md
 ├── build/            # build 腳本（site.py / cwa.py / i18n.py）；cwa_cache.json 已 gitignore
@@ -72,10 +72,13 @@ weather/
 - **CWA API Key** 只存在本機執行環境：不寫進 build 輸出、不進任何 repo。
 - **公開 GitHub repo 只放 `public/` 靜態產物**：Markdown 原文、build 腳本、內部倉庫資訊一律不公開（部署流程見 `WORKFLOW.md` §6）。
 
-## 授權（雙授權）
+## 授權（僅針對網站專案）
 
-- **程式碼**（`build/` 等）：[GNU AGPLv3](LICENSE)
-- **內容**（`災情/`、`颱風/` 紀錄及其網頁／`llms.txt`／`llms-full.txt` 產出）：
+授權範圍僅限**公開網站**（weather.avpclub.eu.org 及其餘域名），不含本倉儲本身
+（`build/` 腳本、`災情/`、`颱風/` Markdown 原文、文件）：
+
+- **網站程式碼**：[GNU AGPLv3](LICENSE)
+- **網站內容**（網頁、`llms.txt`、`llms-full.txt` 之災情紀錄與彙整文字）：
   [CC BY-NC-SA 4.0（創用 CC 姓名標示-非商業性-相同方式分享）](LICENSE-CONTENT)
   ——可自由分享與調修，但須註明出處、**不得商用**、衍生作品須以相同授權釋出。
 - 源自 CWA Open Data API 的氣象資料以中央氣象署官方條款為準，不為本專案授權範圍。

@@ -1,3 +1,14 @@
+# 授權範圍（License Scope）
+
+本 GNU AGPLv3 授權僅適用於**網站專案**之程式碼：`public/` build 產出
+（靜態網站 https://weather.avpclub.eu.org/ 及其其餘域名）之網站程式碼
+（HTML/CSS/JS 產出）及其對應網站專案代碼。
+
+本倉儲之其他內容（build 腳本、`災情/`、`颱風/` Markdown 原文、文件）
+**不以此授權釋出**；網站之文字內容另見 `LICENSE-CONTENT`。
+
+=======================================================================
+
                     GNU AFFERO GENERAL PUBLIC LICENSE
                        Version 3, 19 November 2007
 

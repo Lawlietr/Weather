@@ -1,9 +1,11 @@
 # 內容授權聲明（Content License）
 
-本倉儲與公開網站（https://weather.avpclub.eu.org/ 及其其餘域名）中的
-**災情紀錄、事件彙整、新聞摘要與相關文字內容**（含 `災情/`、`颱風/` 目錄之
-Markdown 原文及其 build 產出之網頁與 `llms.txt`、`llms-full.txt`），
-以下列授權提供：
+本聲明僅適用於**網站專案**：公開網站（https://weather.avpclub.eu.org/ 及其其餘域名）
+所發布之**災情紀錄、事件彙整、新聞摘要與相關文字內容**（即 build 產出之
+`public/` 網頁與 `llms.txt`、`llms-full.txt`），以下列授權提供：
+
+**不涵蓋**：本倉儲本身（`build/` 腳本、`災情/` 與 `颱風/` 之 Markdown 原始檔、
+各項文件與 README），以及本專案以外之既有著作。
 
     創用 CC 姓名標示-非商業性-相同方式分享 4.0 國際
     (CC BY-NC-SA 4.0)
@@ -23,8 +25,7 @@ Markdown 原文及其 build 產出之網頁與 `llms.txt`、`llms-full.txt`）�
 警報特報、雨量站觀測值等），其權利與使用規範以 CWA 官方條款為準，
 本授權不覆蓋該部分資料本身（本專案對其僅有彙整與呈現）。
 
-**程式碼授權**：本倉儲之程式碼（`build/` 等）另以 GNU AGPLv3 授權，
-見 `LICENSE`。
+**網站程式碼授權**：網站專案之程式碼另以 GNU AGPLv3 授權，見 `LICENSE`。
 
 ---
 

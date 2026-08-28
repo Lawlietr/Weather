@@ -153,7 +153,7 @@ https://opendata.cwa.gov.tw/api/v1/rest/datastore/{Data ID}?Authorization=${CWA_
 - **混合更新**：平常由 **GitHub Actions 排程**（`.github/workflows/build.yml`，每 2 小時 UTC：build → wrangler 部署 Cloudflare → orphan push 推 GitHub Pages；2026/8/27 修正：移除 peaceiris 避免觸發 Pages 內建 workflow 造成迴圈）自動 build＋部署；Actions 不穩或需新增災情時，由人工/LLM 手動 build＋部署（`MANUAL_UPDATE.md`）。災情新聞仍需人工把關，**不自動推 RSS**。排程故障處理（CF token 9109 限區域、GitHub 端 incident）見 `WORKFLOW.md` §5。
 - **金鑰管理**：CWA API Key、Cloudflare 憑證同時存在多處：(1) **本機環境**（手動 build/deploy，`~/.zshrc`）；(2) **GitHub Actions Secrets**（排程/CI 用，加密儲存）；(3) **`build/deploy.env`**（本地 cron 備用，gitignore、600，由 `deploy-cron.sh` 載入；cron 不載入 `.zshrc`）。全程**不寫進任何輸出檔案、不進 `public/`、不進網站**。
 - **非即時**：Pages 為靜態託管，採手動 build。首頁必須顯示「**產生時間**」（i18n key `updated`），由 `build/site.py` 以**固定 UTC+8 台灣時間**產生（`datetime.now(timezone(timedelta(hours=8)))`）；**不可改回不帶時區的 `datetime.now()`**（Actions runner 是 UTC，會慢 8 小時，見 `WORKFLOW.md` §5）。用「產生時間」而非「最後更新」：它只代表網頁何時生成，**不等於氣象／災情資料已更新**。
-- **雙授權**：程式碼（`build/` 等）以 **GNU AGPLv3**（`LICENSE`）；內容（`災情/`、`颱風/` 紀錄及其網頁、`llms.txt`、`llms-full.txt` 產出）以 **CC BY-NC-SA 4.0**（`LICENSE-CONTENT`，不得商用）；CWA 資料以官方條款為準。
+- **授權僅針對網站專案**（2026/8/28 修正）：公開網站之程式碼以 **GNU AGPLv3**（`LICENSE`）、內容（網頁、`llms.txt`、`llms-full.txt` 之災情紀錄與彙整文字）以 **CC BY-NC-SA 4.0**（`LICENSE-CONTENT`，不得商用）；**倉儲本身**（`build/` 腳本、`災情/`、`颱風/` Markdown 原文、文件）**不以此兩授權釋出**；CWA 資料以官方條款為準。
 - **LLM 友善產出**：build 必產 `llms.txt`（站點＋事件索引）與 `llms-full.txt`（全部事件繁中全文），canonical base URL 為 `https://weather.avpclub.eu.org`（`build/site.py` 之 `SITE_BASE`）。
 
 ### 技術架構
