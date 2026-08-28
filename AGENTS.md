@@ -95,6 +95,11 @@
 - 若 incident 清單有 Actions／Pages／Database 相關項目 → **是 GitHub 伺服器端問題，不是本 repo 檔案問題**：
   **不要**改名 workflow、改 cron、重建檔案、反覆重測；incident 解除後排程會自動恢復
   （2026/8/26–8/28 已連續數日發生多起 Actions incident，實測細節見 `WORKFLOW.md` §5.5）。
+- ⚠️ **綠燈 ≠ 沒延遲**：狀態頁只顯示「已宣布」的 incident（全域規模＋門檻制），
+  Actions 排隊、排程延遲在綠燈時照常發生。官方對 schedule 只保證「可能延遲 ≤15 分鐘」，
+  高負載時更久、甚至整格跳過（跳過的 run 不進歷史）。**健康訊號以本 repo run 節奏為準**：
+  預期檔位（cron slot）過後 30 分鐘仍無 run → 視為疑似退化，直接手動 `workflow_dispatch`
+  補跑，不要等紅燈，也不要重寫 workflow。
 - 急用時改走手動：`workflow_dispatch` 觸發，或本機 `./build/deploy.sh`（見 `MANUAL_UPDATE.md`）。
 
 ---
