@@ -48,7 +48,7 @@ cd public && python3 -m http.server 8080
 weather/
 ├── AGENTS.md         # 專案規範：檔案規則、CWA API 參考、網站設計原則
 ├── WORKFLOW.md       # Runbook：更新／build／驗證／部署逐步流程（接手先看）
-├── TODO.md           # 網站構想、已定案事項、待辦
+├── TODO.md           # 未完成待辦（RSS 抓取、地圖標註）
 ├── README.md         # 本檔案
 ├── LICENSE           # 程式碼授權：GNU AGPLv3
 ├── LICENSE-CONTENT   # 內容授權：CC BY-NC-SA 4.0（災情紀錄與網頁產出）

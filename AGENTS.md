@@ -410,7 +410,7 @@ obscura --stealth fetch https://example.com --dump text
 - **構想與待辦**：`TODO.md`。
 - **build 入口**：`./build/build.sh`（產出 `public/`（繁中）與 `public/ja/`（日文）、`llms.txt`（LLM 索引）與 `llms-full.txt`（事件全文）；CWA 資料 build 時本機抓取）。
   公開網站主要 host 於 Cloudflare Pages（自訂域名），另同步 GitHub Pages；彙整氣象署天氣資訊與災情紀錄。
-- **颱風軌跡圖台灣輪廓**：`build/cwa.py` 的 `typhoon_svg()` 不再用手寫多邊形，改用 `build/taiwan_geo.py` 的 `ISLANDS`（本島＋澎湖／金門／馬祖／蘭嶼／綠島各自獨立 polygon）。產生器 `build/make_taiwan_geo.py`（含純 Python Douglas–Peucker 簡化，無相依）重跑後會覆寫 `taiwan_geo.py`；原始 GeoJSON 快取 `build/_geo_cache_*.json` 已 gitignore。見 `TODO.md`「⭐ 最高優先：改進台灣輪廓」。
+- **颱風軌跡圖台灣輪廓**：`build/cwa.py` 的 `typhoon_svg()` 不再用手寫多邊形，改用 `build/taiwan_geo.py` 的 `ISLANDS`（本島＋澎湖／金門／馬祖／蘭嶼／綠島各自獨立 polygon）。產生器 `build/make_taiwan_geo.py`（含純 Python Douglas–Peucker 簡化，無相依）重跑後會覆寫 `taiwan_geo.py`；原始 GeoJSON 快取 `build/_geo_cache_*.json` 已 gitignore。
 
 ### 多語言（i18n）
 

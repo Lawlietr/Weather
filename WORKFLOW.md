@@ -176,7 +176,7 @@ cd public && python3 -m http.server 8080
      金鑰完全不碰 GitHub。
   2. **CI 跑 build**：build 在 Actions 執行，`CWA_API_KEY` 放 GitHub secret。
      輸出仍靜態、金鑰不進產物，但金鑰會出現在 CI 環境——權衡後再定。
-  3. **定時排程（cron）**：已定案——本地 cron 備用（`build/deploy-cron.sh`，每 2 小時、預設不啟用）＋ GitHub Actions 排程（每 2 小時 UTC），見上方。核心原則已拍板（`TODO.md` §二.1、`LOCAL_CRON.md`）。
+  3. **定時排程（cron）**：已定案——本地 cron 備用（`build/deploy-cron.sh`，每 2 小時、預設不啟用）＋ GitHub Actions 排程（每 2 小時 UTC），見上方。核心原則已拍板（見 `LOCAL_CRON.md`）。
 
 ---
 
