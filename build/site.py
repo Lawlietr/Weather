@@ -148,6 +148,15 @@ ul.news-list li a{word-break:break-all}
 /* CWA 氣象總覽 */
 .cwa-warn{background:var(--chip-bg);border:1px solid var(--yellow);border-radius:8px;padding:10px 14px;margin:8px 0}
 .cwa-fail{border-color:var(--yellow)}
+/* 目前風險狀態列：由 CWA 目前之警報/特報推導（與事件歷史 severity 無關） */
+.risk-bar{border:2px solid var(--line);border-radius:10px;padding:12px 18px;margin:14px 0;background:var(--card)}
+.risk-bar.risk-red{border-color:var(--red);background:var(--red-bg)}
+.risk-bar.risk-yellow{border-color:var(--yellow);background:var(--yellow-bg)}
+.risk-bar.risk-green{border-color:var(--green)}
+.risk-bar.risk-unknown{border-style:dashed}
+.risk-bar .risk-label{font-weight:800;font-size:1rem}
+.risk-bar ul{list-style:none;margin:6px 0 0;padding:0}
+.risk-bar li{padding:2px 0;font-size:.95rem}
 .typhoon-row{display:flex;gap:18px;align-items:flex-start;margin:10px 0}
 .typhoon-row .map{flex:0 0 340px;max-width:46%}
 .typhoon-row .map svg{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
@@ -518,20 +527,48 @@ def chip_html(lang, county, groups):
     return f'<span class="chip" title="{t(lang, "nav_no_county")}">{county}</span>'
 
 
+def risk_bar_html(lang, level, items, ts, stale):
+    """首頁頂部「目前風險狀態列」：level/items 由 cwa.current_risk_level() 推導。"""
+    cls = {"red": "risk-red", "yellow": "risk-yellow", "green": "risk-green",
+           "unknown": "risk-unknown"}[level]
+    if level in ("red", "yellow"):
+        body = "<ul>" + "".join(f"<li>{t(lang, key, **params)}</li>" for _, key, params in items) + "</ul>"
+    elif level == "green":
+        body = f'<p style="margin:4px 0 0">{t(lang, "risk_none")}</p>'
+    else:
+        body = ""
+    stale_note = f"　{t(lang, 'stale_tag', ts='、'.join(stale.values()))}" if stale else ""
+    return f"""
+<section class="risk-bar {cls}">
+<div class="risk-label">{t(lang, f"risk_label_{level}")}</div>
+{body}
+<p class="meta">{t(lang, "risk_asof", ts=ts)}{stale_note}</p>
+</section>"""
+
+
 def build_home(lang, events, ts, groups, cwa_ctx):
     active = [e for e in events if e["status"] == "active"]
     ended = [e for e in events if e["status"] != "active"]
     parts = []
+    data, errors, stale, mode = cwa_ctx
 
-    # 1. Hero：active 中最後修改最新者
+    # 1. 目前風險狀態列：由 CWA 現況警報/特報推導（與事件歷史 severity 獨立，
+    #    危險結束後不再顯示事件歷史紅）
+    level, items = cwa.current_risk_level(lang, data, stale, mode)
+    parts.append(risk_bar_html(lang, level, items, ts, stale))
+
+    # 2. CWA 氣象總覽（現況資料來源，移至事件 hero 上方；build 時本機抓取，金鑰不出現在輸出）
+    parts.append(cwa.cwa_section_html(lang, *cwa_ctx, has_active_event=bool(active)))
+
+    # 3. Hero：active 事件入口卡（中性卡；severity 徽章只在事件頁與封存清單顯示）
     if active:
         main_ev = active[0]
         latest = main_ev["rows"][-6:][::-1]
         chips = "".join(chip_html(lang, c, groups) for c in main_ev["counties"])
         src = "、".join(main_ev["sources"])
         parts.append(f"""
-<section class="card hero sev-{main_ev['severity']}">
-<h2 style="border:none">{badge(lang, main_ev['severity'])}　<a href="{'/'.join(main_ev['url'])}">{main_ev["name"]}</a></h2>
+<section class="card hero">
+<h2 style="border:none"><span class="chip">{t(lang, "status_active")}</span>　<a href="{'/'.join(main_ev['url'])}">{main_ev["name"]}</a></h2>
 <p class="meta">{(t(lang, "hero_period", p=main_ev["period"]) + "　") if main_ev["period"] else ""}{t(lang, "hero_source", src=src)}</p>
 <p>{main_ev["summary"]}</p>
 <div class="chips">{chips}</div>
@@ -542,17 +579,14 @@ def build_home(lang, events, ts, groups, cwa_ctx):
         # 其他 active 事件
         for e in active[1:]:
             parts.append(f"""
-<section class="card hero sev-{e['severity']}">
-<h2 style="border:none">{badge(lang, e['severity'])}　<a href="{'/'.join(e['url'])}">{e["name"]}</a></h2>
+<section class="card hero">
+<h2 style="border:none"><span class="chip">{t(lang, "status_active")}</span>　<a href="{'/'.join(e['url'])}">{e["name"]}</a></h2>
 <p>{e["summary"]}</p>
 </section>""")
     else:
         parts.append(f'<section class="card hero"><h2 style="border:none;margin-top:0">{t(lang, "no_event_title")}</h2><p>{t(lang, "no_event_body")}</p></section>')
 
-    # 2. CWA 氣象總覽（build 時本機抓取，金鑰不出現在輸出）
-    parts.append(cwa.cwa_section_html(lang, *cwa_ctx, has_active_event=bool(active)))
-
-    # 3. 各縣市災情（跨事件，依縣分組，最新在最上；卡片帶 id 供錨點跳轉）
+    # 4. 各縣市災情（跨事件，依縣分組，最新在最上；卡片帶 id 供錨點跳轉）
     if groups:
         blocks = []
         for county, lst in groups.items():
@@ -566,7 +600,7 @@ def build_home(lang, events, ts, groups, cwa_ctx):
 </div>""")
         parts.append(f'<section><h2>{t(lang, "county_section")}</h2>' + "".join(blocks) + "</section>")
 
-    # 4. 過去事件封存（active / ended 均可瀏覽）
+    # 5. 過去事件封存（active / ended 均可瀏覽；保留 severity 徽章：歷史事件索引）
     if ended:
         lis = []
         for e in ended:
@@ -599,8 +633,8 @@ def build_event_page(lang, ev, ts, depth):
 SITE_BASE = "https://weather.avpclub.eu.org"
 
 
-def build_llms_files(events, ts):
-    """產生 llms.txt（簡明索引）與 llms-full.txt（事件全文），供 LLM 讀取本站內容。
+def build_llms_files(events, ts, cwa_ctx):
+    """產生 llms.txt（簡明索引＋目前風險狀態）與 llms-full.txt（事件全文），供 LLM 讀取本站內容。
 
     固定用繁中（default 語言路徑，即 public/ 根），因為事件正文皆為繁中原文。
     """
@@ -608,6 +642,12 @@ def build_llms_files(events, ts):
     active = [e for e in events if e["status"] == "active"]
     ended = [e for e in events if e["status"] != "active"]
     sev = {"red": "🔴 重大", "yellow": "🟡 警戒", "green": "🟢 一般"}
+    data, errors, stale, mode = cwa_ctx
+    level, items = cwa.current_risk_level("zh-Hant", data, stale, mode)
+    risk_label = t("zh-Hant", f"risk_label_{level}")
+    risk_detail = "；".join(t("zh-Hant", k, **p) for _, k, p in items) or t("zh-Hant", "risk_none").rstrip("。")
+    risk_line = (f"> 目前風險狀態（依 CWA 目前之警報與特報判斷，產生於 {ts}）："
+                 f"{risk_label}——{risk_detail}。")
 
     def link(e):
         return f"{base}/{'/'.join(e['url'])}"
@@ -622,6 +662,8 @@ def build_llms_files(events, ts):
              f"> 記錄台灣目前與歷史上發生的颱風、低壓帶、豪雨等天氣事件與各縣市災情的純靜態網站。"
              f"氣象資料來源為中央氣象署（CWA）Open Data API，災情來源為各縣市政府公告與新聞媒體。"
              f"產生時間：{ts}。繁中為預設語言；`/ja/` 為日文介面（事件正文仍為繁中原文）。",
+             "",
+             risk_line,
              "",
              "## 網站結構",
              "",
@@ -706,11 +748,12 @@ def main():
             out_path.parent.mkdir(parents=True, exist_ok=True)
             out_path.write_text(page, encoding="utf-8")
 
-    build_llms_files(events, ts)
+    build_llms_files(events, ts, cwa_ctx)
 
     mode = cwa_ctx[3]
     src_note = {"live": "CWA live", "partial": "CWA partial（含舊資料）", "cache": "CWA 快取", "none": "CWA 無法取得"}[mode]
-    print(f"build 完成：{len(events)} 個事件（active {sum(1 for e in events if e['status']=='active')} / ended {sum(1 for e in events if e['status']!='active')}）｜{src_note}｜llms.txt + llms-full.txt 已產生")
+    risk, _ = cwa.current_risk_level("zh-Hant", cwa_ctx[0], cwa_ctx[2], mode)
+    print(f"build 完成：{len(events)} 個事件（active {sum(1 for e in events if e['status']=='active')} / ended {sum(1 for e in events if e['status']!='active')}）｜{src_note}｜目前風險：{risk}｜llms.txt + llms-full.txt 已產生")
     print(f"輸出：{OUT}")
     print(f"預覽：cd {OUT} && python3 -m http.server 8080")
 
