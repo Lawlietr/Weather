@@ -179,7 +179,7 @@ cd public && python3 -m http.server 8080
   - 金鑰在 `build/deploy.env`（gitignore、600，由 `build/deploy-cron.sh` 載入；cron 不載入 `.zshrc`）；需該機器常醒著。
 - **更新 agent**：負責「查 CWA API/新聞 → 更新 markdown → build → push」。
   輸入就是本文件 §1～§3；agent 不需懂解析細節，照 check 清單驗收即可。
-
+- **地圖紅警層（CWA，2026/8/28 定案，待實作）**：全自動——build 時抓 CWA（特報/雨量站/氣旋）合成 `map.geo.json` 與地圖頁，掛在**現有每 2 小時排程**上，不新增排程/agent/金鑰；陸地紅區靠 gazetteer（鄉鎮級靜態 JSON，存 repo）轉換特報文字。細節見 `TODO.md` §2a；災情新聞點層（§2b）維持人工把關。
 - **更新 agent**：負責「查 CWA API/新聞 → 更新 markdown → build → push」。
   輸入就是本文件 §1～§3；agent 不需懂解析細節，照 check 清單驗收即可。
 - **GitHub Actions 三種用法**（依風險由低到高，屆時再選）：
