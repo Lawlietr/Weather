@@ -53,7 +53,7 @@
   ---
   status: active        # active | ended
   event: 2026 第 N 號颱風 中文名
-  severity: 🔴重大      # 🔴重大 | 🟡警戒 | 🟢一般
+  severity: 🔴重大      # 🔴重大 | 🟡警戒 | 🟢一般（歷史分級；事件結束後不降級）
   counties: [南投, 屏東, ...]
   summary: 一兩句摘要
   sources: [新聞來源與日期]
@@ -62,8 +62,9 @@
 
 ### 2.2 事件狀態生命周期
 - 事件發生 → 建檔，`status: active`。
-- 首頁 Hero 區自動取 active 中「最後修改」最新者（`build/site.py` 邏輯，勿手動改首頁 HTML）。
-- 事件結束後 → 把該檔 front matter 改為 `status: ended`，重 build；事件自動降級到 archive。
+- 首頁 Hero 區自動取 active 中「最後修改」最新者（`build/site.py` 邏輯，勿手動改首頁 HTML）。Hero 為**中性入口卡**（無 severity 色系/徽章）——「現在危不危險」由頂部「目前風險狀態列」回答。
+- **目前風險狀態列**（red/yellow/green/unknown）：由 `build/cwa.py: current_risk_level()` 自動推導（生效中熱帶氣旋、未解除海上颱風警報、未解除災害天氣特報；已解除/END 跳過，雨量觀測值不計）。不需人工維護、不受事件 `status`/`severity` 影響——事件 ended 後若 CWA 仍有警報/特報，風險列仍會顯示 red。
+- 事件結束後 → 把該檔 front matter 改為 `status: ended`，重 build；事件自動降級到 archive。`severity` 保留歷史分級不降級（徽章只顯示在事件詳情頁與封存清單）。
 
 ## 3. 驗證檢查清單（每次 build 後）
 
@@ -91,7 +92,9 @@ grep -rc "Authorization=" public/ | grep -v ":0" || echo "OK: 無 Authorization"
 grep -rc "$CWA_API_KEY" public/ build/cwa_cache.json | grep -v ":0" || echo "OK: 無金鑰值"
 # ④ 雙語言輸出確認（兩套根頁都存在、語言切換連結正確）
 ls public/index.html public/ja/index.html
-# ⑤ 瀏覽器預覽（重點：首頁 Hero、CWA 區塊、手機寬度、兩套主題、/ja/ 版）
+# ⑤ 風險狀態列（由 CWA 自動推導；應與 build 日誌「目前風險：xxx」一致）
+grep -o 'risk-bar risk-[a-z]*' public/index.html | head -1
+# ⑥ 瀏覽器預覽（重點：風險狀態列、首頁 Hero、CWA 區塊、手機寬度、兩套主題、/ja/ 版）
 cd public && python3 -m http.server 8080
 ```
 
