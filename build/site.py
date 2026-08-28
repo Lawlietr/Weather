@@ -240,6 +240,20 @@ def parse_front_matter(text: str):
     return {}, text
 
 
+def dedupe_last_modified(body: str) -> str:
+    """檔首只顯示最新一筆「最後修改：」。
+    舊慣例是「每次修改新增一筆」，會使檔首堆疊多行並全數渲染到事件頁；
+    此處只處理檔首連續的該類行（保留第一行＝最新），正文其餘位置不受影響。
+    新慣例為原地更新單行（見 AGENTS.md），此函式僅為防線。"""
+    lines = body.splitlines()
+    block = 0
+    while block < len(lines) and re.match(r"^\s*最後修改：", lines[block]):
+        block += 1
+    if block > 1:
+        lines = [lines[0], *lines[block:]]
+    return "\n".join(lines)
+
+
 def extract_news_by_county(body: str):
     """解析「### XX災情新聞來源」章節的 markdown 連結，回傳 {縣名: [(標題, URL, 媒體), ...]}。
     標題與媒體相同時以連結文字為準；行格式：- [標題](URL) — 媒體名"""
@@ -325,6 +339,7 @@ def load_events():
             fm, body = parse_front_matter(text)
             if not fm:
                 continue
+            body = dedupe_last_modified(body)
             events.append({
                 "path": p,
                 "rel": ["events", *p.relative_to(ROOT).with_suffix(".html").parts],  # 磁碟路徑（原始中文）
