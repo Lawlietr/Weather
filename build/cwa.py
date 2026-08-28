@@ -372,6 +372,58 @@ def typhoon_svg(lang, cyclone):
     return "".join(parts)
 
 
+# ---------------------------------------------------------------- 目前風險狀態
+
+def current_risk_level(lang, data, stale, mode):
+    """由 CWA 現況資料推導「目前風險狀態」（首頁頂部狀態列用）。
+
+    與事件的歷史分級（severity）完全獨立：severity 是事件最終量級（固定），
+    這裡只回答「現在有沒有危險」。依據：
+    - 生效中熱帶氣旋（有分析資料）：max wind >= 24.5 m/s → red，否則 yellow
+    - 海上颱風警報（未解除）→ red
+    - 災害性天氣特報（未解除）：沿用 _sev_color 分級（紅/黃），綠色級別不計入
+    雨量觀測值不計入：那是「過去累計」，不是當前危險信號。
+
+    回傳 (level, items)：level ∈ red/yellow/green/unknown（mode=none → unknown）；
+    items = [(level, i18n_key, params), ...]（green 不進 items）。
+    stale 供呼叫端標註舊資料。
+    """
+    if mode == "none":
+        return "unknown", []
+    items = []
+    d = data or {}
+    for c in d.get("typhoons", []):
+        fixes = c.get("analysis") or []
+        if not fixes:
+            continue
+        wind = _num((fixes[-1] or {}).get("MaxWindSpeed"))
+        level = "red" if (wind is not None and wind >= 24.5) else "yellow"
+        name = c.get("name", "") or "（未命名）"
+        if c.get("intl"):
+            name += f"（{c['intl']}）"
+        cat = _classify(wind)
+        items.append((level, "risk_typhoon",
+                      {"name": name, "cat": f"（強度：{t(lang, cat)}）" if cat else ""}))
+    for m in d.get("marine_alert", []):
+        if not m.get("title") or "解除" in m["title"] or m.get("category") == "END":
+            continue
+        items.append(("red", "risk_marine", {"title": m["title"]}))
+    for r in d.get("reports", []):
+        if not r.get("name") or "解除" in r["name"]:
+            continue
+        cls = _sev_color(r["name"], r["phenomena"])
+        if cls == "sev-green":
+            continue
+        valid = r.get("valid", "")
+        if "~" in valid:
+            valid = " ~ ".join(_t(p.strip()) for p in valid.split("~") if p.strip())
+        else:
+            valid = _t(valid)
+        items.append((cls[4:], "risk_report", {"name": r["name"], "valid": valid}))
+    level = "red" if any(l == "red" for l, _, _ in items) else ("yellow" if items else "green")
+    return level, items
+
+
 # ---------------------------------------------------------------- 區塊渲染
 
 def render_typhoon_card(lang, typhoons, stale_at=None):

@@ -94,6 +94,16 @@ STRINGS = {
     "cwa_fail_fix": "{why}。設定 CWA_API_KEY 後重新 build。",
     "cwa_warn_partial": "⚠️ 本次 build 部分 CWA 資料來源無法取得（{bad}），以下含舊資料。",
     "cwa_warn_cache": "⚠️ 本次 build 無法連線 CWA API，以下為上次成功抓取之快取資料。",
+    # --- 目前風險狀態列（由 CWA 現況警報推導，與事件歷史分級無關）---
+    "risk_label_red": "🔴 目前危險中",
+    "risk_label_yellow": "🟡 警戒生效中",
+    "risk_label_green": "🟢 目前無危險信號",
+    "risk_label_unknown": "⚪ 狀態未知（CWA 資料無法取得）",
+    "risk_none": "目前無生效中熱帶氣旋、海上颱風警報或豪雨/強風特報。",
+    "risk_asof": "依中央氣象署目前之警報與特報判斷（網頁產生於 {ts}）；此為目前風險信號，不等於事件歷史分級。",
+    "risk_typhoon": "熱帶氣旋 {name} 生效中{cat}",
+    "risk_marine": "{title}（生效中）",
+    "risk_report": "{name}（有效至 {valid}）",
     # --- 颱風強度分類（CWA 級別） ---
     "ty_cat_super": "超強颱風",
     "ty_cat_strong": "強颱風",
@@ -184,6 +194,16 @@ STRINGS = {
     "cwa_fail_fix": "{why}。CWA_API_KEY を設定のうえ再ビルドしてください。",
     "cwa_warn_partial": "⚠️ 今回のビルドで一部の CWA データソースを取得できませんでした（{bad}）。以下は古いデータを含みます。",
     "cwa_warn_cache": "⚠️ 今回のビルドで CWA API に接続できませんでした。以下は前回取得成功時のキャッシュデータです。",
+    # --- 現在のリスク状態バー（CWA の現行警報から導出、イベントの過去段階とは無関係）---
+    "risk_label_red": "🔴 現在危険",
+    "risk_label_yellow": "🟡 警戒中",
+    "risk_label_green": "🟢 現在の危険シグナルなし",
+    "risk_label_unknown": "⚪ 状況不明（CWA データ取得不可）",
+    "risk_none": "現在、活動中の熱帯低気圧、海洋台風警報、大雨・強風特別警報はありません。",
+    "risk_asof": "中央気象局（CWA）の現在の警報・特別警報に基づく（ページ生成 {ts}）；これは現在のリスクシグナルであり、イベントの過去段階を意味しません。",
+    "risk_typhoon": "熱帯低気圧 {name} が発効中{cat}",
+    "risk_marine": "{title}（発効中）",
+    "risk_report": "{name}（有効 {valid}）",
     # --- 台風強度分類（CWA 級別） ---
     "ty_cat_super": "猛烈な台風",
     "ty_cat_strong": "非常に強い台風",
