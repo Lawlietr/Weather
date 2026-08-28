@@ -155,6 +155,7 @@ https://opendata.cwa.gov.tw/api/v1/rest/datastore/{Data ID}?Authorization=${CWA_
 ## 網站專案（已上線：Cloudflare Pages `weather.*` 自訂域名 ×3 ＋ GitHub Pages https://lawlietr.github.io/Weather/）
 
 - **更新/部署工作流（runbook）**：`WORKFLOW.md`——接手者（agent 或人工）先看這個。
+- **⚠️ 更新災情前先看 `WORKFLOW.md` §8「Agent 效率規範」**：先查 repo 既有檔案／`ctx_search`／`cwa_cache.json`，只查會變的資料，同一資料一個 session 只查一次。
 - **構想與待辦**：`TODO.md`。
 - **build 入口**：`./build/build.sh`（產出 `public/`（繁中）與 `public/ja/`（日文）、`llms.txt`（LLM 索引）與 `llms-full.txt`（事件全文）；CWA 資料 build 時本機抓取）。
   公開網站主要 host 於 Cloudflare Pages（自訂域名），另同步 GitHub Pages；彙整氣象署天氣資訊與災情紀錄。

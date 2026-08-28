@@ -201,6 +201,20 @@ cd public && python3 -m http.server 8080
 
 ---
 
+## 8. Agent 效率規範（2026/8/28 血淚教訓：一次災情更新花了 1 小時）
+
+**核心原則：先查既有資料，再決定要不要重新抓。重複查詢是浪費金錢（token/API 額度）。**
+
+1. **開工前必查三處（按順序，找到就停）**：
+   1. **repo 現有檔案**：`颱風/` `災情/` 裡的既有事件檔已含軌跡、警報時程、雨量——更新時**只補差異**，不重寫既有內容。
+   2. **context-mode 知識庫**：`ctx_search`（前幾天的 API 結構、抓取結果都自動存了）；`ctx_stats` 可看存了什麼。
+   3. **`cwa_cache.json`**（gitignored 本機快取）：上一次 build 的 CWA 資料。
+2. **只查會變的**：颱風位置/強度（每 3~6 小時才變）、當前警報狀態（`Warning_Content.js` 或 W-C0034-001 最後一報）、當日雨量。**不重查**：生成時間、歷史軌跡（已入檔）、API 結構（已入檔＋§5）、RSS 來源清單（`build/rss_sources.json`）。
+3. **同一資料一個 session 只查一次**：查到的 JSON 存 `/tmp`，後續用本機檔案處理（python），不重複 curl/RSS 全量掃描。
+4. **RSS 掃描一次就夠**：關鍵詞命中 0~2 條即停，不要換關鍵詞重掃、不要同一 feed 掃多輪。
+5. **寫檔一次成型**：長內容分段寫或先存 `/tmp` 再 `cp`，避免 write 工具 output token 截斷重來（8/28 實測發生）。
+6. **完成定義**：git status 乾淨（或 diff 已確認）＋ build ＋ deploy ＋ 推 `origin` 與 `github`。deploy 之後不要再做「驗證」式查詢。
+
 ## 附：快速指令參考
 
 ```bash
