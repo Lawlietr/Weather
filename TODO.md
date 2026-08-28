@@ -7,7 +7,7 @@
 
 ## 1. RSS 災情抓取接入 build
 
-`build/rss_sources.json` 已建好並實測（來源清單與抓取守則見 `AGENTS.md`「新聞 RSS 來源清單」），但 `build/site.py` 尚未有任何 RSS 邏輯。待實作：
+`build/rss_sources.json` 已建好並實測（來源清單與抓取守則見 `build/rss_sources.json` 與 `AGENTS.md`「新聞 RSS 來源」），但 `build/site.py` 尚未有任何 RSS 邏輯。待實作：
 
 - 批次抓取 `rss_sources.json` 的 `sources`（勿呼叫 `failed_sources`）。
 - 解析器需同時相容 `rss20`（`<item>`）與 `atom`（`<entry>`，公視是 Atom）。

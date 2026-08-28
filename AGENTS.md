@@ -72,57 +72,32 @@
 
 > ⚠️ 使用新聞資料時，請確認時效性，避免使用舊聞；引用時請註明新聞來源與日期。
 
-## 新聞 RSS 來源清單（`build/rss_sources.json`）⭐ 讀 RSS 前先讀這個
+## 新聞 RSS 來源
 
-> build 抓取即時新聞災情（災情來源第二優先級）時，**一律讀取 `build/rss_sources.json`** 取得可用來源，不要自行重新查或寫死 URL。此檔已實測，避免對失效來源重複呼叫。
-
-- **檔案位置**：`build/rss_sources.json`（2026/8/27 建立，已實測）。
-- **內容**：
-  - `sources`（已驗證可用，8 家／21 個分類網址）＋ `failed_sources`（失效，勿呼叫）＋ `usage_notes`（抓取守則）。
-  - 每條含：`name`／`domain`／`format`（`rss20` 用 `<item>`／`atom` 用 `<entry>`）／`status`／`priority`（`high`＝災情最相關／`medium`）／`disaster_relevance`／`urls`（`category`＋`url`）／`notes`。
-- **已驗證可用（災情優先）**：中央社 CNA（社會/地方檔最高）、自由時報 LTN（社會/地方）、台視 TTV、公視 PTS（**⚠️ Atom 格式**）、新頭殼、關鍵評論、民報（**域名 `peoplenews.tw`，非 `minmax.tw`**）、報導者。
-- **失效勿呼叫**：中天（全站封鎖本環境）、聯合報、中國時報、華視、鏡新聞、公民新聞、東森、三立、頭家日報、鉅亨。
-- **待復查**：**風傳媒 storm.mg**（RSS 疑似移除，但它是颱風/災情最重要新媒體之一，日後重測；取不到時退而用 Obscura 抓其新聞頁）。
-- **抓取守則（`usage_notes`）**：批次抓取、解析器需同時相容 `rss20` 與 `atom`、單一來源 404/超時**不中斷 build**（跳過＋記 warning）、依時間過濾只保留近期且與當前活動事件相關條目、每筆只給摘要＋原連結、不自動推。
-- **守則來源**：中央社 Feedburner 多分類獨立、LTN 檔頭有 BOM（解析需去除）。完整細節見檔案內 `usage_notes`。
+- **一律先讀 `build/rss_sources.json`** 取得來源清單（`sources` 8 家已實測可用；`failed_sources` 失效**勿呼叫**；`usage_notes` 為完整抓取守則），不要自行重新查或寫死 URL。
+- 重點：解析器需相容 `rss20`（`<item>`）與 `atom`（`<entry>`，公視是 Atom）；LTN feed 檔頭有 BOM；**民報域名是 `peoplenews.tw`（非 `minmax.tw`）**；單一來源 404/超時**不中斷 build**（跳過＋記 warning）。
+- **風傳媒（storm.mg）待復查**：RSS 疑似移除，但它是颱風/災情最重要新媒體之一；取不到時退而用 Obscura 抓其新聞頁。
 
 ## Git
 
 - 預設分支：`main`（原 `master` 已更名）
 - 功能開發在 `DEV` 分支，**經使用者確認後才合併回 `main`**
-- 無 CI、無 lint/test 指令
+- 無 lint/test 指令；CI 為 GitHub Actions 排程 build＋部署（見「網站專案」）
 
 ---
 
 ## 中央氣象署（CWA）Open Data API
 
-### API Key 設定
+⭐ **逐 dataset 欄位查表**（結構、呼叫範例、Python 範例、實測差異）：**`build/CWA_API.md`**——解析資料前讀它。
 
-**方式一：環境變數（推薦，自動載入）**
+### API Key
 
-API Key 已設定在 `~/.zshrc`，開啟新 terminal 即可使用：
+以環境變數 `CWA_API_KEY` 讀取（已設在 `~/.zshrc`；也可放專案 `.env`，已 gitignore）。**不得硬編碼或 commit 到 Git**；程式用 `os.getenv("CWA_API_KEY")` 讀取。
 
-```bash
-export CWA_API_KEY="你的_API_KEY"
+### Base URL
+
 ```
-
-**方式二：專案 `.env` 文件**
-
-在專案根目錄建立 `.env` 文件，內容如下：
-
-```bash
-CWA_API_KEY=你的_API_KEY
-```
-
-⚠️ **安全規範**：
-- API Key **不得**硬編碼在腳本或 commit 到 Git
-- `.env` 已加入 `.gitignore`，不會被提交
-- 使用時請透過 `os.getenv("CWA_API_KEY")` 或 shell 讀取
-
-### API 基礎 URL
-
-```bash
-BASE_URL="https://opendata.cwa.gov.tw/api/v1/rest/datastore"
+https://opendata.cwa.gov.tw/api/v1/rest/datastore/{Data ID}?Authorization=${CWA_API_KEY}&format=JSON
 ```
 
 ### API 優先級說明（依事件類型）
@@ -135,271 +110,26 @@ BASE_URL="https://opendata.cwa.gov.tw/api/v1/rest/datastore"
 
 > 完整官方清單（80 筆，2026/8/25 核對）見 `https://opendata.cwa.gov.tw/apidoc/v1`（OpenAPI YAML）。舊資料中常見但**已不存在**（404）的 Data ID：O-A0013~19（逐時/3h/24h 雨量）、F-C0033-001（48h 雨量預報）、F-C0034-001、F-A0045-001（降雨雷達）、W-C0024-001、F-C0040-001（土石流）、O-C0010-001（河川水位）——開放資料平台無這些產品，需改抓 CWA 官網頁面（obscura）或新聞。
 
----
+### ⚠️ 關鍵陷阱（實測）
 
-### P0 必須查詢（颱風追蹤核心）
+1. O-A0001-001 / O-A0002-001 的 `Now.Precipitation` 是**本日 0 時至目前累計**（**非** 1 小時雨量）；1 小時雨量用 O-A0002-001 的 `Past1hr`。
+2. CWA 回傳結構**與官方文件不同**（如 W-C0034-005 多一層 `TropicalCyclone[]`、移動欄位是 `MovingSpeed/MovingDirection`）：改解析碼前**先 dump 真實回傳**，勿照舊文件猜。對照見 `build/CWA_API.md`「實測差異」與 `WORKFLOW.md` §5。
+3. **O-B0075-001（48 小時海況）回傳空 JSON**（2026/8/25 實測）；海況改看 CWA 官網頁面或新聞。
+4. **CWA API 不支援 CORS**（回應無 `Access-Control-Allow-Origin`）：前端無法直接呼叫，氣象資料必須本機 build 時抓取後寫入靜態 HTML。
+5. **更新頻率**：颱風警報每 3~6 小時、氣旋資料每 6 小時；建議每 30~60 分鐘查詢一次即可。
 
-#### 1. 熱帶氣旋完整資料（W-C0034-005）⭐ 最優先
-
-- **用途**：西北太平洋及南海所有活動中熱帶氣旋的**完整歷史軌跡 + 未來預報**
-- **回傳格式**：JSON
-- **呼叫方式**：
-```bash
-curl "${BASE_URL}/W-C0034-005?Authorization=${CWA_API_KEY}&format=JSON"
-```
-- **主要欄位**：
-  - `records.TropicalCyclones[].AnalysisData.Fix`：過去至現在的觀測資料（每 6 小時）
-  - `records.TropicalCyclones[].ForecastData.Fix`：未來預報（6h~120h）
-  - 每個 Fix 包含：DateTime、位置（CoordinateLatitude/Longitude）、最大風速、氣壓、移動速度/方向、暴風半徑
-- **特點**：資料最完整，**每次更新都必須查詢**，適合自動更新颱風軌跡和預報
-
-#### 2. 海上颱風警報（W-C0034-001）
-
-- **用途**：CAP 格式的颱風警報資訊（警報標題、顏色、嚴重程度、警報報數、颱風編號、警戒區域）＋完整警報內文
-- **回傳格式**：JSON
-- **呼叫方式**：
-```bash
-curl "${BASE_URL}/W-C0034-001?Authorization=${CWA_API_KEY}&format=JSON"
-```
-- **主要欄位**：
-  - `records.info[0].parameter`：警報標題（`alert_title`）、顏色（`alert_color`）、嚴重程度（`severity_level`）
-  - `records.info[0].description.typhoon-info[].section[]`：颱風基本資料，但**僅元數據**（「警報報數」「警報類別」「颱風編號」「颱風資訊」），無實際內文
-  - `records.info[0].description.section[]`：**實際警報全文**（「命名與位置」「強度與半徑」「移速與預測」「颱風動態」「警戒區域及事項」「大雨/強風特報」「注意事項」等），需由此處讀取
-  - `records.info[0].area`：警戒區域多邊形座標
-- **特點**：提供警報顏色、警戒區域與完整內文，**每次更新都必須查詢**（全文在 `description.section`，不在 `typhoon-info`）
+資料集清單權威來源：`https://opendata.cwa.gov.tw/apidoc/v1`（OpenAPI YAML，含全部 80 個 Data ID、參數與枚舉值）；web 版資料清單頁為 SPA，直接爬 HTML 拿不到清單。
 
 ---
 
-### P1 重要（災情記錄相關）
+## Obscura 無頭瀏覽器
 
-#### 3. 陸上強風特報（W-C0033-001）
+用於爬取 API 沒有的 JavaScript 渲染頁面（如 CWA 官網頁面）。**工具本身的使用說明見 skill `/root/.pi/agent/skills/obscura/SKILL.md`**（binary `/usr/local/bin/obscura`，Docker 容器 `obscura`，MCP HTTP port 3000）。repo 相關：
 
-- **用途**：各縣市陸上強風特報資訊
-- **回傳格式**：JSON
-- **呼叫方式**：
-```bash
-curl "${BASE_URL}/W-C0033-001?Authorization=${CWA_API_KEY}&format=JSON"
-```
-- **主要欄位**：
-  - `records.location[].hazardConditions.hazards`：各縣市強風特報
-  - 包含：phenomena（陸上強風）、significance（特報）、validTime（有效時間）
-- **特點**：當有陸上強風特報時查詢，用於記錄陸上風災影響
-
-#### 4. 災害性天氣特報（W-C0033-003 / W-C0033-002）⭐ 豪雨事件首選
-
-- **用途**：豪大雨特報等災害性天氣資訊（W-C0033-003 為 CAP 格式，W-C0033-002 為純文字＋影響區域）
-- **回傳格式**：JSON
-- **呼叫方式**：
-```bash
-curl "${BASE_URL}/W-C0033-003?Authorization=${CWA_API_KEY}&format=JSON"   # CAP 格式
-curl "${BASE_URL}/W-C0033-002?Authorization=${CWA_API_KEY}&format=JSON"   # 純文字內容＋影響區域，較易解析
-```
-- **W-C0033-003 主要欄位**：
-  - `records.info[].description`：災害說明（通常會提及颱風編號與影響）
-  - `records.info[].parameter`：警報顏色、嚴重程度（如：severity_level、alert_color）
-  - `records.info[].area`：警戒區域（區/鄉鎮級別）
-  - `records.info[].effective` / `onset` / `expires`：生效／開始／失效時間
-- **W-C0033-002 主要欄位**：
-  - `records.record[].datasetInfo.datasetDescription`：特報品名（如「大雨特報」）
-  - `records.record[].datasetInfo.validTime` / `issueTime` / `update`：有效與發布時間
-  - `records.record[].contents.content.contentText`：特報全文（純文字）
-  - `records.record[].hazardConditions.hazards.hazard[]`：phenomena（大雨/豪雨/強風…）、significance（特報/警報）、affectingArea
-- **特點**：**豪雨/大雨事件每次更新必查**，用於記錄降雨災情與警報升降級
-
-#### 5. 雨量觀測站資料（O-A0002-001）⭐ 豪雨事件雨量首選
-
-- **用途**：全臺 1300+ 自動雨量站，**每 10 分鐘更新**，含多重時間尺度累計雨量
-- **回傳格式**：JSON（約 1.2 MB；可用 `&StationName=高雄&StationName=屏東` 篩選）
-- **呼叫方式**：
-```bash
-curl "${BASE_URL}/O-A0002-001?Authorization=${CWA_API_KEY}&format=JSON"
-```
-- **主要欄位**（`records.Station[]`）：
-  - `StationName` / `StationId` / `ObsTime.DateTime` / `GeoInfo`（座標、鄉鎮、海拔）
-  - `RainfallElement.Now.Precipitation`：**本日 0 時至目前的累積雨量** ⚠️ 不是 1 小時雨量！
-  - `RainfallElement.Past10Min / Past1hr / Past3hr / Past6Hr / Past12hr / Past24hr / Past2days / Past3days`：各時間尺度累計（短延時強降雨看 Past1hr/Past3hr）
-- **特點**：**豪雨事件 P0**。短延時強降雨（時雨量 40/80mm 等）以 `Past1hr` 為準；災情累計雨量以 `Past24hr` / `Past3days` 為準；`Now` 不可標註成「1 小時雨量」
-
-#### 6. 自動氣象站資料（O-A0001-001 / O-A0003-001）
-
-- **用途**：O-A0001-001 為全測站**逐時**氣象資料；O-A0003-001 為 10 分鐘綜觀氣象
-- **回傳格式**：JSON
-- **呼叫方式**：
-```bash
-curl "${BASE_URL}/O-A0001-001?Authorization=${CWA_API_KEY}&format=JSON"
-curl "${BASE_URL}/O-A0003-001?Authorization=${CWA_API_KEY}&format=JSON"
-```
-- **主要欄位**（`records.Station[].WeatherElement.Now`）：
-  - `Precipitation`：雨量（⚠️ 與 O-A0002-001 的 `Now` 同源，為**本日 0 時至目前累計**，非 1 小時雨量）
-  - `WindSpeed` / 陣風：風速（注意：部分站點回傳 None，結構為 `WeatherElement.Now.*`）
-  - `AirTemperature` / `RelativeHumidity` / `AirPressure`：氣溫／濕度／氣壓
-- **特點**：用於風速、氣壓、氣溫等災情紀錄；雨量請改用 O-A0002-001
-
-#### 7. 每日雨量（C-B0025-001）
-
-- **用途**：地面測站每日雨量（當年 1/1 起逐日，「T」=雨跡〈0.5mm、「X」=無紀錄/儀器故障）
-- **回傳格式**：JSON
-- **呼叫方式**：
-```bash
-curl "${BASE_URL}/C-B0025-001?Authorization=${CWA_API_KEY}&format=JSON"
-```
-- **主要欄位**：`records.location[].station`（StationID/StationName）＋ `stationObsTimes.stationObsTime[].{Date, weatherElements.Precipitation}`
-- **特點**：事件結束後補寫每日雨量總表時使用
-
-#### 8. 30 天觀測資料（C-B0024-001）
-
-- **用途**：地面測站近 30 天逐日氣象要素（氣壓、氣溫、濕度、風速、雨量、日照）
-- **回傳格式**：JSON
-- **呼叫方式**：
-```bash
-curl "${BASE_URL}/C-B0024-001?Authorization=${CWA_API_KEY}&format=JSON"
-```
-- **特點**：事件前後背景氣候資料（如「近 30 日第 N 大雨」比較），P2
-
----
-
-### P2 輔助（可選查詢）
-
-#### 9. 鄉鎮天氣預報（F-D0047-xxx）⭐ 豪雨事件預報首選
-
-- **用途**：各縣鄉鎮級「未來 3 天／未來 1 週」預報（溫度、降水、降雨機率、風、天氣現象）
-- **回傳格式**：JSON
-- **Data ID 對照**：屏東 033/035、臺東 037/039、花蓮 041/043、高雄 065/067、臺南 077/079、連江 081/083、**全臺各鄉鎮 093**
-- **呼叫方式**：
-```bash
-curl "${BASE_URL}/F-D0047-033?Authorization=${CWA_API_KEY}&format=JSON"   # 屏東縣未來 3 天
-curl "${BASE_URL}/F-D0047-093?Authorization=${CWA_API_KEY}&format=JSON"   # 全臺各鄉鎮
-```
-- **主要欄位**：`records.Locations[].Location[]` → `WeatherElement[].{ElementName, Time[].{DataTime, ElementValue[]}}`（結構清晰，比 F-C0032-001 易解析）
-- **特點**：豪雨事件「未來天氣預報」章節首選
-
-#### 10. 今明 36 小時天氣預報（F-C0032-001）
-
-- **用途**：鄉鎮級 36 小時預報（天氣現象、降雨機率）
-- **回傳格式**：JSON
-- **呼叫方式**：
-```bash
-curl "${BASE_URL}/F-C0032-001?Authorization=${CWA_API_KEY}&format=JSON"
-```
-- **主要欄位**：`records.location[].weatherElement[]`（⚠️ 子欄位結構與 F-D0047 不同，解析前請先 dump 一筆確認；若遇到解析失敗，改用 F-D0047-093）
-- **特點**：可選
-
-#### 11. 潮汐預報（F-A0021-001）
-
-- **用途**：未來 1 個月潮汐預報（鄉鎮、大潮小潮、滿潮乾潮、時間、潮高）
-- **回傳格式**：JSON
-- **呼叫方式**：
-```bash
-curl "${BASE_URL}/F-A0021-001?Authorization=${CWA_API_KEY}&format=JSON"
-```
-- **主要欄位**：
-  - `LocationName`：鄉鎮名稱
-  - `Tide`：滿潮/乾潮
-  - `TideHeights`：潮高
-
-#### 12. 測站基本資料（C-B0074-001 / C-B0074-002）
-
-- **用途**：有人／無人氣象測站清單（站號、站名、經緯度、海拔、狀態、起止日期）
-- **呼叫方式**：
-```bash
-curl "${BASE_URL}/C-B0074-002?Authorization=${CWA_API_KEY}&format=JSON"
-```
-- **主要欄位**：`records.data.stationStatus.station[]` → `StationID` / `StationName` / `StationLatitude/Longitude` / `StationAltitude` / `CountyName`
-- **特點**：無人氣象站（山區雨量站）的坐標對照，P2
-- **特點**：當颱風可能引發沿海風暴潮時查詢，**可選**
-
-### 資料解析範例（Python）
-
-```python
-import requests
-import os
-
-API_KEY = os.getenv("CWA_API_KEY")
-BASE_URL = "https://opendata.cwa.gov.tw/api/v1/rest/datastore"
-
-def get_typhoon_data():
-    """取得 W-C0034-005 熱帶氣旋資料"""
-    url = f"{BASE_URL}/W-C0034-005"
-    params = {
-        "Authorization": API_KEY,
-        "format": "JSON"
-    }
-    response = requests.get(url, params=params)
-    data = response.json()
-    
-    # 解析白海豚颱風資料
-    for cyclone in data["records"]["TropicalCyclones"]:
-        if cyclone["CwaTyphoonName"] == "白海豚":
-            # 最新觀測數據
-            latest = cyclone["AnalysisData"]["Fix"][-1]
-            print(f"位置：{latest['CoordinateLatitude']}, {latest['CoordinateLongitude']}")
-            print(f"風速：{latest['MaxWindSpeed']} m/s")
-            print(f"氣壓：{latest['Pressure']} hPa")
-            
-            # 預報數據
-            for forecast in cyclone["ForecastData"]["Fix"]:
-                print(f"{forecast['ForecastHour']}h：{forecast['CoordinateLatitude']}°, {forecast['CoordinateLongitude']}°")
-    
-    return data
-```
-
-### 注意事項
-
-1. **快取建議**：API 有快取機制，建議每 30 分鐘至 1 小時查詢一次
-2. **資料更新頻率**：颱風警報每 3~6 小時更新，熱帶氣旋資料每 6 小時更新
-3. **錯誤處理**：若 `success` 欄位為 `"false"`，檢查 API Key 或 Data ID
-4. **格式確認**：各資料集可下載格式不同（JSON/XML/ZIP/CAP），使用前請確認
-5. **開發指南**：https://opendata.cwa.gov.tw/devManual/insrtuction
-6. **資料清單**：https://opendata.cwa.gov.tw/devManual/datalist
-7. **Swagger 線上文件**：https://opendata.cwa.gov.tw/dist/opendata-swagger.html
-8. **資料集清單權威來源**：`https://opendata.cwa.gov.tw/apidoc/v1`（OpenAPI YAML，含全部 80 個 Data ID、參數與枚舉值）；web 版資料清單頁為 SPA，直接爬 HTML 拿不到清單
-9. **雨量欄位語意**：O-A0001-001 / O-A0002-001 的 `Now.Precipitation` = **本日 0 時至目前累計**（非 1 小時雨量）；1 小時雨量請用 O-A0002-001 的 `Past1hr`（2026/8/25 根據官方資料集說明核實）
-10. **O-B0075-001（48 小時海況）JSON 回傳空**：2026/8/25 實測 `records` 為空，海況改看 CWA 官網頁面或新聞
-
----
-
-## Obscura 無頭瀏覽器工具
-
-用於爬取中央氣象署網站的 JavaScript 渲染內容（當 API 無法取得時）。
-
-### 基本資訊
-- **Binary 位置**：`/usr/local/bin/obscura`（v0.2.0）
-- **Docker 容器**：`obscura`（MCP HTTP port 3000, CDP port 9222）
-- **技能文件**：`/root/.pi/agent/skills/obscura/SKILL.md`
-
-### 常用指令
-
-```bash
-# 提取頁面文字（JS 執行後）
-obscura fetch https://www.cwa.gov.tw --dump text --timeout 20
-
-# 提取完整 HTML
-obscura fetch https://www.cwa.gov.tw --dump html --timeout 20
-
-# 提取連結
-obscura fetch https://www.cwa.gov.tw --dump links --timeout 20
-
-# 等待特定元素
-obscura fetch https://example.com --selector ".content" --timeout 15
-
-# Stealth 模式（防封鎖）
-obscura --stealth fetch https://example.com --dump text
-```
-
-### 中央氣象署常用頁面
-
-| 頁面 | URL | 說明 |
-|------|-----|------|
-| 首頁 | `https://www.cwa.gov.tw/V8/C/` | 天氣預報、氣象觀測 |
-| 颱風警報 | `TY_WARN.html` | 颱風警報狀態 |
-| 颱風消息 | `TY_NEWS.html` | 颱風路徑潛勢預報 |
-| 颱風強風告警 | `TY_WIND.html` | 強風告警狀態 |
-
-### 注意事項
-- 首頁有 SVG JS 錯誤（`getTotalLength is not a function`），不影響主要內容
-- 舊路徑 `Typhoon.html` 已移除，正確路徑為 `P/Typhoon/TY_*.html`
-- 多語句 JS 需包 IIFE：`(function(){ ... })()`
-- SSRF 保護會阻擋 private network，需加 `--allow-private-network`
+- **CWA 頁面**：颱風頁在 `P/Typhoon/`——`TY_WARN.html`（警報狀態）、`TY_NEWS.html`（路徑潛勢預報）、`TY_WIND.html`（強風告警）；舊路徑 `Typhoon.html` 已移除。
+- 首頁 `https://www.cwa.gov.tw/V8/C/` 有 SVG JS 錯誤（`getTotalLength is not a function`），不影響主要內容。
+- 多語句 JS 需包 IIFE：`(function(){ ... })()`。
+- SSRF 保護會阻擋 private network，需加 `--allow-private-network`。
 - Docker 容器未運行時：`docker run -d --name obscura -p 3000:3000 h4ckf0r0day/obscura mcp --http --port 3000 --host 0.0.0.0`
 
 ---
@@ -420,15 +150,9 @@ obscura --stealth fetch https://example.com --dump text
 
 ### 核心原則
 
-- **混合更新**：平常由 **GitHub Actions 排程**（一天 4～6 次，`.github/workflows/build.yml`）自動 build＋部署；Actions 不穩或需新增災情時，由人工/LLM 手動 build＋部署（`MANUAL_UPDATE.md`）。災情新聞仍需人工把關，**不自動推 RSS**。
-  - ⚠️ **Actions 排程**（`.github/workflows/build.yml`）：build → wrangler 部署 Cloudflare → git orphan push 推 GitHub Pages（2026/8/27 修正：移除 peaceiris 避免觸發 Pages 內建 workflow 造成迴圈）。排程 `cron: '0 0,2,4,6,8,10,12,14,16,18,20,22 * * *'`（UTC，每 2 小時）。若 Actions 偶發失敗，99% 是 Cloudflare token 又限區域或失效（runner IP 撞上地域限制 code 9109），去後台重開 token 更新 Secret 即可；或改用本地 cron 備用（`LOCAL_CRON.md`）。
-  - ⚠️ **排程不觸發先查 GitHub status**（2026/8/27 實測）：Actions 排程曾**完全不觸發**，但手動 `workflow_dispatch` 正常、檔案 cron 語法也正確——查 `https://www.githubstatus.com/` 發現是 GitHub 端 incident「**Actions scheduled runs delayed**」（Database primary 故障＋上游 event 處理問題，8/26–8/27 多起）。這是 **GitHub 服務／儲存庫層級問題，不是本 repo 檔案問題**：改名／重建 workflow／改每分鐘 cron 測試都無解。若排程突然不動，**先查 status 頁**，GitHub 修復後會自動恢復，不用動檔案。
+- **混合更新**：平常由 **GitHub Actions 排程**（`.github/workflows/build.yml`，每 2 小時 UTC：build → wrangler 部署 Cloudflare → orphan push 推 GitHub Pages；2026/8/27 修正：移除 peaceiris 避免觸發 Pages 內建 workflow 造成迴圈）自動 build＋部署；Actions 不穩或需新增災情時，由人工/LLM 手動 build＋部署（`MANUAL_UPDATE.md`）。災情新聞仍需人工把關，**不自動推 RSS**。排程故障處理（CF token 9109 限區域、GitHub 端 incident）見 `WORKFLOW.md` §5。
 - **金鑰管理**：CWA API Key、Cloudflare 憑證同時存在多處：(1) **本機環境**（手動 build/deploy，`~/.zshrc`）；(2) **GitHub Actions Secrets**（排程/CI 用，加密儲存）；(3) **`build/deploy.env`**（本地 cron 備用，gitignore、600，由 `deploy-cron.sh` 載入；cron 不載入 `.zshrc`）。全程**不寫進任何輸出檔案、不進 `public/`、不進網站**。
-  - ⚠️ CWA API **不支援 CORS**（實測 `W-C0034-005` 回應無 `Access-Control-Allow-Origin` 標頭），故**前端無法直接呼叫**，氣象資料必須由本機 build 時抓取後寫入靜態 HTML。
-- **災情來源優先級**：repo 現有 `災情/` markdown → RSS → Obscura 抓取。每筆附**新聞來源**，僅給**少量摘要＋原連結**。
-- **非即時**：Pages 為靜態託管，採手動 build。首頁必須顯示「**產生時間**」（i18n key `updated`）。時間由 `build/site.py` 第 684 行產生：`ts = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8)))`，**固定使用 UTC+8 台灣時間，不依賴執行 build 機器的本地時區**。
-  - ⚠️ **產生時間時區陷阱**：不要改回 `datetime.now()`（不帶時區）。它取的是**執行端本地時鐘**——本機（`Asia/Taipei`）build 時間正確，但 **GitHub Actions runner 跑在 UTC**，會把時間顯示得**慢 8 小時**（2026/8/27 曾發生：Actions 部署的產生時間比台灣時間慢 8 小時）。手動部署若發現右上角時間錯誤，多半是 Actions（UTC）跑的，下次或本機 build 即為台灣時間。
-  - ⚠️ 用「產生時間」而非「最後更新」：build 每次都會改這個時間戳，但它只代表「網頁何時生成」，**不等於氣象／災情資料已更新**（資料新鮮度改看各 CWA section 與事件的時間戳）。用「最後更新」會誤導一般使用者。
+- **非即時**：Pages 為靜態託管，採手動 build。首頁必須顯示「**產生時間**」（i18n key `updated`），由 `build/site.py` 以**固定 UTC+8 台灣時間**產生（`datetime.now(timezone(timedelta(hours=8)))`）；**不可改回不帶時區的 `datetime.now()`**（Actions runner 是 UTC，會慢 8 小時，見 `WORKFLOW.md` §5）。用「產生時間」而非「最後更新」：它只代表網頁何時生成，**不等於氣象／災情資料已更新**。
 - **雙授權**：程式碼（`build/` 等）以 **GNU AGPLv3**（`LICENSE`）；內容（`災情/`、`颱風/` 紀錄及其網頁、`llms.txt`、`llms-full.txt` 產出）以 **CC BY-NC-SA 4.0**（`LICENSE-CONTENT`，不得商用）；CWA 資料以官方條款為準。
 - **LLM 友善產出**：build 必產 `llms.txt`（站點＋事件索引）與 `llms-full.txt`（全部事件繁中全文），canonical base URL 為 `https://weather.avpclub.eu.org`（`build/site.py` 之 `SITE_BASE`）。
 

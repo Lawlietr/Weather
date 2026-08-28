@@ -3,7 +3,7 @@
 > **讀者**：接手本專案的 agent 或人工操作者。
 > **定位**：「怎麼做」的逐步流程。專案規範（檔案格式、CWA API 結構、設計原則）在
 > `AGENTS.md` 與 `TODO.md`，本文件不重複，只引用。
-> 最後更新：2026/8/27
+> 最後更新：2026/8/28
 > 
 > **環境現況（2026/8/27）**：GitHub repo `Lawlietr/Weather` **已設為公開**（原私有）；`CWA_API_KEY`、
 > `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID` 已存入 **GitHub Actions Secrets**。公開網站由
@@ -101,8 +101,8 @@ cd public && python3 -m http.server 8080
 |------|------|
 | build 顯示「CWA none」 | 金鑰或網路問題。查 `CWA_API_KEY`、`curl` 直連測試。頁面會顯示 `cwa-fail` 警示卡，**不要**把警示卡 commit 進公開站（除非確實要公告資料中斷）。 |
 | build 顯示「CWA partial」 | 單一來源失敗，其餘用快取舊值＋「舊資料」標註。重試一次；若持續，記錄是哪個 Data ID（錯誤訊息會寫出）。 |
-| CWA 回傳結構變動（KeyError/欄位缺失） | **先 dump 真實回傳結構再改解析**，勿照舊文件猜。結構差異對照表在 AGENTS.md 與本文件 §5。 |
-| 需要爬 CWA 官網頁面（API 沒有該產品） | 用 Obscura（設定見 AGENTS.md「Obscura 無頭瀏覽器工具」）。 |
+| CWA 回傳結構變動（KeyError/欄位缺失） | **先 dump 真實回傳結構再改解析**，勿照舊文件猜。結構差異對照表在 `build/CWA_API.md`「實測差異」與本文件 §5。 |
+| 需要爬 CWA 官網頁面（API 沒有該產品） | 用 Obscura（見 skill `/root/.pi/agent/skills/obscura/SKILL.md`，repo 相關頁面見 AGENTS.md「Obscura 無頭瀏覽器」）。 |
 | SSL 錯誤 `CERTIFICATE_VERIFY_FAILED` | 已知問題（見 §5），build 已改走 curl；若你改動 `cwa.py` 的 `_get_json`，**不要改回 urllib**。 |
 
 ## 5. 已知陷阱（2026/8/26–8/27 實測確認）
@@ -125,6 +125,17 @@ cd public && python3 -m http.server 8080
    快取值為 `null`/缺失時 `cwa.py` 會跳過該來源，屬預期行為。
 4. 公開 GitHub repo 只應收到 `public/` 靜態產物，**不收 markdown 原文與 build 腳本**
    （金鑰不進輸出已驗證，但流程上仍分開）。
+5. **Actions 排程突然不觸發，先查 GitHub status**（`https://www.githubstatus.com/`）：2026/8/27
+   實測排程完全不觸發，但手動 `workflow_dispatch` 正常、cron 語法也正確——查 status 發現是
+   GitHub 端 incident「Actions scheduled runs delayed」（Database primary 故障）。
+   **是 GitHub 服務／儲存庫層級問題，不是本 repo 檔案問題**：改名／重建 workflow／改每分鐘 cron
+   測試都無解；GitHub 修復後自動恢復，不用動檔案。
+6. **Actions 偶發失敗，99% 是 Cloudflare token 限區域或失效**：runner IP 撞地域限制（code 9109）。
+   去 CF 後台重開 token 並更新 GitHub Secret 即可；或改用本地 cron 備用（`LOCAL_CRON.md`）。
+7. **「產生時間」時區陷阱**：`build/site.py` 必須保持
+   `datetime.now(timezone(timedelta(hours=8)))`（固定 UTC+8）。若改回不帶時區的 `datetime.now()`，
+   本機（`Asia/Taipei`）build 時間正確，但 **Actions runner 是 UTC，會慢 8 小時**（2026/8/27 曾發生）。
+   手動部署若發現右上角時間錯誤，多半是 Actions（UTC）跑的，下次或本機 build 即恢復。
 
 ## 6. 部署
 

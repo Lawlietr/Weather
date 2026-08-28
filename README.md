@@ -46,7 +46,8 @@ cd public && python3 -m http.server 8080
 
 ```
 weather/
-├── AGENTS.md         # 專案規範：檔案規則、CWA API 參考、網站設計原則
+├── AGENTS.md         # 專案規範：檔案規則、CWA API 優先級、網站設計原則
+├── build/CWA_API.md  # CWA 逐 dataset 欄位查表（解析 CWA 資料前讀）
 ├── WORKFLOW.md       # Runbook：更新／build／驗證／部署逐步流程（接手先看）
 ├── TODO.md           # 未完成待辦（RSS 抓取、地圖標註）
 ├── README.md         # 本檔案
@@ -62,7 +63,7 @@ weather/
 
 | 內容 | 來源 |
 |------|------|
-| 颱風軌跡／強度／警報特報／雨量 | [CWA Open Data API](https://opendata.cwa.gov.tw/)（Data ID 對照見 `AGENTS.md`） |
+| 颱風軌跡／強度／警報特報／雨量 | [CWA Open Data API](https://opendata.cwa.gov.tw/)（優先級見 `AGENTS.md`，欄位查表見 `build/CWA_API.md`） |
 | 災情紀錄（淹水、樹倒、停電等） | 本倉 Markdown，每筆附新聞來源與日期 |
 | 停班停課、交通影響 | 教育部、各縣市政府、交通部公告（記錄於事件內文） |
 

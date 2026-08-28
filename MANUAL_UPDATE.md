@@ -115,7 +115,7 @@ git push origin main
 
 | 症狀 | 處理 |
 |------|------|
-| CWA 回傳結構變動（KeyError／欄位缺失） | **先 dump 真實回傳結構再改解析**，勿照舊文件猜。差異對照見 `AGENTS.md` 與 `WORKFLOW.md` §5。 |
+| CWA 回傳結構變動（KeyError／欄位缺失） | **先 dump 真實回傳結構再改解析**，勿照舊文件猜。差異對照見 `build/CWA_API.md` 與 `WORKFLOW.md` §5。 |
 | SSL 錯誤 `CERTIFICATE_VERIFY_FAILED` | 已知問題，build 已改走 curl；改 `cwa.py` 的 `_get_json` 時**不要改回 urllib**。 |
 | `wrangler` 找不到 | 用 `npx -y wrangler@latest …`（本機已裝 node，或 npx 自動抓）。 |
 | GitHub Pages push 被拒 | 確認已 `source ~/.zshrc`、git 憑證正常（Mac 用 keychain）。 |
