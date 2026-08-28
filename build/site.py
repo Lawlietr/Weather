@@ -526,16 +526,28 @@ _CN_HOURS = (("凌晨", 4), ("清晨", 6), ("上午", 8), ("中午", 12), ("下�
              ("傍晚", 17), ("晚間", 20), ("夜間", 22))
 
 
-def parse_row_time(s, fallback_mtime):
+def parse_row_time(s, fallback_mtime, year_hint=None, month_hint=None):
     """解析災情行的「日期時間」欄位 → datetime（只用於排序，不顯示）。
     常見格式：2026/7/10 05:30、2026/7/11、2026/7/11 下午、2026/7/12 凌晨4時、2026/7/24～25（取首日）。
-    解析失敗時回退到事件檔 mtime。"""
+    不帶年份的「M/D」依檔案路徑的 {YYYY}/{MM}/ 目錄推定年份（repo 慣例），
+    跨年情境用月份差距修正：檔案在 12 月而日期在 1 月 → 下年度；反之 → 上年度。
+    解析失敗時回退到事件檔 mtime（回傳值为 mtime 時由呼叫端計入 warning）。"""
     fallback = datetime.datetime.fromtimestamp(fallback_mtime)
     m = re.search(r"(20\d{2})/(\d{1,2})/(\d{1,2})", s or "")
     if not m:
-        return fallback
+        m = re.search(r"(?<!\d)(\d{1,2})/(\d{1,2})(?!\d)", s or "")  # 不帶年份：M/D（取首日）
+        if not m or not year_hint:
+            return fallback
+        year, month, day = year_hint, int(m.group(1)), int(m.group(2))
+        if month_hint:
+            if month - month_hint > 2:
+                year -= 1      # 檔案在 02 月、日期為 12/30 → 上年度
+            elif month_hint - month > 2:
+                year += 1      # 檔案在 12 月、日期為 1/3 → 下年度
+    else:
+        year, month, day = (int(g) for g in m.groups())
     try:
-        base = datetime.datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        base = datetime.datetime(year, month, day)
     except ValueError:
         return fallback
     tm = re.search(r"(\d{1,2}):(\d{2})", s)
@@ -560,16 +572,30 @@ def compute_groups(events):
     """跨事件依縣分組（最新 8 筆/縣）。回傳 {縣名: [(idx, ev, row), ...]}。
 
     排序規則：
-    - 縣內：依該筆災情行的日期時間（parse_row_time）倒序，最新在上；
+    - 縣內：依該筆災情行的日期時間（parse_row_time；不帶年份者依檔案 {YYYY}/{MM}/ 路徑推定）倒序，最新在上；
     - 縣間：依該縣「最新一筆災情」的時間倒序——哪縣剛有新災情，哪縣就浮到最上；
     - 「中國大陸」「其他」固定在最底部（本站以台灣縣市與周圍島嶼為優先）。
     """
     by_county = {}
+    no_year = []  # 不帶年份靠路徑推定的行（供 warning，確認推定無誤）
     for e in events:
+        year_hint = month_hint = None
+        for part in e["path"].parts:  # 目錄慣例：…/{YYYY}/{MM}/…
+            if re.fullmatch(r"20\d{2}", part):
+                year_hint = int(part)
+            elif re.fullmatch(r"\d{1,2}", part) and 1 <= int(part) <= 12:
+                month_hint = int(part)
         for idx, r in enumerate(e["rows"]):
             c = find_county(r) or "其他"
-            r["rowtime"] = parse_row_time(r["time"], e["mtime"])
+            rt = parse_row_time(r["time"], e["mtime"], year_hint, month_hint)
+            if rt == datetime.datetime.fromtimestamp(e["mtime"]) and not re.search(r"20\d{2}", r["time"]):
+                no_year.append((e["name"], r["time"]))
+            r["rowtime"] = rt
             by_county.setdefault(c, []).append((idx, e, r))
+    if no_year:
+        print(f"warning: {len(no_year)} 筆災情行無法解析日期，排序回退到檔案修改時間（建議補上完整年份，如 2026/7/10 05:30）：")
+        for name, tm in no_year[:10]:
+            print(f"  - {name}｜{tm!r}")
     items = {c: sorted(lst, key=lambda x: (x[2]["rowtime"], x[1]["mtime"], x[0]), reverse=True)[:8]
              for c, lst in by_county.items()}
 
