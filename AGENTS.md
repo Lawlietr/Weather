@@ -84,6 +84,19 @@
 - 功能開發在 `DEV` 分支，**經使用者確認後才合併回 `main`**
 - 無 lint/test 指令；CI 為 GitHub Actions 排程 build＋部署（見「網站專案」）
 
+### ⚠️ GitHub Actions 異常時，agent 第一步：先看 GitHub 官方狀態
+
+遇到 Actions **排程不觸發／run 卡住／大量失敗**時，**先查 GitHub 狀態頁，再動本 repo 的檔案**：
+
+- 狀態頁：https://www.githubstatus.com/
+- JSON API（可用 curl/腳本直接查）：
+  - `curl -s https://www.githubstatus.com/api/v2/status.json`（整體狀態）
+  - `curl -s https://www.githubstatus.com/api/v2/incidents.json`（近 30 天 incidents）
+- 若 incident 清單有 Actions／Pages／Database 相關項目 → **是 GitHub 伺服器端問題，不是本 repo 檔案問題**：
+  **不要**改名 workflow、改 cron、重建檔案、反覆重測；incident 解除後排程會自動恢復
+  （2026/8/26–8/28 已連續數日發生多起 Actions incident，實測細節見 `WORKFLOW.md` §5.5）。
+- 急用時改走手動：`workflow_dispatch` 觸發，或本機 `./build/deploy.sh`（見 `MANUAL_UPDATE.md`）。
+
 ---
 
 ## 中央氣象署（CWA）Open Data API

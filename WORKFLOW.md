@@ -133,6 +133,9 @@ cd public && python3 -m http.server 8080
    GitHub 端 incident「Actions scheduled runs delayed」（Database primary 故障）。
    **是 GitHub 服務／儲存庫層級問題，不是本 repo 檔案問題**：改名／重建 workflow／改每分鐘 cron
    測試都無解；GitHub 修復後自動恢復，不用動檔案。
+   2026/8/24–8/28 已連續多日有多起 Actions/Pages incident（`/api/v2/incidents.json` 可查近 30 天）。agent 快速查法：
+   `curl -s https://www.githubstatus.com/api/v2/status.json`（整體）＋ `.../api/v2/incidents.json`（incident 清單）；
+   排程漏跑可能延遲數小時才補跑、也可能直接跳過不進 run 歷史。
 6. **Actions 偶發失敗，99% 是 Cloudflare token 限區域或失效**：runner IP 撞地域限制（code 9109）。
    去 CF 後台重開 token 並更新 GitHub Secret 即可；或改用本地 cron 備用（`LOCAL_CRON.md`）。
 7. **「產生時間」時區陷阱**：`build/site.py` 必須保持
