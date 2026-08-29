@@ -31,8 +31,8 @@ mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/deploy-cron-$(date +%Y-%m-%d).log"
 LOCK_FILE="/tmp/weather-deploy.lock"
 
-# cron 環境 PATH 極簡，需補齊
-export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+# cron 環境 PATH 極簡，需補齊（含 node 與 python）
+export PATH="/root/.local/share/pi-node/node-v22.23.2-linux-x64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') [cron] $*" >> "$LOG_FILE"; }
 
