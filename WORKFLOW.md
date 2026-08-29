@@ -105,6 +105,7 @@ cd public && python3 -m http.server 8080
 | build 顯示「CWA none」 | 金鑰或網路問題。查 `CWA_API_KEY`、`curl` 直連測試。頁面會顯示 `cwa-fail` 警示卡，**不要**把警示卡 commit 進公開站（除非確實要公告資料中斷）。 |
 | build 顯示「CWA partial」 | 單一來源失敗，其餘用快取舊值＋「舊資料」標註。重試一次；若持續，記錄是哪個 Data ID（錯誤訊息會寫出）。 |
 | CWA 回傳結構變動（KeyError/欄位缺失） | **先 dump 真實回傳結構再改解析**，勿照舊文件猜。結構差異對照表在 `build/CWA_API.md`「實測差異」與本文件 §5。 |
+| build 崩潰 `NoneType.__format__`（如 `:.1f`） | CWA forecast 欄位（`MaxWindSpeed`、`Pressure` 等）可能回傳 `null`。**格式化前必做 `None` 檢查**，參考 `build/cwa.py` L457-459 寫法。 |
 | 需要爬 CWA 官網頁面（API 沒有該產品） | 用 Obscura（見 skill `/root/.pi/agent/skills/obscura/SKILL.md`，repo 相關頁面見 AGENTS.md「Obscura 無頭瀏覽器」）。 |
 | SSL 錯誤 `CERTIFICATE_VERIFY_FAILED` | 已知問題（見 §5），build 已改走 curl；若你改動 `cwa.py` 的 `_get_json`，**不要改回 urllib**。 |
 

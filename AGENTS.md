@@ -144,6 +144,7 @@ https://opendata.cwa.gov.tw/api/v1/rest/datastore/{Data ID}?Authorization=${CWA_
 3. **O-B0075-001（48 小時海況）回傳空 JSON**（2026/8/25 實測）；海況改看 CWA 官網頁面或新聞。
 4. **CWA API 不支援 CORS**（回應無 `Access-Control-Allow-Origin`）：前端無法直接呼叫，氣象資料必須本機 build 時抓取後寫入靜態 HTML。
 5. **更新頻率**：颱風警報每 3~6 小時、氣旋資料每 6 小時；建議每 30~60 分鐘查詢一次即可。
+6. **W-C0034-005 forecast 欄位可能為 None**（2026/8/29 實測）：`MaxWindSpeed`、`Pressure` 等 forecast 資料可能回傳 `null`，解析時**必須做 `None` 檢查**，不可直接格式化。例：`_num(fx.get("MaxWindSpeed"))` 回傳 `None` 時，`f"{None:.1f}"` 會崩潰。正確寫法：`f"{f'{ws:.1f}' if ws is not None else '—'}"`。
 
 資料集清單權威來源：`https://opendata.cwa.gov.tw/apidoc/v1`（OpenAPI YAML，含全部 80 個 Data ID、參數與枚舉值）；web 版資料清單頁為 SPA，直接爬 HTML 拿不到清單。
 
