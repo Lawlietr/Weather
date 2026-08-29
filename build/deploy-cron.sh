@@ -117,6 +117,30 @@ fi
 
 log "START（GH_PAT=${GH_PAT:+set}）"
 
+# ---- CWA 前置檢查（避免 build 失敗卻仍部署舊資料） ----
+if [ -n "${CWA_API_KEY:-}" ]; then
+  _cwa_ok=0
+  for _attempt in 1 2 3; do
+    if curl -fsS -m 20 \
+      "https://opendata.cwa.gov.tw/api/v1/rest/datastore/W-C0034-005?Authorization=${CWA_API_KEY}&format=JSON" \
+      | grep -q "TropicalCyclones" 2>/dev/null; then
+      log "CWA 檢查通過（第 ${_attempt} 次）"
+      _cwa_ok=1
+      break
+    else
+      log "CWA 檢查第 ${_attempt}/3 次失敗，3 秒後重試"
+      sleep 3
+    fi
+  done
+  if [ "$_cwa_ok" -ne 1 ]; then
+    log "CWA API 連續 3 次失敗，中止部署"
+    echo "❌ CWA API 連續 3 次失敗，中止部署"
+    exit 1
+  fi
+else
+  log "⚠️  CWA_API_KEY 未設定，跳過 CWA 檢查"
+fi
+
 # ---- 決定部署範圍 ----
 if [ -n "${GH_PAT:-}" ]; then
   ./build/deploy.sh >> "$LOG_FILE" 2>&1

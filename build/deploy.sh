@@ -5,6 +5,9 @@
 # 用途：改完 災情/ 或 颱風/ 的 markdown 後，跑這支即可
 #       「抓 CWA → 產出 public/ → 推到兩個公開託管」。
 #
+# 日誌：所有輸出同步寫入 build/logs/deploy-YYYY-MM-DD.log
+#       若發生問題，之後可檢視除錯。
+#
 # 用法：
 #   ./deploy.sh                       # 完整流程（build + CF + GitHub Pages）
 #   ./deploy.sh --build-only          # 只 build，不部署
@@ -23,6 +26,13 @@ set -euo pipefail
 # 跳到 repo 根目錄（本腳本在 build/ 下）
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
+
+# --- Logging（所有輸出同步寫入 build/logs/） ---
+LOG_DIR="$REPO_ROOT/build/logs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/deploy-$(date +%Y-%m-%d).log"
+# 將所有輸出（stdout + stderr）透過 tee 同時寫入螢幕與日誌
+exec > >(exec tee -a "$LOG_FILE") 2> >(exec tee -a "$LOG_FILE" >&2)
 
 CF_PROJECT="weather"
 GH_REPO="https://github.com/Lawlietr/Weather.git"
