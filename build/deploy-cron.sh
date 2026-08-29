@@ -8,7 +8,7 @@
 # 功能：
 #   1. 載入 build/deploy.env（金鑰，gitignore，不進 repo）
 #   2. 執行 ./build/deploy.sh（抓 CWA + build + 推 CF / GitHub Pages）
-#   3. 全程寫入 build/logs/ 日誌
+#   3. 全程寫入 build/logs/ 日誌（最多保留 5 天，超時自動刪除）
 #   4. flock 防止重疊執行
 #
 # 選用參數：
@@ -35,6 +35,12 @@ LOCK_FILE="/tmp/weather-deploy.lock"
 export PATH="/root/.local/share/pi-node/node-v22.23.2-linux-x64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') [cron] $*" >> "$LOG_FILE"; }
+
+# ---- 日誌清理（最多保留 5 天） ----
+cleanup_logs() {
+  find "$LOG_DIR" -name 'deploy-cron-*.log' -mtime +5 -delete 2>/dev/null
+  find "$LOG_DIR" -name 'deploy-*.log' -mtime +5 -delete 2>/dev/null
+}
 
 do_selfcheck() {
   log "SELFCHECK 開始"
@@ -116,6 +122,9 @@ if command -v flock >/dev/null 2>&1; then
 fi
 
 log "START（GH_PAT=${GH_PAT:+set}）"
+
+# ---- 清理舊日誌 ----
+cleanup_logs
 
 # ---- CWA 前置檢查（避免 build 失敗卻仍部署舊資料） ----
 if [ -n "${CWA_API_KEY:-}" ]; then
