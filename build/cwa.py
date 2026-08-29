@@ -454,8 +454,9 @@ def render_typhoon_card(lang, typhoons, stale_at=None):
                     tstr = (datetime.fromisoformat(fx["InitialTime"]) + timedelta(hours=h)).strftime("%m/%d %H:%M")
                 except (KeyError, ValueError):
                     tstr = f'+{int(h)}h'
+                ws = _num(fx.get("MaxWindSpeed"))
                 rows.append(f'<tr><td>{tstr}</td><td>{_pos(fx)}</td>'
-                            f'<td>{_num(fx.get("MaxWindSpeed")):.1f} m/s</td><td>{fx.get("Pressure", "—")} hPa</td></tr>')
+                            f'<td>{f"{ws:.1f}" if ws is not None else "—"} m/s</td><td>{fx.get("Pressure", "—")} hPa</td></tr>')
             rows = "".join(rows)
         else:
             rows = f'<tr><td colspan="4" class="muted">{t(lang, "no_fc")}</td></tr>'
