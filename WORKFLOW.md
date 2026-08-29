@@ -129,20 +129,16 @@ cd public && python3 -m http.server 8080
    快取值為 `null`/缺失時 `cwa.py` 會跳過該來源，屬預期行為。
 4. 公開 GitHub repo 只應收到 `public/` 靜態產物，**不收 markdown 原文與 build 腳本**
    （金鑰不進輸出已驗證，但流程上仍分開）。
-5. **Actions 排程突然不觸發，先查 GitHub status**（`https://www.githubstatus.com/`）：2026/8/27
-   實測排程完全不觸發，但手動 `workflow_dispatch` 正常、cron 語法也正確——查 status 發現是
-   GitHub 端 incident「Actions scheduled runs delayed」（Database primary 故障）。
-   **是 GitHub 服務／儲存庫層級問題，不是本 repo 檔案問題**：改名／重建 workflow／改每分鐘 cron
-   測試都無解；GitHub 修復後自動恢復，不用動檔案。
-   2026/8/24–8/28 已連續多日有多起 Actions/Pages incident（`/api/v2/incidents.json` 可查近 30 天）。agent 快速查法：
-   `curl -s https://www.githubstatus.com/api/v2/status.json`（整體）＋ `.../api/v2/incidents.json`（incident 清單）；
-   排程漏跑可能延遲數小時才補跑、也可能直接跳過不進 run 歷史。
-   注意：**狀態頁綠燈只表示「無已宣布 incident」（全域規模＋門檻制），不等於無延遲**——
-   官方對 schedule 只保證「可能延遲 ≤15 分鐘」，高負載時更久或跳格。判定本 repo 健康
-   以 run 節奏為準：slot 後 30 分鐘仍無 run 即視為疑似退化，手動 `workflow_dispatch` 補跑，
-   不等紅燈。
-6. **Actions 偶發失敗，99% 是 Cloudflare token 限區域或失效**：runner IP 撞地域限制（code 9109）。
-   去 CF 後台重開 token 並更新 GitHub Secret 即可；或改用本地 cron 備用（`LOCAL_CRON.md`）。
+5. **Actions 排程已停用（2026/8/29）**：GitHub Actions **已移除 `schedule`**，僅保留 `workflow_dispatch`（手動觸發）。
+   停用原因：Actions runner（Azure `westus2`）到 CWA API 連線不穩定（curl 超時），
+   導致 build 使用舊資料卻仍部署。`build/build.sh` 現已加入 CWA 前置檢查（3 次重試，
+   失敗則 `exit 1` 阻止部署）。
+   若需手動跑 Actions build：到 GitHub repo → Actions tab → "Build & Deploy" → "Run workflow"。
+   本地 cron 備用（`build/deploy-cron.sh`，每 2 小時，`build/cron-enable.sh` 安裝）為主要自動更新通道。
+   > 若日後要恢復 Actions 排程：確認 CWA API 可從海外連線（或改用 Cloudflare Worker 等中轉），
+   > 再把 `schedule` 加回 `.github/workflows/build.yml` 即可。
+6. **Cloudflare token 限區域或失效**：code 9109。去 CF 後台重開 token 並更新 GitHub Secret 即可；
+   或改用本地 cron 備用（`build/cron-enable.sh`）。
 7. **「產生時間」時區陷阱**：`build/site.py` 必須保持
    `datetime.now(timezone(timedelta(hours=8)))`（固定 UTC+8）。若改回不帶時區的 `datetime.now()`，
    本機（`Asia/Taipei`）build 時間正確，但 **Actions runner 是 UTC，會慢 8 小時**（2026/8/27 曾發生）。
@@ -184,21 +180,18 @@ cd public && python3 -m http.server 8080
 ## 7. 排程與自動更新
 
 - **手動**：`MANUAL_UPDATE.md`（改 markdown → `./build/deploy.sh` → 上線）。
-- **GitHub Actions**：在 GitHub 伺服器上排程（**每 2 小時一次**，`cron: '0 0,2,4,6,8,10,12,14,16,18,20,22 * * *'` UTC），不依賴本機開著；金鑰放 GitHub Secret。
-- **cron（unix，本地備用）**：本機或 Ubuntu LXC/VM 排 `build/deploy-cron.sh`，作為 **GitHub Actions 異常時的備用**，**每 2 小時一次**（預設「不啟用」）。
-  - **預設「不啟用」**：cron 工作項目未安裝，僅 Actions 異常時手動 `bash build/cron-enable.sh` 開啟；Actions 復原後 `bash build/cron-disable.sh` 停用。完整說明見 `LOCAL_CRON.md`。
-  - 金鑰在 `build/deploy.env`（gitignore、600，由 `build/deploy-cron.sh` 載入；cron 不載入 `.zshrc`）；需該機器常醒著。
+- **本地 cron（主力，每 2 小時）**：本機或 Ubuntu LXC/VM 排 `build/deploy-cron.sh`。
+  - **安裝**：`bash build/cron-enable.sh`（冪等，重複執行會覆蓋舊排程）。
+  - **停用**：`bash build/cron-disable.sh`。
+  - **自檢**：`bash build/deploy-cron.sh --selfcheck`（驗證金鑰與網路，不部署）。
+  - **金鑰**：`build/deploy.env`（gitignore、600，由 `deploy-cron.sh` 載入；cron 不載入 `.zshrc`）；需該機器常醒著。
+  - **CWA 檢查**：執行前會先檢查 CWA 可用性（3 次重試，失敗中止），不會推舊資料。
+  - **日誌**：全程寫入 `build/logs/deploy-cron-YYYY-MM-DD.log`，方便除錯。
+- **GitHub Actions（手動 dispatch，備援）**：僅保留 `workflow_dispatch`（2026/8/29 起停用排程）。
+  到 GitHub repo → Actions tab → "Build & Deploy" → "Run workflow"。
 - **更新 agent**：負責「查 CWA API/新聞 → 更新 markdown → build → push」。
   輸入就是本文件 §1～§3；agent 不需懂解析細節，照 check 清單驗收即可。
 - **地圖紅警層（CWA，2026/8/28 定案，待實作）**：全自動——build 時抓 CWA（特報/雨量站/氣旋）合成 `map.geo.json` 與地圖頁，掛在**現有每 2 小時排程**上，不新增排程/agent/金鑰；陸地紅區靠 gazetteer（鄉鎮級靜態 JSON，存 repo）轉換特報文字。細節見 `TODO.md` §2a；災情新聞點層（§2b）維持人工把關。
-- **更新 agent**：負責「查 CWA API/新聞 → 更新 markdown → build → push」。
-  輸入就是本文件 §1～§3；agent 不需懂解析細節，照 check 清單驗收即可。
-- **GitHub Actions 三種用法**（依風險由低到高，屆時再選）：
-  1. **純部署**：靜態產物 push 到 Pages 分支時自動 publish（Pages 內建，零設定）。
-     金鑰完全不碰 GitHub。
-  2. **CI 跑 build**：build 在 Actions 執行，`CWA_API_KEY` 放 GitHub secret。
-     輸出仍靜態、金鑰不進產物，但金鑰會出現在 CI 環境——權衡後再定。
-  3. **定時排程（cron）**：已定案——本地 cron 備用（`build/deploy-cron.sh`，每 2 小時、預設不啟用）＋ GitHub Actions 排程（每 2 小時 UTC），見上方。核心原則已拍板（見 `LOCAL_CRON.md`）。
 
 ---
 

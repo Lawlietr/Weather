@@ -91,25 +91,21 @@
 
 - 預設分支：`main`（原 `master` 已更名）
 - 功能開發在 `DEV` 分支，**經使用者確認後才合併回 `main`**
-- 無 lint/test 指令；CI 為 GitHub Actions 排程 build＋部署（見「網站專案」）
+- 無 lint/test 指令；GitHub Actions 僅保留 `workflow_dispatch`（手動觸發，2026/8/29 起停用排程，原因見下方說明）；自動更新改由本地 cron 備用（`build/cron-enable.sh`）
 
-### ⚠️ GitHub Actions 異常時，agent 第一步：先看 GitHub 官方狀態
+### ⚠️ GitHub Actions 狀態（2026/8/29 起僅手動 dispatch）
 
-遇到 Actions **排程不觸發／run 卡住／大量失敗**時，**先查 GitHub 狀態頁，再動本 repo 的檔案**：
+GitHub Actions **已停用排程**（移除 `schedule`），僅保留 `workflow_dispatch`（手動觸發）。
+停用原因：Actions runner（Azure `westus2`）到 CWA API 連線不穩定，導致 build 使用舊資料
+卻仍部署到 CF Pages（`wrangler pages deploy` 只上傳 `public/`，不檢查資料新舊）。
 
-- 狀態頁：https://www.githubstatus.com/
-- JSON API（可用 curl/腳本直接查）：
-  - `curl -s https://www.githubstatus.com/api/v2/status.json`（整體狀態）
-  - `curl -s https://www.githubstatus.com/api/v2/incidents.json`（近 30 天 incidents）
-- 若 incident 清單有 Actions／Pages／Database 相關項目 → **是 GitHub 伺服器端問題，不是本 repo 檔案問題**：
-  **不要**改名 workflow、改 cron、重建檔案、反覆重測；incident 解除後排程會自動恢復
-  （2026/8/26–8/28 已連續數日發生多起 Actions incident，實測細節見 `WORKFLOW.md` §5.5）。
-- ⚠️ **綠燈 ≠ 沒延遲**：狀態頁只顯示「已宣布」的 incident（全域規模＋門檻制），
-  Actions 排隊、排程延遲在綠燈時照常發生。官方對 schedule 只保證「可能延遲 ≤15 分鐘」，
-  高負載時更久、甚至整格跳過（跳過的 run 不進歷史）。**健康訊號以本 repo run 節奏為準**：
-  預期檔位（cron slot）過後 30 分鐘仍無 run → 視為疑似退化，直接手動 `workflow_dispatch`
-  補跑，不要等紅燈，也不要重寫 workflow。
-- 急用時改走手動：`workflow_dispatch` 觸發，或本機 `./build/deploy.sh`（見 `MANUAL_UPDATE.md`）。
+若需手動跑 Actions build：到 GitHub repo 頁面 → Actions tab → "Build & Deploy" → "Run workflow"。
+
+> 本地 cron 備用（`build/cron-enable.sh`）為主要自動更新通道；cron 執行前會先檢查 CWA
+> 可用性（3 次重試），失敗則中止部署，不會推舊資料。
+
+**若 Actions 排程日後要恢復**：確認 CWA API 可從海外連線（或改用 Cloudflare Worker 等中轉），
+再把 `schedule` 加回 `.github/workflows/build.yml` 即可。
 
 ---
 
@@ -179,8 +175,8 @@ https://opendata.cwa.gov.tw/api/v1/rest/datastore/{Data ID}?Authorization=${CWA_
 
 ### 核心原則
 
-- **混合更新**：平常由 **GitHub Actions 排程**（`.github/workflows/build.yml`，每 2 小時 UTC：build → wrangler 部署 Cloudflare → orphan push 推 GitHub Pages；2026/8/27 修正：移除 peaceiris 避免觸發 Pages 內建 workflow 造成迴圈）自動 build＋部署；Actions 不穩或需新增災情時，由人工/LLM 手動 build＋部署（`MANUAL_UPDATE.md`）。災情新聞仍需人工把關，**不自動推 RSS**。排程故障處理（CF token 9109 限區域、GitHub 端 incident）見 `WORKFLOW.md` §5。
-- **金鑰管理**：CWA API Key、Cloudflare 憑證同時存在多處：(1) **本機環境**（手動 build/deploy，`~/.zshrc`）；(2) **GitHub Actions Secrets**（排程/CI 用，加密儲存）；(3) **`build/deploy.env`**（本地 cron 備用，gitignore、600，由 `deploy-cron.sh` 載入；cron 不載入 `.zshrc`）。全程**不寫進任何輸出檔案、不進 `public/`、不進網站**。
+- **混合更新**：平常由 **本地 cron**（`build/deploy-cron.sh`，每 2 小時，由 `build/cron-enable.sh` 安裝）自動 build＋部署；cron 執行前會檢查 CWA 可用性（3 次重試，失敗中止），並寫入 `build/logs/` 日誌。Actions 僅保留 `workflow_dispatch`（手動觸發，2026/8/29 起停用排程）。災情新聞仍需人工把關，**不自動推 RSS**。
+- **金鑰管理**：CWA API Key、Cloudflare 憑證同時存在多處：(1) **本機環境**（手動 build/deploy，`~/.zshrc`）；(2) **GitHub Actions Secrets**（手動 dispatch 用，加密儲存）；(3) **`build/deploy.env`**（本地 cron 用，gitignore、600，由 `deploy-cron.sh` 載入；cron 不載入 `.zshrc`）。全程**不寫進任何輸出檔案、不進 `public/`、不進網站**。
 - **非即時**：Pages 為靜態託管，採手動 build。首頁必須顯示「**產生時間**」（i18n key `updated`），由 `build/site.py` 以**固定 UTC+8 台灣時間**產生（`datetime.now(timezone(timedelta(hours=8)))`）；**不可改回不帶時區的 `datetime.now()`**（Actions runner 是 UTC，會慢 8 小時，見 `WORKFLOW.md` §5）。用「產生時間」而非「最後更新」：它只代表網頁何時生成，**不等於氣象／災情資料已更新**。
 - **授權僅針對網站專案**（2026/8/28 修正）：公開網站之程式碼以 **GNU AGPLv3**（`LICENSE`）、內容（網頁、`llms.txt`、`llms-full.txt` 之災情紀錄與彙整文字）以 **CC BY-NC-SA 4.0**（`LICENSE-CONTENT`，不得商用）；**倉儲本身**（`build/` 腳本、`災情/`、`颱風/` Markdown 原文、文件）**不以此兩授權釋出**；CWA 資料以官方條款為準。
 - **LLM 友善產出**：build 必產 `llms.txt`（站點＋事件索引）與 `llms-full.txt`（全部事件繁中全文），canonical base URL 為 `https://weather.avpclub.eu.org`（`build/site.py` 之 `SITE_BASE`）。
@@ -188,15 +184,19 @@ https://opendata.cwa.gov.tw/api/v1/rest/datastore/{Data ID}?Authorization=${CWA_
 ### 技術架構
 
 ```
-GitHub Actions（排程/CI，主力）
-  ├── CWA_API_KEY / CLOUDFLARE_* 來自 GitHub Secrets
+本地 cron（主力，每 2 小時）
+  ├── 載入 build/deploy.env（金鑰，gitignore、600）
+  ├── CWA 檢查（3 次重試，失敗中止）
   ├── 讀 repo 災情 markdown → 災情資料
   ├── 呼叫 CWA API → 氣象彙整（typhoon_svg 繪製 build/taiwan_geo.py 輪廓）
-  └── build 出靜態 HTML（含「產生時間」）
-        ├── wrangler pages deploy public → Cloudflare Pages（主要，公開）
-        └── orphan gh-pages 分支 force push → GitHub Pages（備用 mirror）
-本機（手動/備援）：`./build/deploy.sh`（流程同上，金鑰取自本機環境）
-本機 cron 備用（Actions 異常時）：`build/deploy-cron.sh`（見 `LOCAL_CRON.md`，預設不啟用）
+  ├── build 出靜態 HTML（含「產生時間」）
+  ├── wrangler pages deploy public → Cloudflare Pages（主要，公開）
+  └── orphan gh-pages 分支 force push → GitHub Pages（備用 mirror）
+  └── 全程寫入 build/logs/deploy-cron-YYYY-MM-DD.log
+GitHub Actions（手動 dispatch，備援）
+  ├── CWA_API_KEY / CLOUDFLARE_* 來自 GitHub Secrets
+  └── 同上 build + 部署流程
+本機（手動）：`./build/deploy.sh`（流程同上，金鑰取自本機環境）
 Cloudflare 靜態託管提供公開網站
 ```
 
