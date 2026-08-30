@@ -65,7 +65,7 @@
 ### 2.2 事件狀態生命周期
 - 事件發生 → 建檔，`status: active`。
 - 首頁 Hero 區自動取 active 中「最後修改」最新者（`build/site.py` 邏輯，勿手動改首頁 HTML）。Hero 為**中性入口卡**（無 severity 色系/徽章）——「現在危不危險」由頂部「目前風險狀態列」回答。
-- **目前風險狀態列**（red/yellow/green/unknown）：由 `build/cwa.py: current_risk_level()` 自動推導（生效中熱帶氣旋、未解除海上颱風警報、未解除災害天氣特報；已解除/END 跳過，雨量觀測值不計）。不需人工維護、不受事件 `status`/`severity` 影響——事件 ended 後若 CWA 仍有警報/特報，風險列仍會顯示 red。
+- **目前風險狀態列**（red/yellow/green/**neutral**/unknown）：由 `build/cwa.py: current_risk_level()` 自動推導（生效中熱帶氣旋、未解除海上颱風警報、未解除災害天氣特報；已解除/END 不計入風險，雨量觀測值不計）。不需人工維護、不受事件 `status`/`severity` 影響——事件 ended 後若 CWA 仍有警報/特報，風險列仍會顯示 red。無生效中項目時：**neutral**（淺色中性狀態列）＝有已解除且未超過 48h（`LIFTED_TTL_HOURS`）的警報/特報，顯示「目前無生效中警報/特報（最近：…已解除）；無異常天氣活動，常態監視中。」（i18n key `risk_neutral`）；連解除紀錄都無 → **green**（`risk_none`）。
 - 事件結束後 → 把該檔 front matter 改為 `status: ended`，重 build；事件自動降級到 archive。`severity` 保留歷史分級不降級（徽章只顯示在事件詳情頁與封存清單）。
 
 ## 3. 驗證檢查清單（每次 build 後）

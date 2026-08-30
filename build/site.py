@@ -126,6 +126,7 @@ a:hover{text-decoration:underline}
 .badge.sev-red{background:var(--red);color:#fff}
 .badge.sev-yellow{background:var(--yellow);color:#3e2723}
 .badge.sev-green{background:var(--green);color:#fff}
+.badge.sev-grey{background:#9e9e9e;color:#fff}
 .chips{margin:10px 0}
 .chip{display:inline-block;background:var(--chip-bg);border-radius:14px;padding:2px 12px;margin:2px 4px 2px 0;font-size:.85rem}
 .chip-link{color:var(--accent);text-decoration:none}
@@ -153,6 +154,7 @@ ul.news-list li a{word-break:break-all}
 .risk-bar.risk-red{border-color:var(--red);background:var(--red-bg)}
 .risk-bar.risk-yellow{border-color:var(--yellow);background:var(--yellow-bg)}
 .risk-bar.risk-green{border-color:var(--green)}
+.risk-bar.risk-neutral{border-color:var(--line);background:var(--bg)}
 .risk-bar.risk-unknown{border-style:dashed}
 .risk-bar .risk-label{font-weight:800;font-size:1rem}
 .risk-bar ul{list-style:none;margin:6px 0 0;padding:0}
@@ -617,8 +619,8 @@ def chip_html(lang, county, groups):
 def risk_bar_html(lang, level, items, ts, stale):
     """首頁頂部「目前風險狀態列」：level/items 由 cwa.current_risk_level() 推導。"""
     cls = {"red": "risk-red", "yellow": "risk-yellow", "green": "risk-green",
-           "unknown": "risk-unknown"}[level]
-    if level in ("red", "yellow"):
+           "neutral": "risk-neutral", "unknown": "risk-unknown"}[level]
+    if level in ("red", "yellow", "neutral"):
         body = "<ul>" + "".join(f"<li>{t(lang, key, **params)}</li>" for _, key, params in items) + "</ul>"
     elif level == "green":
         body = f'<p style="margin:4px 0 0">{t(lang, "risk_none")}</p>'

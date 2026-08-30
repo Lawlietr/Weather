@@ -250,6 +250,33 @@ def _t(s):
         return s
 
 
+def _t_range(s):
+    """時間範圍 'A ~ B' → 'A ~ B'（兩端各自格式化）；單個時間原樣走 _t()。"""
+    if not s:
+        return "—"
+    if "~" in s:
+        parts = [p.strip() for p in s.split("~") if p.strip()]
+        return " ~ ".join(_t(p) for p in parts) or "—"
+    return _t(s)
+
+
+def _ts_parse(s):
+    """ISO / 'YYYY-MM-DD HH:MM:SS' → tz-aware datetime（無時區視為 +08:00）；解析失敗回 None。"""
+    if not s:
+        return None
+    s = s.strip().replace("Z", "+00:00")
+    try:
+        dt = datetime.fromisoformat(s)
+    except ValueError:
+        m = re.match(r"(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})", s)
+        if not m:
+            return None
+        dt = datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4)), int(m.group(5)))
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=TZ_TW)
+    return dt.astimezone(TZ_TW)
+
+
 def _classify(wind_ms):
     """回傳 i18n key；由呼叫端以 t(lang, key) 翻譯。"""
     if wind_ms is None:
@@ -384,14 +411,18 @@ def current_risk_level(lang, data, stale, mode):
     - 災害性天氣特報（未解除）：沿用 _sev_color 分級（紅/黃），綠色級別不計入
     雨量觀測值不計入：那是「過去累計」，不是當前危險信號。
 
-    回傳 (level, items)：level ∈ red/yellow/green/unknown（mode=none → unknown）；
-    items = [(level, i18n_key, params), ...]（green 不進 items）。
+    回傳 (level, items)：level ∈ red/yellow/green/neutral/unknown（mode=none → unknown）；
+    items = [(level, i18n_key, params), ...]。無生效中項目時：
+    - 有已解除（且未超過 LIFTED_TTL_HOURS）的警報/特報 → neutral，附最近解除紀錄；
+    - 連解除紀錄都無 → green（risk_none）。
     stale 供呼叫端標註舊資料。
     """
     if mode == "none":
         return "unknown", []
     items = []
+    lifted_recent = []  # 已解除且未過 TTL 的警報/特報（供中性狀態列註記）
     d = data or {}
+    now = datetime.now(TZ_TW)
     for c in d.get("typhoons", []):
         fixes = c.get("analysis") or []
         if not fixes:
@@ -405,21 +436,29 @@ def current_risk_level(lang, data, stale, mode):
         items.append((level, "risk_typhoon",
                       {"name": name, "cat": f"（強度：{t(lang, cat)}）" if cat else ""}))
     for m in d.get("marine_alert", []):
-        if not m.get("title") or "解除" in m["title"] or m.get("category") == "END":
+        if not m.get("title"):
             continue
-        items.append(("red", "risk_marine", {"title": m["title"]}))
+        if "解除" not in m["title"] and m.get("category") != "END":
+            items.append(("red", "risk_marine", {"title": m["title"]}))
+        else:  # 已解除（解除/END）：不計入風險，只供中性狀態列註記
+            ts = _ts_parse(m.get("effective"))
+            if ts is not None and (now - ts) <= timedelta(hours=LIFTED_TTL_HOURS):
+                lifted_recent.append(f'{m["title"]}（生效 {_t(m.get("effective"))}）')
     for r in d.get("reports", []):
-        if not r.get("name") or "解除" in r["name"]:
+        if not r.get("name"):
+            continue
+        if "解除" in r["name"]:
+            ts = _ts_parse(r.get("issue"))
+            if ts is not None and (now - ts) <= timedelta(hours=LIFTED_TTL_HOURS):
+                lifted_recent.append(f'{r["name"]}（發布 {_t(r["issue"])}）')
             continue
         cls = _sev_color(r["name"], r["phenomena"])
         if cls == "sev-green":
             continue
-        valid = r.get("valid", "")
-        if "~" in valid:
-            valid = " ~ ".join(_t(p.strip()) for p in valid.split("~") if p.strip())
-        else:
-            valid = _t(valid)
+        valid = _t_range(r.get("valid", ""))
         items.append((cls[4:], "risk_report", {"name": r["name"], "valid": valid}))
+    if not items and lifted_recent:
+        return "neutral", [("neutral", "risk_neutral", {"recent": "、".join(lifted_recent[:3])})]
     level = "red" if any(l == "red" for l, _, _ in items) else ("yellow" if items else "green")
     return level, items
 
@@ -489,35 +528,62 @@ def _sev_color(name, phenomena):
     return "sev-green"
 
 
-def render_alert_card(lang, marine, reports, stale_at=None):
-    """警報/特報卡：皆無 → 整張卡隱藏（回傳空字串）。"""
+# 已解除（解除/END）的警報/特報超過此時數後不再渲染：
+# CWA 的 CAP 端點只保留「最新一筆」（含解除報），何時被覆蓋由 CWA 端決定，
+# 我們自行設 TTL 淘汰，避免舊解除報永久佔位。
+LIFTED_TTL_HOURS = 48
+
+
+def render_alert_card(lang, marine, reports, stale_at=None, now=None):
+    """警報/特報卡：皆無 → 整張卡隱藏（回傳空字串）。
+
+    海上颱風警報與災害性天氣特報混排、按時間倒序（最新在最上）；
+    已解除（解除/END）項目置底、灰色 badge，超過 LIFTED_TTL_HOURS 則整筆移除。
+    """
+    now = now or datetime.now(TZ_TW)
     items = []
     for m in marine:
         if not m.get("title"):
             continue
         lifted = "解除" in m["title"] or m.get("category") == "END"
-        cls = "sev-green" if lifted else "sev-red"
+        ts = _ts_parse(m.get("effective"))
+        if lifted and ts is not None and (now - ts) > timedelta(hours=LIFTED_TTL_HOURS):
+            continue
+        cls = "sev-grey" if lifted else "sev-red"
+        note = t(lang, "lifted_note") if lifted else ""
         body = ""
         if m.get("content"):
             body = f'<details><summary class="muted">{t(lang, "view_full")}</summary><pre class="report-text">{m["content"].strip()}</pre></details>'
-        items.append(f'<div class="alert-item"><span class="badge {cls}">{t(lang, "marine_badge")}</span>　'
+        items.append((lifted, ts, f'<div class="alert-item"><span class="badge {cls}">{t(lang, "marine_badge")}</span>　'
                      f'<b>{m["title"]}</b>'
                      + (t(lang, "report_no", n=m["report_no"]) if m.get("report_no") else "")
                      + (f'｜{t(lang, "typhoon_label", n=m["typhoon_name"])}' if m.get("typhoon_name") else "")
+                     + note
                      + f'<div class="meta">{t(lang, "effective", ts=_t(m.get("effective")))}</div>'
-                     + body + '</div>')
+                     + body + '</div>'))
     for r in reports:
         if not r.get("name"):
             continue
-        cls = _sev_color(r["name"], r["phenomena"])
+        lifted = "解除" in r["name"]
+        ts = _ts_parse(r.get("issue"))
+        if lifted and ts is not None and (now - ts) > timedelta(hours=LIFTED_TTL_HOURS):
+            continue
+        cls = "sev-grey" if lifted else _sev_color(r["name"], r["phenomena"])
+        note = t(lang, "lifted_note") if lifted else ""
         phen = "、".join(r["phenomena"])
         body = ""
         if r.get("content"):
             body = f'<details><summary class="muted">{t(lang, "view_full")}</summary><pre class="report-text">{r["content"].strip()}</pre></details>'
-        items.append(f'<div class="alert-item"><span class="badge {cls}">{r["name"]}</span>　'
-                     f'<b>{phen}</b>　'
-                     f'<span class="meta">{t(lang, "issued", ts=_t(r["issue"]))}｜{t(lang, "valid", ts=_t(r["valid"]))}</span>'
-                     + (f'<div>{t(lang, "affected", a="、".join(r["areas"]))}</div>' if r["areas"] else "") + body + '</div>')
+        items.append((lifted, ts, f'<div class="alert-item"><span class="badge {cls}">{r["name"]}</span>　'
+                     f'<b>{phen}</b>{note}　'
+                     f'<span class="meta">{t(lang, "issued", ts=_t(r["issue"]))}｜{t(lang, "valid", ts=_t_range(r["valid"]))}</span>'
+                     + (f'<div>{t(lang, "affected", a="、".join(r["areas"]))}</div>' if r["areas"] else "") + body + '</div>'))
+    # 未解除在前、已解除置底；同組內按時間倒序（ts 無法解析者視為最新，保顯示）
+    def _k(it):
+        return (it[1] or now).timestamp()
+    items = sorted((i for i in items if not i[0]), key=_k, reverse=True) + \
+            sorted((i for i in items if i[0]), key=_k, reverse=True)
+    items = [html for _, _, html in items]
     if not items:
         return ""
     tag = f'　<span class="muted">{t(lang, "stale_tag", ts=stale_at)}</span>' if stale_at else ""
