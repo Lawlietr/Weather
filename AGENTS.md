@@ -209,7 +209,7 @@ Cloudflare 靜態託管提供公開網站
 ### 部署與分支
 
 - **內部仓库**：`ssh://fg/lawliet/Weather.git`（Forgejo，內網 `192.168.1.124:222`，SSH Host `fg`，Identity `~/.ssh/id_rsa_gitea`）。
-- **GitHub**：`https://github.com/Lawlietr/Weather`，**已設為公開**（2026/8/27，原私有，後改公開）。開發與 commit **同時推到 Forgejo 與 GitHub**（保持同步）。build 腳本、`災情/` Markdown 原文、金鑰（存於 Actions Secrets）現存於此 repo。
+- **GitHub**：`https://github.com/Lawlietr/Weather`，**已設為公開**（2026/8/27，原私有，後改公開）。開發與 commit **同時推到 Forgejo 與 GitHub**（保持同步）：`git push origin <branch> && git push github <branch>`。本機 remote `github` 走 **SSH**（`git@github.com:Lawlietr/Weather.git`，key `~/.ssh/id_ed25519_github`，2026/8/30 驗證可直推，**不需要 `GH_PAT`**；`GH_PAT` 僅 `deploy.sh`／`deploy-cron.sh` 推 orphan `gh-pages` 鏡像時選用，未設時自動跳過 GitHub Pages）。build 腳本、`災情/` Markdown 原文、金鑰（存於 Actions Secrets）現存於此 repo。
 - **GitHub Pages**：**已轉為公開**（2026/8/27，隨 repo 轉公開），且目前為 **404**（備用 mirror，非必需）。GitHub Actions 已把預設分支設為 `main`（原 orphan `gh-pages` 為預設分支，導致 Actions 看不到 workflow），`gh-pages` 分支因此不再自動重建、Pages 設定回 404。若日後想救回 GitHub Pages，需把預設分支改回 `gh-pages`（代價：Actions 按鈕又會藏起來，需在 Actions 頁面手動切 `main`）。只推 `public/` 靜態產物（orphan `gh-pages` 分支、不共享 history）。部署步驟見 `WORKFLOW.md` §6。
   - ⚠️ 公開網站已改由 **Cloudflare Pages** 提供；GitHub Pages 僅作 mirror，**以 Cloudflare 為主**，404 不影響公開使用。
 - **Cloudflare Pages**（公開，2026/8/26 已上線，**主要更新通道兼公開網站**）：專案 `weather`，自訂域名 `weather.avpclub.eu.org`、`weather.avpclub.uk`、`weather.larch.dpdns.org`（CNAME 已建、proxied、自動 HTTPS）。更新只需 `npx wrangler pages deploy public --project-name weather`（憑證在 `~/.zshrc` 或 GitHub Actions Secrets，不進 repo）。細節見 `WORKFLOW.md` §6。

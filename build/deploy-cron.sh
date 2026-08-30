@@ -18,7 +18,7 @@
 # 部署範圍：
 #   若 deploy.env 設了 GH_PAT → 完整部署（Cloudflare + GitHub Pages）
 #   若未設 GH_PAT            → 僅 Cloudflare（--no-gh）
-#         （GitHub Pages 已轉私有 mirror 且目前 404，以 Cloudflare 為主）
+#         （GitHub Pages 為公開 mirror 但已 404、非必需，以 Cloudflare 為主）
 # ============================================================
 set -uo pipefail
 

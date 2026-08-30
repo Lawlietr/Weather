@@ -7,7 +7,7 @@
 > 
 > **環境現況（2026/8/27）**：GitHub repo `Lawlietr/Weather` **已設為公開**（原私有）；`CWA_API_KEY`、
 > `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID` 已存入 **GitHub Actions Secrets**。公開網站由
-> **Cloudflare Pages** 提供；GitHub Pages 已轉公開 mirror。Forgejo 與 GitHub **main 同步**（`git push origin main && git push github main`）。
+> **Cloudflare Pages** 提供；GitHub Pages 已轉公開 mirror。Forgejo 與 GitHub **main 同步**（`git push origin main && git push github main`；`github` remote 走 SSH key `id_ed25519_github`，直推即可、不需要 `GH_PAT`，2026/8/30 驗證）。
 
 ---
 
