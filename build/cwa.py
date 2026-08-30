@@ -411,14 +411,18 @@ def current_risk_level(lang, data, stale, mode):
     - 災害性天氣特報（未解除）：沿用 _sev_color 分級（紅/黃），綠色級別不計入
     雨量觀測值不計入：那是「過去累計」，不是當前危險信號。
 
-    回傳 (level, items)：level ∈ red/yellow/green/unknown（mode=none → unknown）；
-    items = [(level, i18n_key, params), ...]（green 不進 items）。
+    回傳 (level, items)：level ∈ red/yellow/green/neutral/unknown（mode=none → unknown）；
+    items = [(level, i18n_key, params), ...]。無生效中項目時：
+    - 有已解除（且未超過 LIFTED_TTL_HOURS）的警報/特報 → neutral，附最近解除紀錄；
+    - 連解除紀錄都無 → green（risk_none）。
     stale 供呼叫端標註舊資料。
     """
     if mode == "none":
         return "unknown", []
     items = []
+    lifted_recent = []  # 已解除且未過 TTL 的警報/特報（供中性狀態列註記）
     d = data or {}
+    now = datetime.now(TZ_TW)
     for c in d.get("typhoons", []):
         fixes = c.get("analysis") or []
         if not fixes:
@@ -432,17 +436,29 @@ def current_risk_level(lang, data, stale, mode):
         items.append((level, "risk_typhoon",
                       {"name": name, "cat": f"（強度：{t(lang, cat)}）" if cat else ""}))
     for m in d.get("marine_alert", []):
-        if not m.get("title") or "解除" in m["title"] or m.get("category") == "END":
+        if not m.get("title"):
             continue
-        items.append(("red", "risk_marine", {"title": m["title"]}))
+        if "解除" not in m["title"] and m.get("category") != "END":
+            items.append(("red", "risk_marine", {"title": m["title"]}))
+        else:  # 已解除（解除/END）：不計入風險，只供中性狀態列註記
+            ts = _ts_parse(m.get("effective"))
+            if ts is not None and (now - ts) <= timedelta(hours=LIFTED_TTL_HOURS):
+                lifted_recent.append(f'{m["title"]}（生效 {_t(m.get("effective"))}）')
     for r in d.get("reports", []):
-        if not r.get("name") or "解除" in r["name"]:
+        if not r.get("name"):
+            continue
+        if "解除" in r["name"]:
+            ts = _ts_parse(r.get("issue"))
+            if ts is not None and (now - ts) <= timedelta(hours=LIFTED_TTL_HOURS):
+                lifted_recent.append(f'{r["name"]}（發布 {_t(r["issue"])}）')
             continue
         cls = _sev_color(r["name"], r["phenomena"])
         if cls == "sev-green":
             continue
         valid = _t_range(r.get("valid", ""))
         items.append((cls[4:], "risk_report", {"name": r["name"], "valid": valid}))
+    if not items and lifted_recent:
+        return "neutral", [("neutral", "risk_neutral", {"recent": "、".join(lifted_recent[:3])})]
     level = "red" if any(l == "red" for l, _, _ in items) else ("yellow" if items else "green")
     return level, items
 
