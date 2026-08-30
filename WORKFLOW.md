@@ -3,7 +3,7 @@
 > **讀者**：接手本專案的 agent 或人工操作者。
 > **定位**：「怎麼做」的逐步流程。專案規範（檔案格式、CWA API 結構、設計原則）在
 > `AGENTS.md` 與 `TODO.md`，本文件不重複，只引用。
-> 最後更新：2026/8/28
+> 最後更新：2026/8/30（風險狀態列新增 neutral 級；警報特報卡混排倒序＋解除項置底灰化＋48h TTL；特報「有效」範圍完整顯示）
 > 
 > **環境現況（2026/8/27）**：GitHub repo `Lawlietr/Weather` **已設為公開**（原私有）；`CWA_API_KEY`、
 > `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID` 已存入 **GitHub Actions Secrets**。公開網站由
