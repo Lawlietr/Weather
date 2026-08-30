@@ -250,6 +250,16 @@ def _t(s):
         return s
 
 
+def _t_range(s):
+    """時間範圍 'A ~ B' → 'A ~ B'（兩端各自格式化）；單個時間原樣走 _t()。"""
+    if not s:
+        return "—"
+    if "~" in s:
+        parts = [p.strip() for p in s.split("~") if p.strip()]
+        return " ~ ".join(_t(p) for p in parts) or "—"
+    return _t(s)
+
+
 def _ts_parse(s):
     """ISO / 'YYYY-MM-DD HH:MM:SS' → tz-aware datetime（無時區視為 +08:00）；解析失敗回 None。"""
     if not s:
@@ -431,11 +441,7 @@ def current_risk_level(lang, data, stale, mode):
         cls = _sev_color(r["name"], r["phenomena"])
         if cls == "sev-green":
             continue
-        valid = r.get("valid", "")
-        if "~" in valid:
-            valid = " ~ ".join(_t(p.strip()) for p in valid.split("~") if p.strip())
-        else:
-            valid = _t(valid)
+        valid = _t_range(r.get("valid", ""))
         items.append((cls[4:], "risk_report", {"name": r["name"], "valid": valid}))
     level = "red" if any(l == "red" for l, _, _ in items) else ("yellow" if items else "green")
     return level, items
@@ -554,7 +560,7 @@ def render_alert_card(lang, marine, reports, stale_at=None, now=None):
             body = f'<details><summary class="muted">{t(lang, "view_full")}</summary><pre class="report-text">{r["content"].strip()}</pre></details>'
         items.append((lifted, ts, f'<div class="alert-item"><span class="badge {cls}">{r["name"]}</span>　'
                      f'<b>{phen}</b>{note}　'
-                     f'<span class="meta">{t(lang, "issued", ts=_t(r["issue"]))}｜{t(lang, "valid", ts=_t(r["valid"]))}</span>'
+                     f'<span class="meta">{t(lang, "issued", ts=_t(r["issue"]))}｜{t(lang, "valid", ts=_t_range(r["valid"]))}</span>'
                      + (f'<div>{t(lang, "affected", a="、".join(r["areas"]))}</div>' if r["areas"] else "") + body + '</div>'))
     # 未解除在前、已解除置底；同組內按時間倒序（ts 無法解析者視為最新，保顯示）
     def _k(it):
