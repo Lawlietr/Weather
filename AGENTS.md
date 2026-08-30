@@ -78,6 +78,7 @@
 - **停班停課**：以教育部或各縣市政府公告為主
 - **交通影響**：以交通部或各縣市政府公告為主，新聞媒體為輔
 - **災情來源優先級（build）**：repo 現有 `災情/` markdown → **RSS** → Obscura 抓取。每筆附**新聞來源**，僅給**少量摘要＋原連結**。
+- **RSS 半自動流程（2026/8/30 起）**：build 時 `build/rss.py` 自動抓 `rss_sources.json` 的 verified 來源 → 去重＋48h 時間過濾＋關鍵詞初判 → 產出 `build/rss_candidates.json`（gitignored、每次 build 重生成）。**候選清單本身從不進 `public/`**（`site.py` 不讀它）；cron／deploy.sh 自動跑時只是順帶刷新本機清單供下次人工/LLM 收集災情時直接讀取，**不上線任何 RSS 內容**。**相關性判斷仍由人 / LLM 審查**，挑中者以 `- [標題](URL) — 媒體名` 寫入事件檔「XX災情新聞來源」章節，build 才會渲染上線。單 feed 失敗不中斷 build。
 
 > ⚠️ 使用新聞資料時，請確認時效性，避免使用舊聞；引用時請註明新聞來源與日期。
 
@@ -85,7 +86,7 @@
 
 - **一律先讀 `build/rss_sources.json`** 取得來源清單（`sources` 8 家已實測可用；`failed_sources` 失效**勿呼叫**；`usage_notes` 為完整抓取守則），不要自行重新查或寫死 URL。
 - 重點：解析器需相容 `rss20`（`<item>`）與 `atom`（`<entry>`，公視是 Atom）；LTN feed 檔頭有 BOM；**民報域名是 `peoplenews.tw`（非 `minmax.tw`）**；單一來源 404/超時**不中斷 build**（跳過＋記 warning）。
-- **風傳媒（storm.mg）待復查**：RSS 疑似移除，但它是颱風/災情最重要新媒體之一；取不到時退而用 Obscura 抓其新聞頁。
+- **風傳媒（storm.mg）待復查**：RSS 疑似移除（2026/8/30 再測仍回 HTML/404），但它是颱風/災情最重要新媒體之一；取不到時退而用 Obscura 抓其新聞頁。
 
 ## Git
 

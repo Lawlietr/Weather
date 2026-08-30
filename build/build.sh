@@ -34,5 +34,9 @@ if [ ! -d .venv ]; then
 fi
 .venv/bin/pip list 2>/dev/null | grep -qi '^markdown ' || .venv/bin/pip install -q markdown
 
+# --- RSS 災情候選清單（半自動：只抓取＋結構化，相關性由人工審查；失敗不影響 build） ---
+echo "==> 抓取 RSS 災情候選清單（build/rss_candidates.json）..."
+.venv/bin/python rss.py || echo "⚠️  RSS 候選清單產出失敗，跳過（不影響 build）"
+
 # --- build ---
 .venv/bin/python site.py

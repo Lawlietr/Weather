@@ -130,7 +130,7 @@
   ],
   "failed_sources": [
     { "name": "中天新聞 CTi", "domain": "ettv.com.tw", "status": "failed", "reason": "全站封鎖本環境（首頁/新聞頁均 000 連線失敗，DNS 正常）。RSS 端點亦取不到。Obscura 抓取大概率也失敗。", "checked": "2026-08-27" },
-    { "name": "風傳媒 storm.mg", "domain": "storm.mg", "status": "pending", "reason": "/feed、/feeds、/rss.xml 均回 HTML 或 404，RSS 疑似已移除。但風傳媒是颱風/災情最重要新媒體之一，建議日後重測。", "checked": "2026-08-27" },
+    { "name": "風傳媒 storm.mg", "domain": "storm.mg", "status": "pending", "reason": "/feed 回 HTML（非 XML）、/rss 與 /rss.xml 均 404，RSS 疑似已移除（2026-08-30 再測仍如此）。但風傳媒是颱風/災情最重要新媒體之一，建議日後重測；取不到時退而用 Obscura 抓其新聞頁。", "checked": "2026-08-30" },
     { "name": "聯合報 udn", "domain": "feed.udn.com", "status": "failed", "reason": "DNS 無法解析，Feed 端點已停用。", "checked": "2026-08-27" },
     { "name": "中國時報 CTS", "domain": "cts.com.tw", "status": "failed", "reason": "RSS 端點回 HTTP 410（永久移除）。", "checked": "2026-08-27" },
     { "name": "華視 CTS", "domain": "cts.com.tw", "status": "failed", "reason": "RSS 端點回 HTTP 410。", "checked": "2026-08-27" },

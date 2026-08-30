@@ -31,6 +31,8 @@
 
 ```
 ① 更新 markdown 內容（災情/颱風檔案，規則見 AGENTS.md「檔案撰寫規則」）
+   ・災情新聞候選：build 會自動抓 RSS 產出 `build/rss_candidates.json`（關鍵詞 flag 在前、時間倒序）；
+     審查候選 → 挑中者以 `- [標題](URL) — 媒體名` 寫入事件檔「XX災情新聞來源」章節（勿自動推入，人工把關）
 ② ./build/build.sh
 ③ 驗證（見 §3 檢查清單）
 ④ git add / commit（訊息用繁體中文，簡述本次更新）
@@ -94,7 +96,9 @@ grep -rc "$CWA_API_KEY" public/ build/cwa_cache.json | grep -v ":0" || echo "OK:
 ls public/index.html public/ja/index.html
 # ⑤ 風險狀態列（由 CWA 自動推導；應與 build 日誌「目前風險：xxx」一致）
 grep -o 'risk-bar risk-[a-z]*' public/index.html | head -1
-# ⑥ 瀏覽器預覽（重點：風險狀態列、首頁 Hero、CWA 區塊、手機寬度、兩套主題、/ja/ 版）
+# ⑥ RSS 候選清單（build/rss_candidates.json 應為本次 build 新生成；feeds ok 應接近全數）
+python3 -c "import json,datetime;d=json.load(open('build/rss_candidates.json'));print(d['generated_at'],d['total'],'則,feeds ok',sum(1 for f in d['feeds'] if f['status']=='ok'),'/',len(d['feeds']))"
+# ⑦ 瀏覽器預覽（重點：風險狀態列、首頁 Hero、CWA 區塊、手機寬度、兩套主題、/ja/ 版）
 cd public && python3 -m http.server 8080
 ```
 
@@ -205,14 +209,15 @@ cd public && python3 -m http.server 8080
    3. **`cwa_cache.json`**（gitignored 本機快取）：上一次 build 的 CWA 資料。
 2. **只查會變的**：颱風位置/強度（每 3~6 小時才變）、當前警報狀態（`Warning_Content.js` 或 W-C0034-001 最後一報）、當日雨量。**不重查**：生成時間、歷史軌跡（已入檔）、API 結構（已入檔＋§5）、RSS 來源清單（`build/rss_sources.json`）。
 3. **同一資料一個 session 只查一次**：查到的 JSON 存 `/tmp`，後續用本機檔案處理（python），不重複 curl/RSS 全量掃描。
-4. **RSS 掃描一次就夠**：關鍵詞命中 0~2 條即停，不要換關鍵詞重掃、不要同一 feed 掃多輪。
+4. **災情新聞用 `build/rss_candidates.json`**：build 已自動抓 RSS（候選清單：關鍵詞 flag 在前、48h 窗口、跨來源去重）；**不要**再手動 curl feed 或 web 搜尋逐家掃（除非候選清單過舊、不足，或無 active 事件需要補充）。手動 web 搜尋仍限一次，命中 0~2 條即停。
 5. **寫檔一次成型**：長內容分段寫或先存 `/tmp` 再 `cp`，避免 write 工具 output token 截斷重來（8/28 實測發生）。
 6. **完成定義**：git status 乾淨（或 diff 已確認）＋ build ＋ deploy ＋ 推 `origin` 與 `github`。deploy 之後不要再做「驗證」式查詢。
 
 ## 附：快速指令參考
 
 ```bash
-./build/build.sh                          # 完整 build（抓 CWA + 產出 public/）
+./build/build.sh                          # 完整 build（RSS 候選 + 抓 CWA + 產出 public/）
+build/.venv/bin/python build/rss.py       # 只重新抓 RSS 候選清單（build/rss_candidates.json）
 cd public && python3 -m http.server 8080  # 本機預覽
 git log --oneline -5                      # 近期更新紀錄
 ```

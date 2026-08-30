@@ -7,15 +7,21 @@
 
 ---
 
-## 1. RSS 災情抓取接入 build
+## 1. RSS 災情抓取接入 build（✅ 半自動方案已實作 2026/8/30）
 
-`build/rss_sources.json` 已建好並實測（來源清單與抓取守則見 `build/rss_sources.json` 與 `AGENTS.md`「新聞 RSS 來源」），但 `build/site.py` 尚未有任何 RSS 邏輯。待實作：
+**已實作**（`build/rss.py`，由 `build/build.sh` 在 site.py 前呼叫；失敗不影響 build）：
 
-- 批次抓取 `rss_sources.json` 的 `sources`（勿呼叫 `failed_sources`）。
-- 解析器需同時相容 `rss20`（`<item>`）與 `atom`（`<entry>`，公視是 Atom）。
-- 單一來源 404/超時不中斷 build（跳過＋記 warning）。
-- 依時間過濾，只保留近期且與當前活動事件相關條目；每筆只給摘要＋原新聞連結。
-- **風傳媒（storm.mg）待復查**：RSS 疑似移除，但它是颱風/災情最重要的新媒體之一。若確認失效，取不到時退而用 Obscura 抓其新聞頁。
+- 批次抓取 `rss_sources.json` 的 verified 來源（21 feeds，勿呼叫 `failed_sources`）。
+- 解析器相容 `rss20`（`<item>`）與 `atom`（`<entry>`，公視）；utf-8-sig 處理 BOM（LTN）。
+- 單一來源 404/超時不中斷 build（跳過＋記 warning，與 feed 狀態寫入 `rss_candidates.json` 的 `warnings`）。
+- 時間過濾（預設 48h，`RSS_LOOKBACK_HOURS` 可調）＋ URL/標題雙去重＋關鍵詞初判 flag。
+- 產出 `build/rss_candidates.json`（gitignored）：候選清單供人 / LLM 審查，挑中者寫入事件 markdown「XX災情新聞來源」章節（`- [標題](URL) — 媒體名`）；build 會自動渲染到縣市卡。
+- 實測 2026/8/30：21/21 feeds ok、339 則候選、27 則關鍵詞命中。
+
+**剩餘待辦**：
+- **風傳媒（storm.mg）待復查**：RSS 疑似移除（2026/8/30 再測仍回 HTML/404），但它是颱風/災情最重要新媒體之一。若確認失效，取不到時退而用 Obscura 抓其新聞頁（未自動接入，因需 headless 抓取、與 curl 流水線不同）。
+- 關鍵詞清單（`rss.py` 的 `KEYWORDS`）需隨事件類型實測微調（已移除過於泛用的「中斷」）。
+- 候選審查目前全靠人工/LLM；若事件期間量太大，可考慮把 flag 條目渲染到首頁供快速瀏覽（非必需）。
 
 ### 半自動方案（建議採行；2026/8/29 與 AG 討論後定案）
 
@@ -24,7 +30,7 @@
 #### 關鍵設計（與 deploy.sh 解耦、與現有解析管道相容）
 
 - **只改 build 階段，不動 deploy.sh**：RSS 屬於「資料蒐集」，應長在 `build.sh` / `site.py`（build 流水線的 `[1/4] Build`），而非部署階段。`deploy.sh` 是部署編排器，不碰資料內容，保持不動。
-- **產出候選清單，不直接上線**：build 時抓 RSS → 去重 + 結構化（標題／連結／時間／來源）→ 寫入 `build/rss_candidates.json`（或 `public/assets/` 的候選資料）。程式**只負責抓取＋排版**，**不判定相關性**。
+- **產出候選清單，不直接上線**：build 時抓 RSS → 去重 + 結構化（標題／連結／時間／來源）→ 寫入 `build/rss_candidates.json`（gitignored；**從不進 `public/`**，cron 自動跑也只是刷新本機清單）。程式**只負責抓取＋排版**，**不判定相關性**。
 - **判斷永遠在人工層**：`site.py` 的解析器（`extract_news_by_county`、`find_county`）只把你已 curated 的東西從 markdown 搬到 HTML，不會決定要不要這則新聞。RSS 的「相關性／縣市歸類」判斷留給人 / LLM，符合「人工把關」。
 - **省的是重複勞動，不是判斷**：RSS 真正省下的是「逐家開網站抓＋解析 XML＋排版」的髒活；舊聞過濾、縣市歸類、事件相關性仍得做（keyword 比對準確度要實測微調）。
 
