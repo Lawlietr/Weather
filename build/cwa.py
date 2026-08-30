@@ -250,6 +250,23 @@ def _t(s):
         return s
 
 
+def _ts_parse(s):
+    """ISO / 'YYYY-MM-DD HH:MM:SS' → tz-aware datetime（無時區視為 +08:00）；解析失敗回 None。"""
+    if not s:
+        return None
+    s = s.strip().replace("Z", "+00:00")
+    try:
+        dt = datetime.fromisoformat(s)
+    except ValueError:
+        m = re.match(r"(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})", s)
+        if not m:
+            return None
+        dt = datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4)), int(m.group(5)))
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=TZ_TW)
+    return dt.astimezone(TZ_TW)
+
+
 def _classify(wind_ms):
     """回傳 i18n key；由呼叫端以 t(lang, key) 翻譯。"""
     if wind_ms is None:
@@ -489,35 +506,62 @@ def _sev_color(name, phenomena):
     return "sev-green"
 
 
-def render_alert_card(lang, marine, reports, stale_at=None):
-    """警報/特報卡：皆無 → 整張卡隱藏（回傳空字串）。"""
+# 已解除（解除/END）的警報/特報超過此時數後不再渲染：
+# CWA 的 CAP 端點只保留「最新一筆」（含解除報），何時被覆蓋由 CWA 端決定，
+# 我們自行設 TTL 淘汰，避免舊解除報永久佔位。
+LIFTED_TTL_HOURS = 48
+
+
+def render_alert_card(lang, marine, reports, stale_at=None, now=None):
+    """警報/特報卡：皆無 → 整張卡隱藏（回傳空字串）。
+
+    海上颱風警報與災害性天氣特報混排、按時間倒序（最新在最上）；
+    已解除（解除/END）項目置底、灰色 badge，超過 LIFTED_TTL_HOURS 則整筆移除。
+    """
+    now = now or datetime.now(TZ_TW)
     items = []
     for m in marine:
         if not m.get("title"):
             continue
         lifted = "解除" in m["title"] or m.get("category") == "END"
-        cls = "sev-green" if lifted else "sev-red"
+        ts = _ts_parse(m.get("effective"))
+        if lifted and ts is not None and (now - ts) > timedelta(hours=LIFTED_TTL_HOURS):
+            continue
+        cls = "sev-grey" if lifted else "sev-red"
+        note = t(lang, "lifted_note") if lifted else ""
         body = ""
         if m.get("content"):
             body = f'<details><summary class="muted">{t(lang, "view_full")}</summary><pre class="report-text">{m["content"].strip()}</pre></details>'
-        items.append(f'<div class="alert-item"><span class="badge {cls}">{t(lang, "marine_badge")}</span>　'
+        items.append((lifted, ts, f'<div class="alert-item"><span class="badge {cls}">{t(lang, "marine_badge")}</span>　'
                      f'<b>{m["title"]}</b>'
                      + (t(lang, "report_no", n=m["report_no"]) if m.get("report_no") else "")
                      + (f'｜{t(lang, "typhoon_label", n=m["typhoon_name"])}' if m.get("typhoon_name") else "")
+                     + note
                      + f'<div class="meta">{t(lang, "effective", ts=_t(m.get("effective")))}</div>'
-                     + body + '</div>')
+                     + body + '</div>'))
     for r in reports:
         if not r.get("name"):
             continue
-        cls = _sev_color(r["name"], r["phenomena"])
+        lifted = "解除" in r["name"]
+        ts = _ts_parse(r.get("issue"))
+        if lifted and ts is not None and (now - ts) > timedelta(hours=LIFTED_TTL_HOURS):
+            continue
+        cls = "sev-grey" if lifted else _sev_color(r["name"], r["phenomena"])
+        note = t(lang, "lifted_note") if lifted else ""
         phen = "、".join(r["phenomena"])
         body = ""
         if r.get("content"):
             body = f'<details><summary class="muted">{t(lang, "view_full")}</summary><pre class="report-text">{r["content"].strip()}</pre></details>'
-        items.append(f'<div class="alert-item"><span class="badge {cls}">{r["name"]}</span>　'
-                     f'<b>{phen}</b>　'
+        items.append((lifted, ts, f'<div class="alert-item"><span class="badge {cls}">{r["name"]}</span>　'
+                     f'<b>{phen}</b>{note}　'
                      f'<span class="meta">{t(lang, "issued", ts=_t(r["issue"]))}｜{t(lang, "valid", ts=_t(r["valid"]))}</span>'
-                     + (f'<div>{t(lang, "affected", a="、".join(r["areas"]))}</div>' if r["areas"] else "") + body + '</div>')
+                     + (f'<div>{t(lang, "affected", a="、".join(r["areas"]))}</div>' if r["areas"] else "") + body + '</div>'))
+    # 未解除在前、已解除置底；同組內按時間倒序（ts 無法解析者視為最新，保顯示）
+    def _k(it):
+        return (it[1] or now).timestamp()
+    items = sorted((i for i in items if not i[0]), key=_k, reverse=True) + \
+            sorted((i for i in items if i[0]), key=_k, reverse=True)
+    items = [html for _, _, html in items]
     if not items:
         return ""
     tag = f'　<span class="muted">{t(lang, "stale_tag", ts=stale_at)}</span>' if stale_at else ""

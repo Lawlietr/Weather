@@ -126,6 +126,7 @@ a:hover{text-decoration:underline}
 .badge.sev-red{background:var(--red);color:#fff}
 .badge.sev-yellow{background:var(--yellow);color:#3e2723}
 .badge.sev-green{background:var(--green);color:#fff}
+.badge.sev-grey{background:#9e9e9e;color:#fff}
 .chips{margin:10px 0}
 .chip{display:inline-block;background:var(--chip-bg);border-radius:14px;padding:2px 12px;margin:2px 4px 2px 0;font-size:.85rem}
 .chip-link{color:var(--accent);text-decoration:none}
