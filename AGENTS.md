@@ -160,7 +160,7 @@ cbph.cwa.gov.tw＝「預報中心資訊發布查詢系統」，即 CWA「災防�
 
 - **文件分工**：runbook（例行更新、新事件、驗證清單、部署、排程、陷阱）→ `WORKFLOW.md`；CWA 欄位查表 → `build/CWA_API.md`；手動路徑 → `MANUAL_UPDATE.md`；本地 cron → `LOCAL_CRON.md`；構想與待辦 → `TODO.md`。
 - **⚠️ 更新災情前必看 `WORKFLOW.md` §8「Agent 效率規範」**：先查 repo 既有檔案／`ctx_search`／`cwa_cache.json`，只查會變的資料，同一資料一個 session 只查一次。
-- **build 入口**：`./build/build.sh`（產出 `public/`（繁中）＋ `public/ja/`（日文）、`llms.txt`（站點＋事件索引）與 `llms-full.txt`（事件全文）；CWA 資料 build 時本機抓取）。
+- **build 入口**：`./build/build.sh`（產出 `public/`（繁中）＋ `public/ja/`（日文）、`llms.txt`（站點＋事件索引）與 `llms-full.txt`（事件全文）；CWA 資料 build 時本機抓取；另產 cbph 災防告警 `build/map.geo.json`（build 中間檔、gitignored，供地圖紅警功能，`/map/` 頁開發中，見 `TODO.md` §2））。
 - **颱風軌跡圖台灣輪廓**：`build/cwa.py` 的 `typhoon_svg()` 用 `build/taiwan_geo.py` 的 `ISLANDS`（本島＋澎湖／金門／馬祖／蘭嶼／綠島各自獨立 polygon）；產生器 `build/make_taiwan_geo.py`（純 Python Douglas–Peucker，無相依）重跑後會覆寫 `taiwan_geo.py`，GeoJSON 快取 `build/_geo_cache_*.json` 已 gitignore。
 - **i18n**：預設 zh-Hant（根目錄）、ja（`public/ja/`）；UI 字串收斂在 `build/i18n.py`（`STRINGS`＋`t()` 三級回退），**加新語言＝加一組 dict、不改模板**；**內容不翻譯**——事件 Markdown 正文、CWA 資料全語言保留中文原文，非預設語言頁面以 `content_note` / `cwa_data_note` 提示。
 

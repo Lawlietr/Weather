@@ -24,7 +24,7 @@
 3. 試跑一次確認 pipeline 通：
    ```bash
    ./build/build.sh
-   # 預期輸出：build 完成：N 個事件（active X / ended Y）｜CWA live
+   # 預期輸出：build 完成：N 個事件（active X / ended Y）｜CWA live｜…｜map.geo.json：N 筆生效告警
    ```
 
 ## 1. 例行更新流程（每次都要做）
@@ -33,7 +33,7 @@
 ① 更新 markdown 內容（災情/颱風檔案，規則見 AGENTS.md「檔案撰寫規則」）
    ・災情新聞候選：build 會自動抓 RSS 產出 `build/rss_candidates.json`（關鍵詞 flag 在前、時間倒序）；
      審查候選 → 挑中者以 `- [標題](URL) — 媒體名` 寫入事件檔「XX災情新聞來源」章節（勿自動推入，人工把關）
-② ./build/build.sh
+② ./build/build.sh（順帶：自動抓 cbph 災防告警產出 `build/map.geo.json`，build 中間檔、gitignored；地圖頁消費它，見 §2/§7 與 TODO §2）
 ③ 驗證（見 §3 檢查清單）
 ④ git add / commit（訊息用繁體中文，簡述本次更新）
 ⑤ git push origin main（內部 Forgejo）
@@ -196,7 +196,7 @@ cd public && python3 -m http.server 8080
   到 GitHub repo → Actions tab → "Build & Deploy" → "Run workflow"。
 - **更新 agent**：負責「查 CWA API/新聞 → 更新 markdown → build → push」。
   輸入就是本文件 §1～§3；agent 不需懂解析細節，照 check 清單驗收即可。
-- **地圖紅警層（CWA，2026/8/28 定案、2026/9/1 補 cbph API 實測，待實作）**：全自動——build 時抓 CWA（**cbph 災防告警 polygon**（`cbph.cwa.gov.tw/api/`，免 key、官方座標、免 gazetteer）＋特報/雨量站/氣旋）合成 `map.geo.json` 與地圖頁，掛在**現有每 2 小時排程**上，不新增排程/agent/金鑰；陸地特報紅區仍靠 gazetteer（鄉鎮級靜態 JSON，存 repo）轉換文字。細節見 `TODO.md` §2；災情新聞點層（§2b）維持人工把關。
+- **地圖紅警層（CWA，2026/8/28 定案、2026/9/1 補 cbph API 實測；實作中：gazetteer＋cbph→`build/map.geo.json` 已完成（2026/9/2），`/map/` 頁待做）**：全自動——build 時抓 CWA（**cbph 災防告警 polygon**（`cbph.cwa.gov.tw/api/`，免 key、官方座標、免 gazetteer；`build/cbph.py` 已掛 `site.py` 流水線，任何類型失敗只 warning、不中斷 build）＋特報/雨量站/氣旋）合成 `map.geo.json`（build 中間檔、gitignore）與地圖頁，掛在**現有每 2 小時排程**上，不新增排程/agent/金鑰；陸地特報紅區仍靠 gazetteer（`build/gazetteer.json`，存 repo）轉換文字。細節見 `TODO.md` §2；災情新聞點層（§2b）維持人工把關。
 
 ---
 
