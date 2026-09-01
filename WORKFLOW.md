@@ -196,7 +196,7 @@ cd public && python3 -m http.server 8080
   到 GitHub repo → Actions tab → "Build & Deploy" → "Run workflow"。
 - **更新 agent**：負責「查 CWA API/新聞 → 更新 markdown → build → push」。
   輸入就是本文件 §1～§3；agent 不需懂解析細節，照 check 清單驗收即可。
-- **地圖紅警層（CWA，2026/8/28 定案，待實作）**：全自動——build 時抓 CWA（特報/雨量站/氣旋）合成 `map.geo.json` 與地圖頁，掛在**現有每 2 小時排程**上，不新增排程/agent/金鑰；陸地紅區靠 gazetteer（鄉鎮級靜態 JSON，存 repo）轉換特報文字。細節見 `TODO.md` §2a；災情新聞點層（§2b）維持人工把關。
+- **地圖紅警層（CWA，2026/8/28 定案、2026/9/1 補 cbph API 實測，待實作）**：全自動——build 時抓 CWA（**cbph 災防告警 polygon**（`cbph.cwa.gov.tw/api/`，免 key、官方座標、免 gazetteer）＋特報/雨量站/氣旋）合成 `map.geo.json` 與地圖頁，掛在**現有每 2 小時排程**上，不新增排程/agent/金鑰；陸地特報紅區仍靠 gazetteer（鄉鎮級靜態 JSON，存 repo）轉換文字。細節見 `TODO.md` §2；災情新聞點層（§2b）維持人工把關。
 
 ---
 

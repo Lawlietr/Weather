@@ -3,7 +3,7 @@
 > 專案背景、設計原則、技術架構與部署流程分別見 `README.md`、`AGENTS.md`、`WORKFLOW.md`，本文件只放**未完成的待辦**；已完成項目的設計史不留在此（看 git history 或各文件）。
 > 最後更新：2026/9/1
 
-> 優先級：§1 RSS 殘餘細項（高，隨事件順手做）、§2 地圖紅警（高，已定案待實作）、§3 平常天氣報導（中，構想待討論）、§4 ja 移除／§5 分享按鈕（低）。
+> 優先級：§1 RSS 殘餘細項（高，隨事件順手做）、§2 地圖紅警（高，已定案待實作；2026/9/1 補 cbph 災防告警 API 實測與設計修正）、§3 平常天氣報導（中，構想待討論）、§4 ja 移除／§5 分享按鈕（低）。
 
 ---
 
@@ -18,9 +18,11 @@
 
 ---
 
-## 2. 地圖紅警功能（構想，待實作；2026/8/28 討論定案）
+## 2. 地圖紅警功能（構想，待實作；2026/8/28 定案、2026/9/1 補 cbph API 實測與設計修正）
 
-在互動地圖上以紅色危險告警標註「目前或預計會有淹水/大雨的地區」，讓使用者一眼看到「現在最危險的地區在哪」。**分兩層、可獨立上線**：
+在互動地圖上以紅色危險告警標註「目前或預計會有淹水/大雨的地區」，讓使用者一眼看到「現在最危險的地區在哪」。**分兩層、可獨立上線**。
+
+**定位（2026/9/1 定案）：地圖導向，非事件導向**——一張完整台灣地圖疊全部目前生效告警＋觀測＋災情點（對比 CWA cbph 的「選類型→事件列表→單事件範圍」），點擊紅色區域→該告警詳情＋本 repo 該區域相關災情紀錄。概念釐清：CWA 的「災情」是**危險告警**（哪裡可能變危險），非損失紀錄；實際災情（淹水/樹倒/停電）不在任何 CWA API，屬新聞層（2b）。
 
 ### 2a. CWA 紅警層（**全自動部署**，已定案）
 
@@ -28,12 +30,32 @@
 - 資料來源對應：
   | 地圖元素 | 來源 | 備註 |
   |----------|------|------|
+  | PWS 災防告警區（大雷雨/颱風強風/山區暴雨/巨浪） | cbph.cwa.gov.tw `/api/global/`＋`/api/{type}/`（2026/9/1 實測新增） | **官方 polygon，免 gazetteer**；含生效時段/影響鄉鎮/細胞廣播狀態；詳見下方小節 |
   | 雨量站紅點 | O-A0002-001 `GeoInfo` + `Past1hr`/當日累計 | 超閾值上紅，點大小/顏色深淺對應雨量等級 |
   | 颱風軌跡/風圈 | W-C0034-005 | 預測路徑＋風圈圓環 |
   | 海區警報多邊形 | W-C0034-001 CAP `area` | **唯一官方座標化多邊形，且是海區** |
   | 陸地紅區（豪大雨特報影響區域） | W-C0033-002/003 | ⚠️ 影響區域是**文字/縣市清單，非座標多邊形**，必須經 gazetteer 轉換；標籤註明生效時段（「今夜起」等） |
-- **gazetteer（鄉鎮級靜態座標表）是必建項目，非可選**：JSON 存 repo（手工維護或用 CWA C-B0074 測站資料生成），一次性建好後此層即永久自動。特報文字與災情新聞的鄉鎮名稱都對照它；查不到回退縣級，再查不到不上圖。
+- **gazetteer（鄉鎮級靜態座標表）是必建項目，非可選**：JSON 存 repo（手工維護或用 CWA C-B0074 測站資料生成），一次性建好後此層即永久自動。特報文字與災情新聞的鄉鎮名稱都對照它；查不到回退縣級，再查不到不上圖。（2026/9/1 修正：cbph PWS 告警層改用**官方 polygon**，gazetteer 僅服務特報文字層＋新聞點對照——仍必建，但角色縮小。）
 - **不做**：像素級降雨預報雲圖（CWA 開放資料無 48h 雨量預報座標，F-C0033-001 已下架）；河川水位/土石流（O-C0010-001 已下架）——淹水類警報只能靠 2b 新聞層，粒度到鄉鎮。
+
+#### cbph 災防告警 API（2026/9/1 實測，新增資料源）
+
+cbph.cwa.gov.tw＝「預報中心資訊發布查詢系統」（CWA Broadcast Product History），即 CWA「災防訊息彙整」（`/V8/C/P/PWS/PWS.html`，該頁本身只有文字清單）背後的地圖查詢系統。**公開 JSON API、免 key**（build 時抓取，無 CORS 問題；預設 curl UA 即可）。
+
+- **Endpoints**（實測 2026/9/1）：
+  - `GET https://cbph.cwa.gov.tw/api/global/` — 目前告警，依 4 類分組（前端再按 `is_active`＋`expires` 過濾）
+  - `GET https://cbph.cwa.gov.tw/api/{type}/?issuetime_after=&issuetime_before=&county=` — 歷史（預設最新 50 筆）
+  - type slugs：`cells`＝大雷雨即時訊息、`tywinds`＝颱風強風告警、`mountainstorms`＝山區暴雨警示訊息、`largesurfs`＝巨浪告警
+- **每筆欄位**：`identifier`（例 `cwa.gov.tw_thunderstorm_20260901142900_100`）、`official_id`、`sent`/`onset`/`effective`/`expires`（**UTC**，`Z` 結尾）、`is_active`、`msg_type`、`description`（告警原句）、`cmam_text`（細胞廣播原文）、`cb_enabled`、`county[]`/`town[]`（含鄉鎮）、`coastal_county[]`/`coastal_town[]`、**`polygon`**（字串：`lat,lon lat,lon ...`，多 ring 以 `;` 分開＝**官方影響區域座標**）、`geocode_dict`（實測 50 筆全空）
+- **官方頁 deep link**：`https://cbph.cwa.gov.tw/ui/?type={type}&identifier={identifier}`（點擊詳情卡可回連官方頁）
+- **實測陷阱**（2026/9/1）：
+  1. `largesurfs` 目前回 **503**（空類型/不存在路徑皆可能 503）——503/404 一律容錯跳過。
+  2. `county=` 過濾不可靠（實測宜蘭縣 0 筆，但資料裡有宜蘭）——build 端抓全量自行 filter。
+  3. 預設 50 筆 `is_active` 全 True（mountainstorms 例）——build 端仍須自行驗 `is_active`＋`expires`。
+  4. **非 Open Data 正式目錄**：無 SLA、無變更通知；build 端 try/except＋輕量 schema 驗證，失敗跳過＋warning、**不中斷 build**（沿用 RSS 守則）。
+  5. 時區 UTC——build 端一律轉 UTC+8（沿用固定 UTC+8 慣例）。
+  6. 引用措辭：UI 註明「資料來源：中央氣象署災防告警系統（PWS）」。
+- **更新頻率疑慮**：大雷雨即時訊息 lifespan 約 2 小時＝每 2 小時 cron 的下限，事件高峰期可能整筆錯過 → 見下方「待決定」。
 
 ### 2b. 災情新聞點層（人工/agent 餵料，可選疊層）
 
@@ -50,6 +72,32 @@
 
 - 所有 JS/CSS 自託在 `public/assets/`，不引 CDN。
 - 瓦片策略：build 時只抓台灣範圍所需瓦片存本地（約 z9–z11，幾十張 PNG、數 MB）——瓦片幾乎不變，可 build 時缺什麼補什麼，甚至直接 commit 進 repo 使 build 零外部依賴；Leaflet 指向本地瓦片 → 完全離線、零外部請求（災發時網路最不稳定，離線靠得住）；不要跑 OSM tile server。出範圍的瓦片顯示空白底（或 fallback 到現有靜態 SVG）。
+
+### 地圖頁 UI 設計（2026/9/1 討論，待實作）
+
+- **獨立 `/map/` 頁**：Leaflet 只在此頁載入；首頁維持零 JS＋現有靜態 SVG 軌跡圖，只加一個「查看地圖」入口。
+- 佈局：全幅地圖（預設全台視角 z8–9）＋右側欄（行動版 bottom sheet）：點擊詳情卡＋圖例＋「產生時間：YYYY/M/D HH:mm（每 2 小時更新，非即時）」——**快照標示必顯示**。
+- **點擊詳情卡欄位**：告警類型＋`official_id`、生效時段（`effective→expires`，UTC+8）、影響縣市/鄉鎮、`description` 原句、`cmam_text`＋`cb_enabled`（細胞廣播狀態）、**本 repo 該區域相關災情紀錄連結**、回連 cbph 官方頁。
+- 圖層配色沿用 cbph：大雷雨 `#f59e0b`、颱風強風 `#ef4444`；山區暴雨/巨浪配色自定。hover tooltip（類型＋時段＋縣市）；圖層可勾選開關（預設全開）。
+- **Deep link**：`/map/?layer=&zoom=&center=`、`/map/event/{identifier}`（分享單一告警）。
+- **LLM 友善**：`/map/data.json`（即 build 產出之 `map.geo.json`）公開＋寫進 `llms.txt`。
+- OSM 瓦片署名義務：頁尾必顯示 `© OpenStreetMap contributors`。
+- 無 JS fallback：顯示既有靜態 SVG 總覽。
+
+### 待決定（2026/9/1 提出）
+
+1. **cbph 是否接受為資料源**——非正式 API、無 SLA（資料本身是 CWA 公開資訊；以「轉引」措辭呈現）。
+2. **更新頻率**——維持每 2 小時，或事件期間（有 active 告警）加頻至 30–60 分鐘（大雷雨 lifespan 只有 2 小時）。
+3. **2b 新聞點層上線時程**——與 CWA 自動層同批，或自動層先上。
+
+### 建議執行順序（2026/9/1）
+
+1. gazetteer（鄉鎮/縣級 JSON，一次性建）
+2. `build/cbph.py`：抓 4 類→驗證→合併進 `map.geo.json`
+3. `/map/` 骨架：自託 Leaflet＋瓦片＋cbph polygon 層＋點擊詳情卡＋圖例＋產生時間
+4. 雨量站＋颱風軌跡/風圈＋特報（gazetteer）層
+5. 2b 災情新聞點層（人工餵料）
+6. v2：`/map/data.json` 公開＋deep link＋時間線快照
 
 ---
 

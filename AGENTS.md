@@ -74,6 +74,7 @@
 
 - **颱風資料**（軌跡、強度、位置、預測）：以中央氣象署（CWA）API 為主
 - **警報與特報**（海上颱風警報、大雨特報、強風特報）：以 CWA API 為主
+- **災防告警區**（大雷雨/颱風強風/山區暴雨/巨浪，含官方影響區域 polygon、細胞廣播狀態）：以 CWA cbph API（`cbph.cwa.gov.tw/api/`，免 key、build 時抓取）為主；欄位與陷阱見下方「CWA cbph 災防告警 API」節
 - **雨量、風力、浪高**：以 CWA API 為主
 - **災情紀錄**（淹水、樹倒、落石、停電等）：以各縣市新聞媒體為輔，引用時請註明出處
 - **停班停課**：以教育部或各縣市政府公告為主
@@ -133,6 +134,15 @@ https://opendata.cwa.gov.tw/api/v1/rest/datastore/{Data ID}?Authorization=${CWA_
 6. 更新頻率：颱風警報每 3~6 小時、氣旋資料每 6 小時；每 30~60 分鐘查一次即可。
 
 ---
+
+## CWA cbph 災防告警 API（PWS，2026/9/1 實測）
+
+cbph.cwa.gov.tw＝「預報中心資訊發布查詢系統」，即 CWA「災防訊息彙整」（`www.cwa.gov.tw/V8/C/P/PWS/PWS.html`；該頁只有文字清單）背後的地圖查詢系統。**公開 JSON API、免 key**；CORS 同 Open Data 不可依賴，一律 build 時本機抓取。
+
+- **Endpoints**：`GET /api/global/`（目前生效告警，4 類分組）；`GET /api/{type}/?issuetime_after=&issuetime_before=&county=`（歷史，預設最新 50 筆）。type slugs：`cells`＝大雷雨即時訊息、`tywinds`＝颱風強風告警、`mountainstorms`＝山區暴雨警示訊息、`largesurfs`＝巨浪告警。
+- **每筆欄位**：`identifier`、`official_id`、`sent`/`onset`/`effective`/`expires`（UTC）、`is_active`、`msg_type`、`description`（告警原句）、`cmam_text`（細胞廣播原文）、`cb_enabled`、`county[]`/`town[]`（含鄉鎮）、`coastal_*`、**`polygon`**（字串 `lat,lon lat,lon ...`，多 ring 以 `;` 分開＝官方影響區域座標）、`geocode_dict`（實測空）。
+- **官方頁 deep link**：`https://cbph.cwa.gov.tw/ui/?type={type}&identifier={identifier}`
+- **陷阱（實測）**：空類型回 503（如 largesurfs）；`county=` 過濾不可靠（自行 filter）；**非 Open Data 正式目錄**（無 SLA）→ build 端容錯、失敗跳過＋warning 不中斷；時間 UTC；UI 引用註明「資料來源：中央氣象署災防告警系統」。設計與用途 → `TODO.md` §2。
 
 ## Obscura 無頭瀏覽器
 
