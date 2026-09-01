@@ -15,6 +15,7 @@ import datetime
 from pathlib import Path
 
 import cwa
+import cbph
 from urllib.parse import quote
 
 import i18n
@@ -839,10 +840,15 @@ def main():
 
     build_llms_files(events, ts, cwa_ctx)
 
+    # 地圖紅警（TODO §2）：cbph 災防告警 → build/map.geo.json（build 中間檔，gitignore）。
+    # 容錯：單類抓取失敗記 warning（cbph 內部已印）＋寫入 map.geo.json 的 warnings 欄、
+    # 不中斷 build（沿用 RSS 守則）。
+    n_alerts, _cbph_warnings = cbph.build_map_geojson(Path(__file__).resolve().parent / "map.geo.json")
+
     mode = cwa_ctx[3]
     src_note = {"live": "CWA live", "partial": "CWA partial（含舊資料）", "cache": "CWA 快取", "none": "CWA 無法取得"}[mode]
     risk, _ = cwa.current_risk_level("zh-Hant", cwa_ctx[0], cwa_ctx[2], mode)
-    print(f"build 完成：{len(events)} 個事件（active {sum(1 for e in events if e['status']=='active')} / ended {sum(1 for e in events if e['status']!='active')}）｜{src_note}｜目前風險：{risk}｜llms.txt + llms-full.txt 已產生")
+    print(f"build 完成：{len(events)} 個事件（active {sum(1 for e in events if e['status']=='active')} / ended {sum(1 for e in events if e['status']!='active')}）｜{src_note}｜目前風險：{risk}｜llms.txt + llms-full.txt 已產生｜map.geo.json：{n_alerts} 筆生效告警")
     print(f"輸出：{OUT}")
     print(f"預覽：cd {OUT} && python3 -m http.server 8080")
 

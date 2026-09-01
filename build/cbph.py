@@ -164,6 +164,27 @@ def fetch_map_features(only_active=True, warnings=None):
     return features
 
 
+def build_map_geojson(path, only_active=True):
+    """抓目前生效告警 → 寫 GeoJSON FeatureCollection（build 時呼叫）。
+
+    回傳 (feature 數, warnings)。任何類型抓取失敗不中斷（沿用 RSS 守則）。
+    產物為 build 中間檔（gitignore）；公開 /map/data.json 屬執行順序 6（v2）。
+    """
+    warnings = []
+    features = fetch_map_features(only_active=only_active, warnings=warnings)
+    fc = {
+        "type": "FeatureCollection",
+        "generated_at": datetime.now(TZ_TW).strftime("%Y/%-m/%-d %H:%M"),
+        "source": "中央氣象署災防告警系統（PWS）",
+        "api": "cbph.cwa.gov.tw",
+        "note": "build 時快照、每 2 小時更新、非即時",
+        "warnings": warnings,
+        "features": features,
+    }
+    Path(path).write_text(json.dumps(fc, ensure_ascii=False, indent=1), encoding="utf-8")
+    return len(features), warnings
+
+
 if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser()
