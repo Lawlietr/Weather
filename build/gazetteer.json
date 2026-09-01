@@ -1,0 +1,2334 @@
+{
+  "meta": {
+    "generated": "2026-09-01",
+    "sources": {
+      "cwa_station": "CWA Open Data C-B0074-001/002 現存測站（官方座標）",
+      "boundary": "g0v/twgeojson twTown1982.geo.json（MIT，界線質心；2010 五都後/2014 桃園升格前快照，桃園縣已換算為桃園市）",
+      "manual": "手動補位（界線快照漏收且無測站的鄉鎮）"
+    },
+    "keys": "「縣+鄉鎮」全名，官方 臺字系（如 臺中市霧峰區）",
+    "normalization": "比對端請將查詢名先 台→臺 正規化再查本表；查不到回退 counties（縣級），縣級也無則不上圖"
+  },
+  "counties": {
+    "南投縣": {
+      "lat": 23.86831,
+      "lon": 120.93714,
+      "station_count": 59
+    },
+    "嘉義市": {
+      "lat": 23.4768,
+      "lon": 120.44672,
+      "station_count": 2
+    },
+    "嘉義縣": {
+      "lat": 23.44956,
+      "lon": 120.49753,
+      "station_count": 31
+    },
+    "基隆市": {
+      "lat": 25.20781,
+      "lon": 121.79432,
+      "station_count": 7
+    },
+    "宜蘭縣": {
+      "lat": 24.65389,
+      "lon": 121.70027,
+      "station_count": 45
+    },
+    "屏東縣": {
+      "lat": 22.35354,
+      "lon": 120.67127,
+      "station_count": 67
+    },
+    "彰化縣": {
+      "lat": 23.95809,
+      "lon": 120.48656,
+      "station_count": 26
+    },
+    "新北市": {
+      "lat": 25.05684,
+      "lon": 121.58006,
+      "station_count": 47
+    },
+    "新竹市": {
+      "lat": 24.80475,
+      "lon": 120.93879,
+      "station_count": 3
+    },
+    "新竹縣": {
+      "lat": 24.72517,
+      "lon": 121.09205,
+      "station_count": 20
+    },
+    "桃園市": {
+      "lat": 24.94434,
+      "lon": 121.23118,
+      "station_count": 20
+    },
+    "澎湖縣": {
+      "lat": 23.4259,
+      "lon": 119.51907,
+      "station_count": 7
+    },
+    "臺中市": {
+      "lat": 24.24492,
+      "lon": 120.8526,
+      "station_count": 51
+    },
+    "臺北市": {
+      "lat": 25.09747,
+      "lon": 121.53869,
+      "station_count": 15
+    },
+    "臺南市": {
+      "lat": 23.15312,
+      "lon": 120.30036,
+      "station_count": 46
+    },
+    "臺東縣": {
+      "lat": 22.75822,
+      "lon": 121.13685,
+      "station_count": 52
+    },
+    "花蓮縣": {
+      "lat": 23.77857,
+      "lon": 121.47158,
+      "station_count": 63
+    },
+    "苗栗縣": {
+      "lat": 24.51768,
+      "lon": 120.86782,
+      "station_count": 37
+    },
+    "連江縣": {
+      "lat": 26.11828,
+      "lon": 119.95966,
+      "station_count": 3
+    },
+    "金門縣": {
+      "lat": 24.55429,
+      "lon": 118.54336,
+      "station_count": 5
+    },
+    "雲林縣": {
+      "lat": 23.67038,
+      "lon": 120.36361,
+      "station_count": 24
+    },
+    "高雄市": {
+      "lat": 22.85125,
+      "lon": 120.45883,
+      "station_count": 53
+    }
+  },
+  "towns": {
+    "南投縣中寮鄉": {
+      "lat": 23.93402,
+      "lon": 120.812,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "南投縣仁愛鄉": {
+      "lat": 24.04407,
+      "lon": 121.14296,
+      "source": "cwa_station",
+      "stations": 18
+    },
+    "南投縣信義鄉": {
+      "lat": 23.62554,
+      "lon": 120.93391,
+      "source": "cwa_station",
+      "stations": 13
+    },
+    "南投縣南投市": {
+      "lat": 23.91827,
+      "lon": 120.66257,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "南投縣名間鄉": {
+      "lat": 23.82892,
+      "lon": 120.67202,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "南投縣國姓鄉": {
+      "lat": 24.00178,
+      "lon": 120.85674,
+      "source": "cwa_station",
+      "stations": 4
+    },
+    "南投縣埔里鎮": {
+      "lat": 23.95435,
+      "lon": 120.9671,
+      "source": "cwa_station",
+      "stations": 4
+    },
+    "南投縣水里鄉": {
+      "lat": 23.81255,
+      "lon": 120.84979,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "南投縣竹山鎮": {
+      "lat": 23.68996,
+      "lon": 120.72017,
+      "source": "cwa_station",
+      "stations": 5
+    },
+    "南投縣草屯鎮": {
+      "lat": 23.97053,
+      "lon": 120.74152,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "南投縣集集鎮": {
+      "lat": 23.82821,
+      "lon": 120.80147,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "南投縣魚池鄉": {
+      "lat": 23.88851,
+      "lon": 120.9247,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "南投縣鹿谷鄉": {
+      "lat": 23.71165,
+      "lon": 120.8203,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "嘉義市西區": {
+      "lat": 23.49593,
+      "lon": 120.43291,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "嘉義縣中埔鄉": {
+      "lat": 23.42538,
+      "lon": 120.5229,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "嘉義縣六腳鄉": {
+      "lat": 23.49287,
+      "lon": 120.29063,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "嘉義縣大埔鄉": {
+      "lat": 23.24689,
+      "lon": 120.60888,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "嘉義縣大林鎮": {
+      "lat": 23.60062,
+      "lon": 120.45841,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "嘉義縣太保市": {
+      "lat": 23.45506,
+      "lon": 120.33145,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "嘉義縣布袋鎮": {
+      "lat": 23.35864,
+      "lon": 120.15289,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "嘉義縣新港鄉": {
+      "lat": 23.55327,
+      "lon": 120.34573,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "嘉義縣朴子市": {
+      "lat": 23.43463,
+      "lon": 120.23902,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "嘉義縣東石鄉": {
+      "lat": 23.45893,
+      "lon": 120.15385,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "嘉義縣梅山鄉": {
+      "lat": 23.5854,
+      "lon": 120.55559,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "嘉義縣民雄鄉": {
+      "lat": 23.55175,
+      "lon": 120.42846,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "嘉義縣水上鄉": {
+      "lat": 23.41973,
+      "lon": 120.38891,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "嘉義縣溪口鄉": {
+      "lat": 23.60413,
+      "lon": 120.40357,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "嘉義縣番路鄉": {
+      "lat": 23.42592,
+      "lon": 120.60397,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "嘉義縣竹崎鄉": {
+      "lat": 23.51343,
+      "lon": 120.63152,
+      "source": "cwa_station",
+      "stations": 4
+    },
+    "嘉義縣義竹鄉": {
+      "lat": 23.36991,
+      "lon": 120.24806,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "嘉義縣阿里山鄉": {
+      "lat": 23.41343,
+      "lon": 120.73017,
+      "source": "cwa_station",
+      "stations": 6
+    },
+    "嘉義縣鹿草鄉": {
+      "lat": 23.41134,
+      "lon": 120.30835,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "基隆市七堵區": {
+      "lat": 25.09482,
+      "lon": 121.71713,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "基隆市中正區": {
+      "lat": 25.32138,
+      "lon": 121.88511,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "基隆市仁愛區": {
+      "lat": 25.13331,
+      "lon": 121.74048,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "基隆市安樂區": {
+      "lat": 25.16668,
+      "lon": 121.70699,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "基隆市暖暖區": {
+      "lat": 25.0957,
+      "lon": 121.7403,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "宜蘭縣三星鄉": {
+      "lat": 24.66812,
+      "lon": 121.65302,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "宜蘭縣五結鄉": {
+      "lat": 24.68637,
+      "lon": 121.79794,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "宜蘭縣冬山鄉": {
+      "lat": 24.63387,
+      "lon": 121.7553,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "宜蘭縣南澳鄉": {
+      "lat": 24.48889,
+      "lon": 121.80128,
+      "source": "cwa_station",
+      "stations": 7
+    },
+    "宜蘭縣員山鄉": {
+      "lat": 24.7385,
+      "lon": 121.68381,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "宜蘭縣壯圍鄉": {
+      "lat": 24.76827,
+      "lon": 121.81509,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "宜蘭縣大同鄉": {
+      "lat": 24.52913,
+      "lon": 121.49405,
+      "source": "cwa_station",
+      "stations": 14
+    },
+    "宜蘭縣宜蘭市": {
+      "lat": 24.76397,
+      "lon": 121.75653,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "宜蘭縣礁溪鄉": {
+      "lat": 24.81061,
+      "lon": 121.72368,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "宜蘭縣羅東鎮": {
+      "lat": 24.68184,
+      "lon": 121.74934,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "宜蘭縣蘇澳鎮": {
+      "lat": 24.54699,
+      "lon": 121.84979,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "宜蘭縣頭城鎮": {
+      "lat": 24.90616,
+      "lon": 121.87085,
+      "source": "cwa_station",
+      "stations": 8
+    },
+    "屏東縣三地門鄉": {
+      "lat": 22.78883,
+      "lon": 120.67785,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "屏東縣九如鄉": {
+      "lat": 22.7405,
+      "lon": 120.4905,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "屏東縣佳冬鄉": {
+      "lat": 22.41818,
+      "lon": 120.53604,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "屏東縣來義鄉": {
+      "lat": 22.45427,
+      "lon": 120.66622,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "屏東縣內埔鄉": {
+      "lat": 22.66179,
+      "lon": 120.60053,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "屏東縣南州鄉": {
+      "lat": 22.48591,
+      "lon": 120.50274,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "屏東縣崁頂鄉": {
+      "lat": 22.51478,
+      "lon": 120.50691,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "屏東縣恆春鎮": {
+      "lat": 21.96245,
+      "lon": 120.76301,
+      "source": "cwa_station",
+      "stations": 8
+    },
+    "屏東縣新園鄉": {
+      "lat": 22.5434,
+      "lon": 120.46156,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "屏東縣新埤鄉": {
+      "lat": 22.48781,
+      "lon": 120.58535,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "屏東縣春日鄉": {
+      "lat": 22.40125,
+      "lon": 120.67024,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "屏東縣東港鎮": {
+      "lat": 22.46247,
+      "lon": 120.44074,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "屏東縣枋寮鄉": {
+      "lat": 22.38031,
+      "lon": 120.57272,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "屏東縣枋山鄉": {
+      "lat": 22.25776,
+      "lon": 120.65831,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "屏東縣林邊鄉": {
+      "lat": 22.4634,
+      "lon": 120.5339,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "屏東縣泰武鄉": {
+      "lat": 22.60296,
+      "lon": 120.69858,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "屏東縣滿州鄉": {
+      "lat": 22.04304,
+      "lon": 120.85724,
+      "source": "cwa_station",
+      "stations": 6
+    },
+    "屏東縣潮州鎮": {
+      "lat": 22.53436,
+      "lon": 120.54,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "屏東縣牡丹鄉": {
+      "lat": 22.13786,
+      "lon": 120.83566,
+      "source": "cwa_station",
+      "stations": 6
+    },
+    "屏東縣獅子鄉": {
+      "lat": 22.25477,
+      "lon": 120.69698,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "屏東縣琉球鄉": {
+      "lat": 22.33225,
+      "lon": 120.36224,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "屏東縣瑪家鄉": {
+      "lat": 22.6829,
+      "lon": 120.68664,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "屏東縣竹田鄉": {
+      "lat": 22.58486,
+      "lon": 120.54344,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "屏東縣萬丹鄉": {
+      "lat": 22.5885,
+      "lon": 120.4851,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "屏東縣萬巒鄉": {
+      "lat": 22.55982,
+      "lon": 120.61971,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "屏東縣車城鄉": {
+      "lat": 22.09467,
+      "lon": 120.72752,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "屏東縣里港鄉": {
+      "lat": 22.77919,
+      "lon": 120.49459,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "屏東縣長治鄉": {
+      "lat": 22.69313,
+      "lon": 120.54263,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "屏東縣霧臺鄉": {
+      "lat": 22.74291,
+      "lon": 120.74367,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "屏東縣高樹鄉": {
+      "lat": 22.82639,
+      "lon": 120.60081,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "屏東縣鹽埔鄉": {
+      "lat": 22.73956,
+      "lon": 120.53078,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "屏東縣麟洛鄉": {
+      "lat": 22.65078,
+      "lon": 120.52719,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "彰化縣二林鎮": {
+      "lat": 23.90332,
+      "lon": 120.37608,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "彰化縣二水鄉": {
+      "lat": 23.81074,
+      "lon": 120.6173,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "彰化縣伸港鄉": {
+      "lat": 24.16622,
+      "lon": 120.48575,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "彰化縣和美鎮": {
+      "lat": 24.10517,
+      "lon": 120.49213,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "彰化縣員林鎮": {
+      "lat": 23.9465,
+      "lon": 120.58559,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "彰化縣埔心鄉": {
+      "lat": 23.94763,
+      "lon": 120.52546,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "彰化縣埔鹽鄉": {
+      "lat": 24.0004,
+      "lon": 120.43169,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "彰化縣埤頭鄉": {
+      "lat": 23.866,
+      "lon": 120.4528,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "彰化縣大城鄉": {
+      "lat": 23.86724,
+      "lon": 120.30522,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "彰化縣永靖鄉": {
+      "lat": 23.9247,
+      "lon": 120.54753,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "彰化縣溪州鄉": {
+      "lat": 23.83385,
+      "lon": 120.53334,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "彰化縣溪湖鎮": {
+      "lat": 23.94835,
+      "lon": 120.47912,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "彰化縣田中鎮": {
+      "lat": 23.8738,
+      "lon": 120.58128,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "彰化縣田尾鄉": {
+      "lat": 23.90167,
+      "lon": 120.50939,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "彰化縣社頭鄉": {
+      "lat": 23.89765,
+      "lon": 120.5862,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "彰化縣福興鄉": {
+      "lat": 24.04279,
+      "lon": 120.40954,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "彰化縣秀水鄉": {
+      "lat": 24.03405,
+      "lon": 120.50387,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "彰化縣竹塘鄉": {
+      "lat": 23.84825,
+      "lon": 120.38676,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "彰化縣線西鄉": {
+      "lat": 24.14336,
+      "lon": 120.44353,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "彰化縣芬園鄉": {
+      "lat": 24.01568,
+      "lon": 120.6213,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "彰化縣花壇鄉": {
+      "lat": 24.03208,
+      "lon": 120.54946,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新北市三峽區": {
+      "lat": 24.93903,
+      "lon": 121.36973,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新北市三芝區": {
+      "lat": 25.2698,
+      "lon": 121.4886,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新北市三重區": {
+      "lat": 25.05733,
+      "lon": 121.50063,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新北市中和區": {
+      "lat": 24.99162,
+      "lon": 121.49179,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新北市五股區": {
+      "lat": 25.07445,
+      "lon": 121.42728,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新北市八里區": {
+      "lat": 25.15021,
+      "lon": 121.40395,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新北市土城區": {
+      "lat": 24.97321,
+      "lon": 121.44517,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新北市坪林區": {
+      "lat": 24.94051,
+      "lon": 121.7116,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "新北市新店區": {
+      "lat": 24.93843,
+      "lon": 121.55268,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "新北市新莊區": {
+      "lat": 25.05148,
+      "lon": 121.44675,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新北市板橋區": {
+      "lat": 25.0107,
+      "lon": 121.4489,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新北市林口區": {
+      "lat": 25.10356,
+      "lon": 121.37287,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "新北市樹林區": {
+      "lat": 24.97494,
+      "lon": 121.40201,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新北市永和區": {
+      "lat": 25.01125,
+      "lon": 121.50811,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新北市汐止區": {
+      "lat": 25.09952,
+      "lon": 121.63373,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "新北市淡水區": {
+      "lat": 25.19649,
+      "lon": 121.43521,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "新北市深坑區": {
+      "lat": 25.0027,
+      "lon": 121.62833,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新北市烏來區": {
+      "lat": 24.79331,
+      "lon": 121.57265,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "新北市瑞芳區": {
+      "lat": 25.09879,
+      "lon": 121.8369,
+      "source": "cwa_station",
+      "stations": 4
+    },
+    "新北市石碇區": {
+      "lat": 25.00134,
+      "lon": 121.65458,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "新北市石門區": {
+      "lat": 25.2784,
+      "lon": 121.56013,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "新北市萬里區": {
+      "lat": 25.18647,
+      "lon": 121.6615,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "新北市蘆洲區": {
+      "lat": 25.08659,
+      "lon": 121.47233,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新北市貢寮區": {
+      "lat": 25.0314,
+      "lon": 121.96368,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "新北市金山區": {
+      "lat": 25.22839,
+      "lon": 121.61961,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "新北市雙溪區": {
+      "lat": 25.0036,
+      "lon": 121.84398,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "新北市鶯歌區": {
+      "lat": 24.95153,
+      "lon": 121.34629,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新竹市北區": {
+      "lat": 24.83198,
+      "lon": 120.91444,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新竹市東區": {
+      "lat": 24.79868,
+      "lon": 120.98694,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新竹市香山區": {
+      "lat": 24.78358,
+      "lon": 120.91499,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新竹縣五峰鄉": {
+      "lat": 24.55507,
+      "lon": 121.11102,
+      "source": "cwa_station",
+      "stations": 5
+    },
+    "新竹縣北埔鄉": {
+      "lat": 24.64445,
+      "lon": 121.09096,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新竹縣寶山鄉": {
+      "lat": 24.73501,
+      "lon": 121.02519,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新竹縣尖石鄉": {
+      "lat": 24.69872,
+      "lon": 121.24622,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "新竹縣峨眉鄉": {
+      "lat": 24.6905,
+      "lon": 121.01719,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新竹縣新埔鎮": {
+      "lat": 24.84856,
+      "lon": 121.09457,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "新竹縣新豐鄉": {
+      "lat": 24.89421,
+      "lon": 120.97296,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "新竹縣橫山鄉": {
+      "lat": 24.71116,
+      "lon": 121.11693,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新竹縣湖口鄉": {
+      "lat": 24.9048,
+      "lon": 121.04363,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新竹縣竹北市": {
+      "lat": 24.82785,
+      "lon": 121.01422,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新竹縣竹東鎮": {
+      "lat": 24.76715,
+      "lon": 121.05788,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新竹縣芎林鄉": {
+      "lat": 24.76646,
+      "lon": 121.11918,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "新竹縣關西鎮": {
+      "lat": 24.7977,
+      "lon": 121.1732,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "桃園市中壢區": {
+      "lat": 24.97766,
+      "lon": 121.25638,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "桃園市八德區": {
+      "lat": 24.92871,
+      "lon": 121.28329,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "桃園市大園區": {
+      "lat": 25.11269,
+      "lon": 121.23982,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "桃園市大溪區": {
+      "lat": 24.8879,
+      "lon": 121.29526,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "桃園市平鎮區": {
+      "lat": 24.8975,
+      "lon": 121.21464,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "桃園市復興區": {
+      "lat": 24.76531,
+      "lon": 121.39682,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "桃園市新屋區": {
+      "lat": 24.98643,
+      "lon": 121.02803,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "桃園市桃園區": {
+      "lat": 24.99243,
+      "lon": 121.32317,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "桃園市楊梅區": {
+      "lat": 24.92623,
+      "lon": 121.1151,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "桃園市蘆竹區": {
+      "lat": 25.08427,
+      "lon": 121.26577,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "桃園市觀音區": {
+      "lat": 25.03265,
+      "lon": 121.12176,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "桃園市龍潭區": {
+      "lat": 24.87006,
+      "lon": 121.22139,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "桃園市龜山區": {
+      "lat": 25.02846,
+      "lon": 121.38656,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "澎湖縣望安鄉": {
+      "lat": 23.32851,
+      "lon": 119.49511,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "澎湖縣西嶼鄉": {
+      "lat": 23.5626,
+      "lon": 119.46844,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "澎湖縣馬公市": {
+      "lat": 23.5655,
+      "lon": 119.5631,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺中市北區": {
+      "lat": 24.14574,
+      "lon": 120.68407,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺中市北屯區": {
+      "lat": 24.17314,
+      "lon": 120.72229,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺中市南屯區": {
+      "lat": 24.13701,
+      "lon": 120.63797,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺中市后里區": {
+      "lat": 24.31044,
+      "lon": 120.72973,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺中市和平區": {
+      "lat": 24.28314,
+      "lon": 121.09377,
+      "source": "cwa_station",
+      "stations": 20
+    },
+    "臺中市外埔區": {
+      "lat": 24.34782,
+      "lon": 120.70569,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺中市大安區": {
+      "lat": 24.35862,
+      "lon": 120.58558,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "臺中市大甲區": {
+      "lat": 24.39987,
+      "lon": 120.61877,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "臺中市大里區": {
+      "lat": 24.09246,
+      "lon": 120.70138,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺中市大雅區": {
+      "lat": 24.21528,
+      "lon": 120.62445,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺中市太平區": {
+      "lat": 24.07124,
+      "lon": 120.82042,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺中市新社區": {
+      "lat": 24.173,
+      "lon": 120.8449,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "臺中市東勢區": {
+      "lat": 24.23026,
+      "lon": 120.84289,
+      "source": "cwa_station",
+      "stations": 4
+    },
+    "臺中市梧棲區": {
+      "lat": 24.256,
+      "lon": 120.52338,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺中市清水區": {
+      "lat": 24.3123,
+      "lon": 120.56224,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺中市潭子區": {
+      "lat": 24.21311,
+      "lon": 120.70393,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺中市烏日區": {
+      "lat": 24.10706,
+      "lon": 120.6241,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺中市石岡區": {
+      "lat": 24.27606,
+      "lon": 120.77764,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺中市神岡區": {
+      "lat": 24.27248,
+      "lon": 120.65832,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺中市西屯區": {
+      "lat": 24.17949,
+      "lon": 120.64127,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺中市豐原區": {
+      "lat": 24.25432,
+      "lon": 120.7207,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺中市霧峰區": {
+      "lat": 24.05404,
+      "lon": 120.71734,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "臺中市龍井區": {
+      "lat": 24.19957,
+      "lon": 120.50984,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "臺北市中正區": {
+      "lat": 25.03766,
+      "lon": 121.51485,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺北市信義區": {
+      "lat": 25.03782,
+      "lon": 121.5646,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺北市內湖區": {
+      "lat": 25.07942,
+      "lon": 121.57545,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺北市北投區": {
+      "lat": 25.15388,
+      "lon": 121.51583,
+      "source": "cwa_station",
+      "stations": 5
+    },
+    "臺北市士林區": {
+      "lat": 25.11313,
+      "lon": 121.52511,
+      "source": "cwa_station",
+      "stations": 4
+    },
+    "臺北市文山區": {
+      "lat": 25.00235,
+      "lon": 121.57573,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺北市松山區": {
+      "lat": 25.04871,
+      "lon": 121.55042,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市下營區": {
+      "lat": 23.22695,
+      "lon": 120.25626,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市中西區": {
+      "lat": 22.99324,
+      "lon": 120.20477,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市仁德區": {
+      "lat": 22.96826,
+      "lon": 120.25769,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市佳里區": {
+      "lat": 23.17304,
+      "lon": 120.14509,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市六甲區": {
+      "lat": 23.22206,
+      "lon": 120.40085,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市北區": {
+      "lat": 23.01039,
+      "lon": 120.19423,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市北門區": {
+      "lat": 23.26772,
+      "lon": 120.11066,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "臺南市南化區": {
+      "lat": 23.12648,
+      "lon": 120.54455,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "臺南市南區": {
+      "lat": 22.96119,
+      "lon": 120.18838,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市善化區": {
+      "lat": 23.11288,
+      "lon": 120.29722,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市大內區": {
+      "lat": 23.13373,
+      "lon": 120.38973,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "臺南市學甲區": {
+      "lat": 23.23037,
+      "lon": 120.18219,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市安南區": {
+      "lat": 23.04015,
+      "lon": 120.1036,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "臺南市安定區": {
+      "lat": 23.10261,
+      "lon": 120.22784,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市安平區": {
+      "lat": 22.99316,
+      "lon": 120.15218,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市官田區": {
+      "lat": 23.19322,
+      "lon": 120.31542,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市將軍區": {
+      "lat": 23.20145,
+      "lon": 120.11234,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "臺南市山上區": {
+      "lat": 23.0757,
+      "lon": 120.36325,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市左鎮區": {
+      "lat": 23.05676,
+      "lon": 120.40852,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市後壁區": {
+      "lat": 23.36636,
+      "lon": 120.36233,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市新化區": {
+      "lat": 23.02138,
+      "lon": 120.34788,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市新市區": {
+      "lat": 23.06161,
+      "lon": 120.2982,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市新營區": {
+      "lat": 23.31069,
+      "lon": 120.31668,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市東山區": {
+      "lat": 23.2941,
+      "lon": 120.42471,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "臺南市柳營區": {
+      "lat": 23.25333,
+      "lon": 120.37525,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市楠西區": {
+      "lat": 23.18351,
+      "lon": 120.48408,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市歸仁區": {
+      "lat": 22.96361,
+      "lon": 120.30146,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "臺南市永康區": {
+      "lat": 23.03839,
+      "lon": 120.2367,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市白河區": {
+      "lat": 23.34406,
+      "lon": 120.48051,
+      "source": "cwa_station",
+      "stations": 4
+    },
+    "臺南市西港區": {
+      "lat": 23.12561,
+      "lon": 120.20311,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市關廟區": {
+      "lat": 22.96302,
+      "lon": 120.3278,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市鹽水區": {
+      "lat": 23.27262,
+      "lon": 120.24764,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市麻豆區": {
+      "lat": 23.18329,
+      "lon": 120.24861,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺南市龍崎區": {
+      "lat": 22.95955,
+      "lon": 120.36932,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺東縣卑南鄉": {
+      "lat": 22.78189,
+      "lon": 121.04372,
+      "source": "cwa_station",
+      "stations": 4
+    },
+    "臺東縣大武鄉": {
+      "lat": 22.3635,
+      "lon": 120.89603,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "臺東縣太麻里鄉": {
+      "lat": 22.58865,
+      "lon": 120.99029,
+      "source": "cwa_station",
+      "stations": 7
+    },
+    "臺東縣延平鄉": {
+      "lat": 22.90258,
+      "lon": 121.08406,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺東縣成功鎮": {
+      "lat": 23.10008,
+      "lon": 121.37083,
+      "source": "cwa_station",
+      "stations": 6
+    },
+    "臺東縣東河鄉": {
+      "lat": 22.91759,
+      "lon": 121.2483,
+      "source": "cwa_station",
+      "stations": 5
+    },
+    "臺東縣池上鄉": {
+      "lat": 23.11963,
+      "lon": 121.20947,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺東縣海端鄉": {
+      "lat": 23.16687,
+      "lon": 121.05241,
+      "source": "cwa_station",
+      "stations": 4
+    },
+    "臺東縣綠島鄉": {
+      "lat": 22.6672,
+      "lon": 121.47533,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺東縣臺東市": {
+      "lat": 22.74902,
+      "lon": 121.14334,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "臺東縣蘭嶼鄉": {
+      "lat": 22.05575,
+      "lon": 121.52453,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "臺東縣達仁鄉": {
+      "lat": 22.33331,
+      "lon": 120.87069,
+      "source": "cwa_station",
+      "stations": 5
+    },
+    "臺東縣金峰鄉": {
+      "lat": 22.56891,
+      "lon": 120.92863,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "臺東縣長濱鄉": {
+      "lat": 23.27474,
+      "lon": 121.4262,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "臺東縣關山鎮": {
+      "lat": 23.0395,
+      "lon": 121.17502,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "臺東縣鹿野鄉": {
+      "lat": 22.94604,
+      "lon": 121.13985,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "花蓮縣光復鄉": {
+      "lat": 23.62119,
+      "lon": 121.40551,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "花蓮縣卓溪鄉": {
+      "lat": 23.38643,
+      "lon": 121.2677,
+      "source": "cwa_station",
+      "stations": 6
+    },
+    "花蓮縣吉安鄉": {
+      "lat": 23.93092,
+      "lon": 121.59515,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "花蓮縣壽豐鄉": {
+      "lat": 23.8381,
+      "lon": 121.54029,
+      "source": "cwa_station",
+      "stations": 9
+    },
+    "花蓮縣富里鄉": {
+      "lat": 23.19276,
+      "lon": 121.26989,
+      "source": "cwa_station",
+      "stations": 4
+    },
+    "花蓮縣新城鄉": {
+      "lat": 24.04049,
+      "lon": 121.60488,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "花蓮縣玉里鎮": {
+      "lat": 23.36993,
+      "lon": 121.36773,
+      "source": "cwa_station",
+      "stations": 5
+    },
+    "花蓮縣瑞穗鄉": {
+      "lat": 23.49601,
+      "lon": 121.38214,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "花蓮縣秀林鄉": {
+      "lat": 24.1586,
+      "lon": 121.57678,
+      "source": "cwa_station",
+      "stations": 20
+    },
+    "花蓮縣花蓮市": {
+      "lat": 23.98522,
+      "lon": 121.6258,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "花蓮縣萬榮鄉": {
+      "lat": 23.67149,
+      "lon": 121.38088,
+      "source": "cwa_station",
+      "stations": 4
+    },
+    "花蓮縣豐濱鄉": {
+      "lat": 23.574,
+      "lon": 121.51241,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "花蓮縣鳳林鎮": {
+      "lat": 23.7302,
+      "lon": 121.43122,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "苗栗縣三灣鄉": {
+      "lat": 24.61807,
+      "lon": 120.94858,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "苗栗縣公館鄉": {
+      "lat": 24.52691,
+      "lon": 120.8308,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "苗栗縣卓蘭鎮": {
+      "lat": 24.3126,
+      "lon": 120.8244,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "苗栗縣南庄鄉": {
+      "lat": 24.56495,
+      "lon": 121.0126,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "苗栗縣大湖鄉": {
+      "lat": 24.37212,
+      "lon": 120.8554,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "苗栗縣後龍鎮": {
+      "lat": 24.6095,
+      "lon": 120.77779,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "苗栗縣泰安鄉": {
+      "lat": 24.43888,
+      "lon": 120.97659,
+      "source": "cwa_station",
+      "stations": 9
+    },
+    "苗栗縣獅潭鄉": {
+      "lat": 24.53913,
+      "lon": 120.92004,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "苗栗縣竹南鎮": {
+      "lat": 24.70451,
+      "lon": 120.87401,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "苗栗縣苑裡鎮": {
+      "lat": 24.43971,
+      "lon": 120.65305,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "苗栗縣苗栗市": {
+      "lat": 24.56457,
+      "lon": 120.82458,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "苗栗縣西湖鄉": {
+      "lat": 24.56295,
+      "lon": 120.7485,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "苗栗縣通霄鎮": {
+      "lat": 24.50664,
+      "lon": 120.69176,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "苗栗縣造橋鄉": {
+      "lat": 24.64281,
+      "lon": 120.8483,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "苗栗縣銅鑼鄉": {
+      "lat": 24.48968,
+      "lon": 120.79085,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "苗栗縣頭份鎮": {
+      "lat": 24.68825,
+      "lon": 120.91221,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "苗栗縣頭屋鄉": {
+      "lat": 24.58349,
+      "lon": 120.88541,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "連江縣北竿鄉": {
+      "lat": 26.22036,
+      "lon": 119.97488,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "連江縣南竿鄉": {
+      "lat": 26.16927,
+      "lon": 119.92342,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "連江縣莒光鄉": {
+      "lat": 25.9652,
+      "lon": 119.98069,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "金門縣烈嶼鄉": {
+      "lat": 24.42375,
+      "lon": 118.24019,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "金門縣烏坵鄉": {
+      "lat": 24.9944,
+      "lon": 119.44956,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "金門縣金城鎮": {
+      "lat": 24.40731,
+      "lon": 118.28928,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "金門縣金寧鄉": {
+      "lat": 24.4577,
+      "lon": 118.32899,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "金門縣金沙鎮": {
+      "lat": 24.48829,
+      "lon": 118.40878,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "雲林縣二崙鄉": {
+      "lat": 23.7728,
+      "lon": 120.40894,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "雲林縣元長鄉": {
+      "lat": 23.64981,
+      "lon": 120.31503,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "雲林縣北港鎮": {
+      "lat": 23.57396,
+      "lon": 120.2928,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "雲林縣口湖鄉": {
+      "lat": 23.58044,
+      "lon": 120.16328,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "雲林縣古坑鄉": {
+      "lat": 23.66004,
+      "lon": 120.57765,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "雲林縣四湖鄉": {
+      "lat": 23.63041,
+      "lon": 120.22713,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "雲林縣土庫鎮": {
+      "lat": 23.67903,
+      "lon": 120.39558,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "雲林縣大埤鄉": {
+      "lat": 23.64607,
+      "lon": 120.43153,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "雲林縣崙背鄉": {
+      "lat": 23.75555,
+      "lon": 120.31892,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "雲林縣斗六市": {
+      "lat": 23.72058,
+      "lon": 120.54113,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "雲林縣斗南鎮": {
+      "lat": 23.67873,
+      "lon": 120.47835,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "雲林縣東勢鄉": {
+      "lat": 23.67419,
+      "lon": 120.25572,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "雲林縣林內鄉": {
+      "lat": 23.74867,
+      "lon": 120.60964,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "雲林縣水林鄉": {
+      "lat": 23.54362,
+      "lon": 120.23785,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "雲林縣臺西鄉": {
+      "lat": 23.70155,
+      "lon": 120.19756,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "雲林縣莿桐鄉": {
+      "lat": 23.76119,
+      "lon": 120.50237,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "雲林縣虎尾鎮": {
+      "lat": 23.72832,
+      "lon": 120.42999,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "雲林縣褒忠鄉": {
+      "lat": 23.69094,
+      "lon": 120.30363,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "雲林縣西螺鎮": {
+      "lat": 23.80041,
+      "lon": 120.46739,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市三民區": {
+      "lat": 22.64502,
+      "lon": 120.31123,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市仁武區": {
+      "lat": 22.70108,
+      "lon": 120.34772,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市內門區": {
+      "lat": 22.97548,
+      "lon": 120.46677,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市六龜區": {
+      "lat": 22.98108,
+      "lon": 120.64188,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "高雄市前鎮區": {
+      "lat": 22.5718,
+      "lon": 120.3117,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市大寮區": {
+      "lat": 22.60561,
+      "lon": 120.39571,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市大樹區": {
+      "lat": 22.71161,
+      "lon": 120.4398,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "高雄市大社區": {
+      "lat": 22.73031,
+      "lon": 120.34664,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市小港區": {
+      "lat": 22.52668,
+      "lon": 120.37584,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "高雄市岡山區": {
+      "lat": 22.79708,
+      "lon": 120.29496,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市左營區": {
+      "lat": 22.67491,
+      "lon": 120.28491,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市彌陀區": {
+      "lat": 22.78264,
+      "lon": 120.23222,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "高雄市新興區": {
+      "lat": 22.62742,
+      "lon": 120.29881,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市旗山區": {
+      "lat": 22.88862,
+      "lon": 120.4836,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市林園區": {
+      "lat": 22.49297,
+      "lon": 120.4048,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "高雄市桃源區": {
+      "lat": 23.18628,
+      "lon": 120.80964,
+      "source": "cwa_station",
+      "stations": 9
+    },
+    "高雄市梓官區": {
+      "lat": 22.74308,
+      "lon": 120.25996,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "高雄市楠梓區": {
+      "lat": 22.7304,
+      "lon": 120.3125,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市橋頭區": {
+      "lat": 22.75781,
+      "lon": 120.30575,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市永安區": {
+      "lat": 22.82315,
+      "lon": 120.23686,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市湖內區": {
+      "lat": 22.88714,
+      "lon": 120.2445,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市燕巢區": {
+      "lat": 22.79977,
+      "lon": 120.38327,
+      "source": "cwa_station",
+      "stations": 3
+    },
+    "高雄市田寮區": {
+      "lat": 22.89318,
+      "lon": 120.40195,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市甲仙區": {
+      "lat": 23.14841,
+      "lon": 120.63325,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市美濃區": {
+      "lat": 22.85422,
+      "lon": 120.5454,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市苓雅區": {
+      "lat": 22.62274,
+      "lon": 120.33067,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市茂林區": {
+      "lat": 22.89699,
+      "lon": 120.71299,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "高雄市茄萣區": {
+      "lat": 22.89222,
+      "lon": 120.19765,
+      "source": "cwa_station",
+      "stations": 2
+    },
+    "高雄市路竹區": {
+      "lat": 22.855,
+      "lon": 120.25944,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市那瑪夏區": {
+      "lat": 23.27981,
+      "lon": 120.70532,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市阿蓮區": {
+      "lat": 22.88321,
+      "lon": 120.32751,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市鳳山區": {
+      "lat": 22.64665,
+      "lon": 120.35613,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "高雄市鼓山區": {
+      "lat": 22.62333,
+      "lon": 120.27557,
+      "source": "cwa_station",
+      "stations": 1
+    },
+    "嘉義市東區": {
+      "lat": 23.48177,
+      "lon": 120.47064,
+      "source": "boundary",
+      "stations": 0
+    },
+    "基隆市中山區": {
+      "lat": 25.14997,
+      "lon": 121.7307,
+      "source": "boundary",
+      "stations": 0
+    },
+    "澎湖縣白沙鄉": {
+      "lat": 23.65285,
+      "lon": 119.58826,
+      "source": "boundary",
+      "stations": 0
+    },
+    "臺中市沙鹿區": {
+      "lat": 24.23432,
+      "lon": 120.58388,
+      "source": "boundary",
+      "stations": 0
+    },
+    "高雄市鹽埕區": {
+      "lat": 22.6243,
+      "lon": 120.28425,
+      "source": "boundary",
+      "stations": 0
+    },
+    "臺南市七股區": {
+      "lat": 23.12332,
+      "lon": 120.10062,
+      "source": "boundary",
+      "stations": 0
+    },
+    "臺中市中區": {
+      "lat": 24.14176,
+      "lon": 120.68061,
+      "source": "boundary",
+      "stations": 0
+    },
+    "臺北市南港區": {
+      "lat": 25.03612,
+      "lon": 121.60974,
+      "source": "boundary",
+      "stations": 0
+    },
+    "屏東縣屏東市": {
+      "lat": 22.6648,
+      "lon": 120.48001,
+      "source": "boundary",
+      "stations": 0
+    },
+    "臺中市西區": {
+      "lat": 24.14399,
+      "lon": 120.66477,
+      "source": "boundary",
+      "stations": 0
+    },
+    "雲林縣麥寮鄉": {
+      "lat": 23.78822,
+      "lon": 120.24356,
+      "source": "boundary",
+      "stations": 0
+    },
+    "彰化縣北斗鎮": {
+      "lat": 23.86764,
+      "lon": 120.53317,
+      "source": "boundary",
+      "stations": 0
+    },
+    "臺北市中山區": {
+      "lat": 25.06981,
+      "lon": 121.53814,
+      "source": "boundary",
+      "stations": 0
+    },
+    "澎湖縣湖西鄉": {
+      "lat": 23.5781,
+      "lon": 119.64508,
+      "source": "boundary",
+      "stations": 0
+    },
+    "臺北市大同區": {
+      "lat": 25.06353,
+      "lon": 121.51303,
+      "source": "boundary",
+      "stations": 0
+    },
+    "高雄市鳥松區": {
+      "lat": 22.66255,
+      "lon": 120.3728,
+      "source": "boundary",
+      "stations": 0
+    },
+    "臺南市東區": {
+      "lat": 22.98184,
+      "lon": 120.22821,
+      "source": "boundary",
+      "stations": 0
+    },
+    "臺中市南區": {
+      "lat": 24.12121,
+      "lon": 120.66463,
+      "source": "boundary",
+      "stations": 0
+    },
+    "連江縣東引鄉": {
+      "lat": 26.36799,
+      "lon": 120.49597,
+      "source": "boundary",
+      "stations": 0
+    },
+    "基隆市信義區": {
+      "lat": 25.12588,
+      "lon": 121.77258,
+      "source": "boundary",
+      "stations": 0
+    },
+    "臺北市大安區": {
+      "lat": 25.02688,
+      "lon": 121.54342,
+      "source": "boundary",
+      "stations": 0
+    },
+    "臺南市玉井區": {
+      "lat": 23.11488,
+      "lon": 120.46098,
+      "source": "boundary",
+      "stations": 0
+    },
+    "臺中市大肚區": {
+      "lat": 24.14474,
+      "lon": 120.55434,
+      "source": "boundary",
+      "stations": 0
+    },
+    "新北市泰山區": {
+      "lat": 25.0556,
+      "lon": 121.41626,
+      "source": "boundary",
+      "stations": 0
+    },
+    "臺中市東區": {
+      "lat": 24.13741,
+      "lon": 120.6971,
+      "source": "boundary",
+      "stations": 0
+    },
+    "彰化縣鹿港鎮": {
+      "lat": 24.08294,
+      "lon": 120.43856,
+      "source": "boundary",
+      "stations": 0
+    },
+    "高雄市旗津區": {
+      "lat": 22.58573,
+      "lon": 120.28915,
+      "source": "boundary",
+      "stations": 0
+    },
+    "新北市平溪區": {
+      "lat": 25.02618,
+      "lon": 121.75786,
+      "source": "boundary",
+      "stations": 0
+    },
+    "苗栗縣三義鄉": {
+      "lat": 24.3809,
+      "lon": 120.7702,
+      "source": "boundary",
+      "stations": 0
+    },
+    "臺北市萬華區": {
+      "lat": 25.0287,
+      "lon": 121.49797,
+      "source": "boundary",
+      "stations": 0
+    },
+    "彰化縣彰化市": {
+      "lat": 24.0754,
+      "lon": 120.56943,
+      "source": "boundary",
+      "stations": 0
+    },
+    "高雄市前金區": {
+      "lat": 22.62705,
+      "lon": 120.29444,
+      "source": "boundary",
+      "stations": 0
+    },
+    "金門縣金湖鎮": {
+      "lat": 24.44266,
+      "lon": 118.41748,
+      "source": "boundary",
+      "stations": 0
+    },
+    "彰化縣芳苑鄉": {
+      "lat": 23.95386,
+      "lon": 120.35395,
+      "source": "boundary",
+      "stations": 0
+    },
+    "高雄市杉林區": {
+      "lat": 22.99702,
+      "lon": 120.56221,
+      "source": "boundary",
+      "stations": 0
+    },
+    "彰化縣大村鄉": {
+      "lat": 23.99216,
+      "lon": 120.5587,
+      "source": "boundary",
+      "stations": 0
+    },
+    "澎湖縣七美鄉": {
+      "lat": 23.20842,
+      "lon": 119.42947,
+      "source": "boundary",
+      "stations": 0
+    }
+  }
+}
