@@ -49,6 +49,7 @@
 - 檔名仍可保留 JTMA 編號於 `_` 後（如 `0818_20_沙德爾_SAUDEL.md`），但 `event:` 標題必須寫 CWA 編號
 - 原因：CWA API 回傳 `CwaTdNo`，與 JTMA 編號不一致（例：沙德爾 = JTMA 第 18 號，CWA 第 20 號）
 - 若 CWA API 尚未分配編號（剛生成為 TD 時），可先寫 JTMA 編號並加註待補
+- **系統減弱後再增強（復活）不重新計號**：CWA 沿用同一 `CwaTdNo`（例：沙德爾 9/1 於南海重新升格仍為 20 號）→ **同一檔案**更新，`status` 改回 `active`，流程見 `WORKFLOW.md` §2.2
 
 ## 檔案撰寫規則
 
@@ -77,8 +78,9 @@
 - **災情紀錄**（淹水、樹倒、落石、停電等）：以各縣市新聞媒體為輔，引用時請註明出處
 - **停班停課**：以教育部或各縣市政府公告為主
 - **交通影響**：以交通部或各縣市政府公告為主，新聞媒體為輔
+- **措辭跟隨來源、不自行解讀（2026/9/1 定）**：對路徑、強度、登陸與對台影響的判斷性表述，一律引來源原話（CWA API 數值、CWA 發言人/公告口吻），**不得加「二次登陸」「直接侵台」等推測性升級詞**——以 CWA 當時路徑為準（例：9/1 沙德爾返回時 CWA 預測登陸廣東、口徑為「直接侵台機會低」，就照此寫；CWA 修訂路徑後再更新）。
 - **災情來源優先級（build）**：repo 現有 `災情/` markdown → **RSS** → Obscura 抓取。每筆附**新聞來源**，僅給**少量摘要＋原連結**。
-- **RSS 半自動流程（2026/8/30 起）**：build 時 `build/rss.py` 自動抓 `rss_sources.json` 的 verified 來源 → 去重＋48h 時間過濾＋關鍵詞初判 → 產出 `build/rss_candidates.json`（gitignored、每次 build 重生成）。**候選清單本身從不進 `public/`**（`site.py` 不讀它）；cron／deploy.sh 自動跑時只是順帶刷新本機清單供下次人工/LLM 收集災情時直接讀取，**不上線任何 RSS 內容**。**相關性判斷仍由人 / LLM 審查**，挑中者以 `- [標題](URL) — 媒體名` 寫入事件檔「XX災情新聞來源」章節，build 才會渲染上線。單 feed 失敗不中斷 build。
+- **RSS 半自動流程**：build 時 `build/rss.py` 自動抓 `rss_sources.json` 的 verified 來源，產出候選清單 `build/rss_candidates.json`（gitignored；**從不進 `public/`**）。相關性判斷**由人 / LLM 審查**，挑中者以 `- [標題](URL) — 媒體名` 寫入事件檔「XX災情新聞來源」章節才上線。流程與驗證見 `WORKFLOW.md` §1/§3。
 
 > ⚠️ 使用新聞資料時，請確認時效性，避免使用舊聞；引用時請註明新聞來源與日期。
 
@@ -91,22 +93,9 @@
 ## Git
 
 - 預設分支：`main`（原 `master` 已更名）
+- Remotes：`origin`＝內部 Forgejo（`ssh://fg/lawliet/Weather.git`，內網，Identity `~/.ssh/id_rsa_gitea`）；`github`＝公開 repo `Lawlietr/Weather`（SSH `git@github.com:Lawlietr/Weather.git`，key `id_ed25519_github`，直推即可、**不需要 `GH_PAT`**）。commit 後**兩邊都推**：`git push origin <branch> && git push github <branch>`
 - 功能開發在 `DEV` 分支，**經使用者確認後才合併回 `main`**
-- 無 lint/test 指令；GitHub Actions 僅保留 `workflow_dispatch`（手動觸發，2026/8/29 起停用排程，原因見下方說明）；自動更新改由本地 cron 備用（`build/cron-enable.sh`）
-
-### ⚠️ GitHub Actions 狀態（2026/8/29 起僅手動 dispatch）
-
-GitHub Actions **已停用排程**（移除 `schedule`），僅保留 `workflow_dispatch`（手動觸發）。
-停用原因：Actions runner（Azure `westus2`）到 CWA API 連線不穩定，導致 build 使用舊資料
-卻仍部署到 CF Pages（`wrangler pages deploy` 只上傳 `public/`，不檢查資料新舊）。
-
-若需手動跑 Actions build：到 GitHub repo 頁面 → Actions tab → "Build & Deploy" → "Run workflow"。
-
-> 本地 cron 備用（`build/cron-enable.sh`）為主要自動更新通道；cron 執行前會先檢查 CWA
-> 可用性（3 次重試），失敗則中止部署，不會推舊資料。
-
-**若 Actions 排程日後要恢復**：確認 CWA API 可從海外連線（或改用 Cloudflare Worker 等中轉），
-再把 `schedule` 加回 `.github/workflows/build.yml` 即可。
+- 無 lint/test 指令；**排程狀態（2026/8/29 起）**：GitHub Actions 僅保留 `workflow_dispatch`（排程已停用，原因：runner 到 CWA 連線不穩定、會推舊資料）；**主力自動更新通道＝本地 cron**（CWA 前置檢查 3 次重試、失敗中止）。部署指令與恢復 Actions 的條件 → `WORKFLOW.md` §7
 
 ---
 
@@ -132,18 +121,16 @@ https://opendata.cwa.gov.tw/api/v1/rest/datastore/{Data ID}?Authorization=${CWA_
 | **P1（重要）** | W-C0033-001（強風特報）、W-C0033-003、O-A0001-001（逐時氣象） | W-C0033-001（強風特報）、O-A0001-001（逐時氣象）、C-B0025-001（每日雨量）、F-D0047-xxx（鄉鎮預報） |
 | **P2（輔助）** | F-C0032-001、F-D0047-xxx、F-A0021-001（潮汐） | C-B0024-001（30天觀測）、C-B0074-001/002（測站基本資料）、F-C0032-001、F-A0021-001（潮汐） |
 
-> 完整官方清單（80 筆，2026/8/25 核對）見 `https://opendata.cwa.gov.tw/apidoc/v1`（OpenAPI YAML）。舊資料中常見但**已不存在**（404）的 Data ID：O-A0013~19（逐時/3h/24h 雨量）、F-C0033-001（48h 雨量預報）、F-C0034-001、F-A0045-001（降雨雷達）、W-C0024-001、F-C0040-001（土石流）、O-C0010-001（河川水位）——開放資料平台無這些產品，需改抓 CWA 官網頁面（obscura）或新聞。
+> 完整官方清單（80 筆）見 `https://opendata.cwa.gov.tw/apidoc/v1`（OpenAPI YAML；web 清單頁是 SPA 爬不到）。常見但**已 404**、勿呼叫的 Data ID：O-A0013~19、F-C0033-001、F-C0034-001、F-A0045-001、W-C0024-001、F-C0040-001、O-C0010-001——改抓 CWA 官網頁面（obscura）或新聞。
 
-### ⚠️ 關鍵陷阱（實測）
+### ⚠️ 關鍵陷阱（實測；處置細節見 `build/CWA_API.md`「實測差異」與 `WORKFLOW.md` §4–5）
 
-1. O-A0001-001 / O-A0002-001 的 `Now.Precipitation` 是**本日 0 時至目前累計**（**非** 1 小時雨量）；1 小時雨量用 O-A0002-001 的 `Past1hr`。
-2. CWA 回傳結構**與官方文件不同**（如 W-C0034-005 多一層 `TropicalCyclone[]`、移動欄位是 `MovingSpeed/MovingDirection`）：改解析碼前**先 dump 真實回傳**，勿照舊文件猜。對照見 `build/CWA_API.md`「實測差異」與 `WORKFLOW.md` §5。
-3. **O-B0075-001（48 小時海況）回傳空 JSON**（2026/8/25 實測）；海況改看 CWA 官網頁面或新聞。
-4. **CWA API 不支援 CORS**（回應無 `Access-Control-Allow-Origin`）：前端無法直接呼叫，氣象資料必須本機 build 時抓取後寫入靜態 HTML。
-5. **更新頻率**：颱風警報每 3~6 小時、氣旋資料每 6 小時；建議每 30~60 分鐘查詢一次即可。
-6. **W-C0034-005 forecast 欄位可能為 None**（2026/8/29 實測）：`MaxWindSpeed`、`Pressure` 等 forecast 資料可能回傳 `null`，解析時**必須做 `None` 檢查**，不可直接格式化。例：`_num(fx.get("MaxWindSpeed"))` 回傳 `None` 時，`f"{None:.1f}"` 會崩潰。正確寫法：`f"{f'{ws:.1f}' if ws is not None else '—'}"`。
-
-資料集清單權威來源：`https://opendata.cwa.gov.tw/apidoc/v1`（OpenAPI YAML，含全部 80 個 Data ID、參數與枚舉值）；web 版資料清單頁為 SPA，直接爬 HTML 拿不到清單。
+1. O-A0001/O-A0002-001 的 `Now.Precipitation`＝**本日 0 時至目前累計**（非 1 小時）；1 小時用 `Past1hr`。
+2. 回傳結構**與官方文件不同**（W-C0034-005 多一層 `TropicalCyclones`、移動欄位是 `MovingSpeed/MovingDirection`）：改解析碼前**先 dump 真實回傳**，勿照舊文件猜。
+3. O-B0075-001（48h 海況）回傳空 JSON；海況改看 CWA 官網頁面或新聞。
+4. **不支援 CORS**：前端無法直接呼叫，氣象資料必須 build 時本機抓取後寫入靜態 HTML。
+5. forecast 欄位可能為 `None`：格式化前**必做 null 檢查**（`f"{None:.1f}"` 會崩潰）。
+6. 更新頻率：颱風警報每 3~6 小時、氣旋資料每 6 小時；每 30~60 分鐘查一次即可。
 
 ---
 
@@ -159,57 +146,30 @@ https://opendata.cwa.gov.tw/api/v1/rest/datastore/{Data ID}?Authorization=${CWA_
 
 ---
 
-## 網站專案（已上線：Cloudflare Pages `weather.*` 自訂域名 ×3 ＋ GitHub Pages https://lawlietr.github.io/Weather/）
+## 網站專案（已上線：Cloudflare Pages ×3 自訂域名；GitHub Pages 備用 mirror）
 
-- **更新/部署工作流（runbook）**：`WORKFLOW.md`——接手者（agent 或人工）先看這個。
-- **⚠️ 更新災情前先看 `WORKFLOW.md` §8「Agent 效率規範」**：先查 repo 既有檔案／`ctx_search`／`cwa_cache.json`，只查會變的資料，同一資料一個 session 只查一次。
-- **構想與待辦**：`TODO.md`。
-- **build 入口**：`./build/build.sh`（產出 `public/`（繁中）與 `public/ja/`（日文）、`llms.txt`（LLM 索引）與 `llms-full.txt`（事件全文）；CWA 資料 build 時本機抓取）。
-  公開網站主要 host 於 Cloudflare Pages（自訂域名），另同步 GitHub Pages；彙整氣象署天氣資訊與災情紀錄。
-- **颱風軌跡圖台灣輪廓**：`build/cwa.py` 的 `typhoon_svg()` 不再用手寫多邊形，改用 `build/taiwan_geo.py` 的 `ISLANDS`（本島＋澎湖／金門／馬祖／蘭嶼／綠島各自獨立 polygon）。產生器 `build/make_taiwan_geo.py`（含純 Python Douglas–Peucker 簡化，無相依）重跑後會覆寫 `taiwan_geo.py`；原始 GeoJSON 快取 `build/_geo_cache_*.json` 已 gitignore。
+- **文件分工**：runbook（例行更新、新事件、驗證清單、部署、排程、陷阱）→ `WORKFLOW.md`；CWA 欄位查表 → `build/CWA_API.md`；手動路徑 → `MANUAL_UPDATE.md`；本地 cron → `LOCAL_CRON.md`；構想與待辦 → `TODO.md`。
+- **⚠️ 更新災情前必看 `WORKFLOW.md` §8「Agent 效率規範」**：先查 repo 既有檔案／`ctx_search`／`cwa_cache.json`，只查會變的資料，同一資料一個 session 只查一次。
+- **build 入口**：`./build/build.sh`（產出 `public/`（繁中）＋ `public/ja/`（日文）、`llms.txt`（站點＋事件索引）與 `llms-full.txt`（事件全文）；CWA 資料 build 時本機抓取）。
+- **颱風軌跡圖台灣輪廓**：`build/cwa.py` 的 `typhoon_svg()` 用 `build/taiwan_geo.py` 的 `ISLANDS`（本島＋澎湖／金門／馬祖／蘭嶼／綠島各自獨立 polygon）；產生器 `build/make_taiwan_geo.py`（純 Python Douglas–Peucker，無相依）重跑後會覆寫 `taiwan_geo.py`，GeoJSON 快取 `build/_geo_cache_*.json` 已 gitignore。
+- **i18n**：預設 zh-Hant（根目錄）、ja（`public/ja/`）；UI 字串收斂在 `build/i18n.py`（`STRINGS`＋`t()` 三級回退），**加新語言＝加一組 dict、不改模板**；**內容不翻譯**——事件 Markdown 正文、CWA 資料全語言保留中文原文，非預設語言頁面以 `content_note` / `cwa_data_note` 提示。
 
-### 多語言（i18n）
+### 不變項（改動前先確認）
 
-- 預設語言 **zh-Hant**（`public/` 根目錄）、第二語言 **ja**（`public/ja/`）；頁首有語言切換。
-- 所有 UI 字串收斂在 `build/i18n.py`（`STRINGS` 表＋`t()` 三級回退）；**加新語言＝在 `STRINGS` 加一組 dict**，不改模板。
-- **內容不翻譯**：事件 Markdown 正文、CWA 資料（颱風名、雨量站名、特報全文）全語言保留中文原文；非預設語言頁面以 `content_note` / `cwa_data_note` 提示。
-
-### 核心原則
-
-- **混合更新**：平常由 **本地 cron**（`build/deploy-cron.sh`，每 2 小時，由 `build/cron-enable.sh` 安裝）自動 build＋部署；cron 執行前會檢查 CWA 可用性（3 次重試，失敗中止），並寫入 `build/logs/` 日誌。Actions 僅保留 `workflow_dispatch`（手動觸發，2026/8/29 起停用排程）。災情新聞仍需人工把關，**不自動推 RSS**。
-- **金鑰管理**：CWA API Key、Cloudflare 憑證同時存在多處：(1) **本機環境**（手動 build/deploy，`~/.zshrc`）；(2) **GitHub Actions Secrets**（手動 dispatch 用，加密儲存）；(3) **`build/deploy.env`**（本地 cron 用，gitignore、600，由 `deploy-cron.sh` 載入；cron 不載入 `.zshrc`）。全程**不寫進任何輸出檔案、不進 `public/`、不進網站**。
-- **非即時**：Pages 為靜態託管，採手動 build。首頁必須顯示「**產生時間**」（i18n key `updated`），由 `build/site.py` 以**固定 UTC+8 台灣時間**產生（`datetime.now(timezone(timedelta(hours=8)))`）；**不可改回不帶時區的 `datetime.now()`**（Actions runner 是 UTC，會慢 8 小時，見 `WORKFLOW.md` §5）。用「產生時間」而非「最後更新」：它只代表網頁何時生成，**不等於氣象／災情資料已更新**。
-- **授權僅針對網站專案**（2026/8/28 修正）：公開網站之程式碼以 **GNU AGPLv3**（`LICENSE`）、內容（網頁、`llms.txt`、`llms-full.txt` 之災情紀錄與彙整文字）以 **CC BY-NC-SA 4.0**（`LICENSE-CONTENT`，不得商用）；**倉儲本身**（`build/` 腳本、`災情/`、`颱風/` Markdown 原文、文件）**不以此兩授權釋出**；CWA 資料以官方條款為準。
-- **LLM 友善產出**：build 必產 `llms.txt`（站點＋事件索引）與 `llms-full.txt`（全部事件繁中全文），canonical base URL 為 `https://weather.avpclub.eu.org`（`build/site.py` 之 `SITE_BASE`）。
-
-### 技術架構
-
-```
-本地 cron（主力，每 2 小時）
-  ├── 載入 build/deploy.env（金鑰，gitignore、600）
-  ├── CWA 檢查（3 次重試，失敗中止）
-  ├── 讀 repo 災情 markdown → 災情資料
-  ├── 呼叫 CWA API → 氣象彙整（typhoon_svg 繪製 build/taiwan_geo.py 輪廓）
-  ├── build 出靜態 HTML（含「產生時間」）
-  ├── wrangler pages deploy public → Cloudflare Pages（主要，公開）
-  └── orphan gh-pages 分支 force push → GitHub Pages（備用 mirror）
-  └── 全程寫入 build/logs/deploy-cron-YYYY-MM-DD.log
-GitHub Actions（手動 dispatch，備援）
-  ├── CWA_API_KEY / CLOUDFLARE_* 來自 GitHub Secrets
-  └── 同上 build + 部署流程
-本機（手動）：`./build/deploy.sh`（流程同上，金鑰取自本機環境）
-Cloudflare 靜態託管提供公開網站
-```
+- **更新模式**：本地 cron（每 2 小時）自動 build＋部署為主力；Actions 手動 dispatch 為備援；**災情新聞人工把關、不自動推 RSS**（流程見 `WORKFLOW.md` §1、`MANUAL_UPDATE.md`）。
+- **金鑰**：CWA Key、Cloudflare 憑證分散在 (1) 本機 `~/.zshrc`（手動）、(2) GitHub Secrets（dispatch）、(3) `build/deploy.env`（cron 用，600）；**不寫進任何輸出檔案、不進 `public/`、不進網站**。
+- **非即時**：首頁顯示「**產生時間**」（i18n key `updated`），由 `build/site.py` 以**固定 UTC+8** 產生（`datetime.now(timezone(timedelta(hours=8)))`）；**不可改回不帶時區的 `datetime.now()`**（Actions runner 是 UTC、會慢 8 小時）。「產生時間」＝網頁何時生成，**不等於氣象／災情資料已更新**。
+- **CWA 不支援 CORS**：氣象資料全部 build 時本機抓取寫入靜態 HTML；前端零外部請求、首頁零 JS。
+- **授權僅針對網站專案**（2026/8/28 修正）：網站程式 **GNU AGPLv3**（`LICENSE`）、網站內容（含 `llms.txt`／`llms-full.txt`）**CC BY-NC-SA 4.0**（`LICENSE-CONTENT`，不得商用）；**倉儲本身**（`build/` 腳本、`災情/`、`颱風/`、文件）**不以此兩授權釋出**；CWA 資料以官方條款為準。
+- **LLM 友善產出**：build 必產 `llms.txt`＋`llms-full.txt`，canonical base URL `https://weather.avpclub.eu.org`（`build/site.py` 之 `SITE_BASE`）。
 
 ### 網站結構
 
-- **首頁**：頂部「目前風險狀態列」（`build/cwa.py: current_risk_level()` 由 CWA 目前之熱帶氣旋/海上颱風警報/災害天氣特報自動推導，紅/黃/綠/**中性**（無生效中項目但有 ≤48h 內的解除紀錄）/未知，與事件 `severity` 無關）→ 氣象彙整（颱風軌跡/警報特報/雨量/風力；警報特報卡**混排、時間倒序**（最新最上），已解除項置底灰化、超過 48h（`LIFTED_TTL_HOURS`）不顯示）→ 事件 Hero（中性入口卡，無 severity 色系與徽章）＋ 各縣市災情總覽（依縣市分組，每組內按時間倒序，最新在最上）→ 過去事件封存（含 severity 徽章）。
+- **首頁**：頂部「目前風險狀態列」（`build/cwa.py: current_risk_level()` 由 CWA 目前生效中之熱帶氣旋／海上颱風警報／災害天氣特報自動推導：紅/黃/綠/**中性**（無生效中項目但有 ≤48h 內解除紀錄）/未知；與事件 `severity` 無關）→ 氣象彙整（颱風軌跡/警報特報/雨量/風力；警報特報卡**混排、時間倒序**，已解除項置底灰化、超過 48h（`LIFTED_TTL_HOURS`）不顯示）→ 事件 Hero（中性入口卡，無 severity 色系與徽章）＋ 各縣市災情總覽（依縣市分組、時間倒序）→ 過去事件封存（含 severity 徽章）。
 - **各縣市子頁（選用）**：該縣市災情按時間倒序。
 
-### 部署與分支
+### 部署（詳 `WORKFLOW.md` §6）
 
-- **內部仓库**：`ssh://fg/lawliet/Weather.git`（Forgejo，內網 `192.168.1.124:222`，SSH Host `fg`，Identity `~/.ssh/id_rsa_gitea`）。
-- **GitHub**：`https://github.com/Lawlietr/Weather`，**已設為公開**（2026/8/27，原私有，後改公開）。開發與 commit **同時推到 Forgejo 與 GitHub**（保持同步）：`git push origin <branch> && git push github <branch>`。本機 remote `github` 走 **SSH**（`git@github.com:Lawlietr/Weather.git`，key `~/.ssh/id_ed25519_github`，2026/8/30 驗證可直推，**不需要 `GH_PAT`**；`GH_PAT` 僅 `deploy.sh`／`deploy-cron.sh` 推 orphan `gh-pages` 鏡像時選用，未設時自動跳過 GitHub Pages）。build 腳本、`災情/` Markdown 原文、金鑰（存於 Actions Secrets）現存於此 repo。
-- **GitHub Pages**：**已轉為公開**（2026/8/27，隨 repo 轉公開），且目前為 **404**（備用 mirror，非必需）。GitHub Actions 已把預設分支設為 `main`（原 orphan `gh-pages` 為預設分支，導致 Actions 看不到 workflow），`gh-pages` 分支因此不再自動重建、Pages 設定回 404。若日後想救回 GitHub Pages，需把預設分支改回 `gh-pages`（代價：Actions 按鈕又會藏起來，需在 Actions 頁面手動切 `main`）。只推 `public/` 靜態產物（orphan `gh-pages` 分支、不共享 history）。部署步驟見 `WORKFLOW.md` §6。
-  - ⚠️ 公開網站已改由 **Cloudflare Pages** 提供；GitHub Pages 僅作 mirror，**以 Cloudflare 為主**，404 不影響公開使用。
-- **Cloudflare Pages**（公開，2026/8/26 已上線，**主要更新通道兼公開網站**）：專案 `weather`，自訂域名 `weather.avpclub.eu.org`、`weather.avpclub.uk`、`weather.larch.dpdns.org`（CNAME 已建、proxied、自動 HTTPS）。更新只需 `npx wrangler pages deploy public --project-name weather`（憑證在 `~/.zshrc` 或 GitHub Actions Secrets，不進 repo）。細節見 `WORKFLOW.md` §6。
+- **Cloudflare Pages**（**主要公開通道**）：專案 `weather`，自訂域名 `weather.avpclub.eu.org`、`weather.avpclub.uk`、`weather.larch.dpdns.org`（CNAME 已建、proxied、自動 HTTPS）。更新：`npx wrangler pages deploy public --project-name weather`。
+- **GitHub Pages**（備用 mirror，只收 `public/`）：orphan `gh-pages` 分支、不共享 history；目前 404 不影響使用（救回方式與代價見 `WORKFLOW.md` §6）。
+- **GitHub 公開 repo 不接收**：build 腳本、災情/颱風 markdown 原文、內部倉庫資訊、金鑰——一律不外流到 `gh-pages` 或任何公開輸出。

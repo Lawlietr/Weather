@@ -1,19 +1,18 @@
 # 手動更新指南（Manual Update）
 
 本文件記錄「改完災情／颱風 markdown → build → 部署上線」的完整手動流程。
-自動化排程（GitHub Actions / cron）見 `WORKFLOW.md` §7。
+自動化排程與完整 runbook 見 `WORKFLOW.md`（主力為本地 cron，Actions 僅手動 dispatch；cron 細節見 `LOCAL_CRON.md`）。
 
 > 快速版：改完 markdown 後只跑一支指令即可上線：
 > ```bash
 > ./build/deploy.sh
 > ```
 >
-> **環境現況（2026/8/27）**：GitHub repo `Lawlietr/Weather` **已設為公開**（原私有）；
-> `CWA_API_KEY`、`CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID` 已同時存在
-> **本機環境**（本指南用）與 **GitHub Actions Secrets**（排程用）。公開網站由
-> **Cloudflare Pages** 提供；GitHub Pages 已轉公開 mirror（`lawlietr.github.io/Weather/`
-> 現為公開，目前 404）。Forgejo 與 GitHub **main 同步**；Actions 與本地 cron 備用
-> 均**每 2 小時**一次（本地 cron 預設不啟用，見 `LOCAL_CRON.md`）。
+> **環境現況（2026/9/1）**：GitHub repo `Lawlietr/Weather` **已設為公開**；
+> 金鑰存在本機環境（手動用）與 `build/deploy.env`（cron 用）。公開網站由
+> **Cloudflare Pages** 提供；GitHub Pages 為備用 mirror（目前 404）。
+> Forgejo 與 GitHub **main 同步**；**本地 cron 為主力自動更新**（每 2 小時，見
+> `LOCAL_CRON.md`），Actions 排程已停用（僅手動 dispatch）。
 
 ---
 
@@ -87,13 +86,13 @@ git push origin main
 
 > 🕐 **時間意識（極度重要）**：寫災情前**先確認現實時間**（`date`）。
 > 只記錄「目前正在發生」的事件；引用新聞時確認時效性、註明出處與日期。
-> 每次修改檔案，在檔首基本資料表上方新增一筆 `最後修改：YYYY/M/D HH:mm`。
-> 新進展**附加**在檔尾，不覆寫。
+> 每次修改檔案，把檔首基本資料表上方的**那一行** `最後修改：YYYY/M/D HH:mm` **原地更新**
+> （**不要新增行**，舊慣例已廢）；新進展**附加**在檔尾，不覆寫。
 
 ### 2.2 事件狀態生命周期
 
-事件結束（颱風遠離／雨勢停止）後：把檔案的 active 標記改為 ended，
-再 build 一次，Hero 就會切到下一個 active 事件。
+完整規則（含 ended→active 復活）見 `WORKFLOW.md` §2.2。簡版：事件結束後把
+`status` 改為 `ended`，重 build，Hero 自動切到下一個 active 事件。
 
 ---
 

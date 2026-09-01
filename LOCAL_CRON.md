@@ -1,24 +1,24 @@
-# LOCAL_CRON.md：本地自動部署（GitHub Actions 備用）
+# LOCAL_CRON.md：本地自動部署（主力更新通道）
 
-> **定位**：當 GitHub Actions 排程異常時，本機（Ubuntu LXC）的 cron 作為**替代自動部署**。
-> **預設「不啟用」**：cron 工作項目默认未安裝，只有 Actions 異常時才手動開啟。
-> 最後更新：2026/8/27
+> **定位**：2026/8/29 起 GitHub Actions 排程已停用（僅手動 dispatch），本機（Ubuntu LXC）的 cron 為**主要自動 build＋部署通道**（每 2 小時）；Actions 轉為手動備援。
+> cron 工作項目預設未安裝，以 `build/cron-enable.sh` 開啟（主力通道應常開）。
+> 最後更新：2026/9/1
 
 ---
 
 ## 一、這是什麼
 
 在機器本地排 `build/deploy.sh`（抓 CWA → build → 推 Cloudflare Pages ＋ GitHub Pages），
-對齊 Actions 的排程：**每 2 小時一次（一天 12 次）**。
+**每 2 小時一次（一天 12 次）**。執行前檢查 CWA 可用性（3 次重試，失敗則中止部署，不推舊資料）。
 
 與 Actions 的不同：
 
-| | GitHub Actions | 本地 cron（本備用） |
+| | GitHub Actions（手動備援） | 本地 cron（主力） |
 |---|---|---|
 | 金鑰 | GitHub Secrets | `build/deploy.env`（本機，gitignore，600） |
-| git 憑證 | Actions env | 本機已設定（Forgejo SSH / GitHub 視 GH_PAT） |
-| 依賴 | GitHub 伺服器 | **本機需保持醒著** |
-| 啟用 | 一直跑 | **預設關閉，手動開啟** |
+| git 憑證 | Actions env | 本機已設定（Forgejo SSH / GitHub 直推） |
+| 依賴 | GitHub 伺服器（CWA 連線不穩定，停用排程的原因） | **本機需保持醒著** |
+| 啟用 | 僅手動 workflow_dispatch | 常開（`cron-enable.sh` 安裝） |
 
 ---
 
@@ -40,7 +40,7 @@
 ### 準備（接手時一次，或金鑰移動後）
 金鑰已從 `~/.zshrc` 複製到 `build/deploy.env`（若遺失，手動寫入後 `chmod 600`）。
 
-### Actions 異常時 → 開啟備用
+### 開啟 cron（一次）
 ```bash
 # 1. 先自檢（驗證金鑰與網路，不部署）
 bash build/deploy-cron.sh --selfcheck
@@ -53,7 +53,7 @@ crontab -l
 ```
 之後每 2 小時（台灣時間）自動 build＋部署，日誌見 `build/logs/deploy-cron-*.log`。
 
-### Actions 復原 → 停用備用
+### 暫時停用 cron
 ```bash
 bash build/cron-disable.sh
 crontab -l   # 確認 Weather 排程已移除
@@ -74,7 +74,7 @@ source build/deploy.env
 ## 四、部署範圍預設
 
 - **未設 `GH_PAT`** → cron 只推 **Cloudflare Pages**（`--no-gh`）。
-  Cloudflare 是主要公開通道；GitHub Pages 已轉私有 mirror 且目前 404，非必需。
+  Cloudflare 是主要公開通道；GitHub Pages 為備用 mirror（目前 404，非必需）。
 - **設了 `GH_PAT`** → cron 完整部署（Cloudflare ＋ GitHub Pages）。
 
 ---
@@ -92,7 +92,7 @@ source build/deploy.env
 
 1. **本機需保持醒著**；休眠/關機期間的排程不會補跑（cron 非 systemd timer 的 missed-run 補執）。
 2. **金鑰安全**：`build/deploy.env` 權限 600、gitignore，絕不 commit。若懷疑洩漏，請到 Cloudflare/CWA 後台重設並更新此檔。
-3. **Actions 與 cron 不要同時開**，否則一天會部署多次（Cloudflare 會重複 publish，無害但浪費）。
+3. GitHub Actions 排程已停用（8/29）；手動 dispatch 與 cron 不衝突，最壞情況是 Cloudflare 重複 publish（無害但浪費）。
 4. Actions 偶發失敗 99% 是 Cloudflare token 限區域或失效；用 `--selfcheck` 可先確認是 token 問題還是本機問題。
 5. cron 環境極簡（不載入 `.zshrc`），故金鑰必須在 `build/deploy.env`（由 `deploy-cron.sh` 載入），不要依賴 shell 環境變數。
 
