@@ -160,7 +160,7 @@ cbph.cwa.gov.tw＝「預報中心資訊發布查詢系統」，即 CWA「災防�
 
 - **文件分工**：runbook（例行更新、新事件、驗證清單、部署、排程、陷阱）→ `WORKFLOW.md`；CWA 欄位查表 → `build/CWA_API.md`；手動路徑 → `MANUAL_UPDATE.md`；本地 cron → `LOCAL_CRON.md`；構想與待辦 → `TODO.md`。
 - **⚠️ 更新災情前必看 `WORKFLOW.md` §8「Agent 效率規範」**：先查 repo 既有檔案／`ctx_search`／`cwa_cache.json`，只查會變的資料，同一資料一個 session 只查一次。
-- **build 入口**：`./build/build.sh`（產出 `public/`（繁中）＋ `public/ja/`（日文）、`llms.txt`（站點＋事件索引）與 `llms-full.txt`（事件全文）；CWA 資料 build 時本機抓取；另產 cbph 災防告警 `build/map.geo.json`（build 中間檔、gitignored，供地圖紅警功能，`/map/` 頁開發中，見 `TODO.md` §2））。
+- **build 入口**：`./build/build.sh`（產出 `public/`（繁中）＋ `public/ja/`（日文）、`llms.txt`（站點＋事件索引）與 `llms-full.txt`（事件全文）；CWA 資料 build 時本機抓取；另產 cbph 災防告警 `build/map.geo.json`（build 中間檔、gitignored，供 `/map/` 災防告警地圖頁消費）＋離線瓦片 `public/assets/tiles/`（z8–z11；來源與陷阱見 `build/tiles.py` 頭註：OSM 官方 server 對本機 IP 假 200 封鎖，改用 `tile.openstreetmap.de`））。
 - **颱風軌跡圖台灣輪廓**：`build/cwa.py` 的 `typhoon_svg()` 用 `build/taiwan_geo.py` 的 `ISLANDS`（本島＋澎湖／金門／馬祖／蘭嶼／綠島各自獨立 polygon）；產生器 `build/make_taiwan_geo.py`（純 Python Douglas–Peucker，無相依）重跑後會覆寫 `taiwan_geo.py`，GeoJSON 快取 `build/_geo_cache_*.json` 已 gitignore。
 - **i18n**：預設 zh-Hant（根目錄）、ja（`public/ja/`）；UI 字串收斂在 `build/i18n.py`（`STRINGS`＋`t()` 三級回退），**加新語言＝加一組 dict、不改模板**；**內容不翻譯**——事件 Markdown 正文、CWA 資料全語言保留中文原文，非預設語言頁面以 `content_note` / `cwa_data_note` 提示。
 
@@ -177,6 +177,7 @@ cbph.cwa.gov.tw＝「預報中心資訊發布查詢系統」，即 CWA「災防�
 
 - **首頁**：頂部「目前風險狀態列」（`build/cwa.py: current_risk_level()` 由 CWA 目前生效中之熱帶氣旋／海上颱風警報／災害天氣特報自動推導：紅/黃/綠/**中性**（無生效中項目但有 ≤48h 內解除紀錄）/未知；與事件 `severity` 無關）→ 氣象彙整（颱風軌跡/警報特報/雨量/風力；警報特報卡**混排、時間倒序**，已解除項置底灰化、超過 48h（`LIFTED_TTL_HOURS`）不顯示）→ 事件 Hero（中性入口卡，無 severity 色系與徽章）＋ 各縣市災情總覽（依縣市分組、時間倒序）→ 過去事件封存（含 severity 徽章）。
 - **各縣市子頁（選用）**：該縣市災情按時間倒序。
+- **災防告警地圖 `/map/`（2026/9/2 上線）**：`build/map_page.py`＋自託 Leaflet 1.9.4（`build/static/leaflet/`）＋離線瓦片；cbph 4 類告警官方 polygon 分色渲染、hover/click 詳情卡、圖層開關、`<noscript>` fallback、行動版 bottom-sheet；資料全 build 時寫入（`map.geo.json` 嵌入頁面，前端零外部請求）。細節與待辦見 `TODO.md` §2。
 
 ### 部署（詳 `WORKFLOW.md` §6）
 

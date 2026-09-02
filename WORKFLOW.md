@@ -3,7 +3,7 @@
 > **讀者**：接手本專案的 agent 或人工操作者。
 > **定位**：「怎麼做」的逐步流程。專案規範（檔案格式、CWA API 結構、設計原則）在
 > `AGENTS.md`，本文件不重複，只引用。
-> 最後更新：2026/9/1（§2.2 新增「復活/reopen」規則；風險狀態列新增 neutral 級；警報特報卡混排倒序＋解除項置底灰化＋48h TTL）
+> 最後更新：2026/9/2（`/map/` 災防告警地圖骨架上線（DEV）；§1/§2.2 更新瓦片與地圖頁說明；§3 新增地圖/瓦片驗證項）
 > 
 > **環境現況（2026/8/27）**：GitHub repo `Lawlietr/Weather` **已設為公開**（原私有）；`CWA_API_KEY`、
 > `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID` 已存入 **GitHub Actions Secrets**。公開網站由
@@ -33,7 +33,7 @@
 ① 更新 markdown 內容（災情/颱風檔案，規則見 AGENTS.md「檔案撰寫規則」）
    ・災情新聞候選：build 會自動抓 RSS 產出 `build/rss_candidates.json`（關鍵詞 flag 在前、時間倒序）；
      審查候選 → 挑中者以 `- [標題](URL) — 媒體名` 寫入事件檔「XX災情新聞來源」章節（勿自動推入，人工把關）
-② ./build/build.sh（順帶：自動抓 cbph 災防告警產出 `build/map.geo.json`，build 中間檔、gitignored；地圖頁消費它，見 §2/§7 與 TODO §2）
+② ./build/build.sh（順帶：自動抓 cbph 災防告警產出 `build/map.geo.json`＋抓/補離線瓦片→產出 `/map/` 頁；瓦片有 `build/_tile_cache/` 持久化快取，命中不重抓，見 TODO §2）
 ③ 驗證（見 §3 檢查清單）
 ④ git add / commit（訊息用繁體中文，簡述本次更新）
 ⑤ git push origin main（內部 Forgejo）
@@ -95,6 +95,11 @@ grep -rc "Authorization=" public/ | grep -v ":0" || echo "OK: 無 Authorization"
 grep -rc "$CWA_API_KEY" public/ build/cwa_cache.json | grep -v ":0" || echo "OK: 無金鑰值"
 # ④ 雙語言輸出確認（兩套根頁都存在、語言切換連結正確）
 ls public/index.html public/ja/index.html
+# ⑤ 地圖頁＋瓦片確認（/map/ 兩語言存在；瓦片數應為 967；大小應有分佈而非單一值——
+#    單一值＝疑似整批被擋（2026/9/2 實測 OSM 官方 server 回假 200＋6987B 封鎖頁、967 張全中））
+ls public/map/index.html public/ja/map/index.html
+find public/assets/tiles -name '*.png' | wc -l   # 預期 967
+find public/assets/tiles -name '*.png' -exec stat -c '%s' {} \; | sort -u | wc -l   # 預期 >50
 # ⑤ 風險狀態列（由 CWA 自動推導；應與 build 日誌「目前風險：xxx」一致）
 grep -o 'risk-bar risk-[a-z]*' public/index.html | head -1
 # ⑥ RSS 候選清單（build/rss_candidates.json 應為本次 build 新生成；feeds ok 應接近全數）
@@ -196,7 +201,7 @@ cd public && python3 -m http.server 8080
   到 GitHub repo → Actions tab → "Build & Deploy" → "Run workflow"。
 - **更新 agent**：負責「查 CWA API/新聞 → 更新 markdown → build → push」。
   輸入就是本文件 §1～§3；agent 不需懂解析細節，照 check 清單驗收即可。
-- **地圖紅警層（CWA，2026/8/28 定案、2026/9/1 補 cbph API 實測；實作中：gazetteer＋cbph→`build/map.geo.json` 已完成（2026/9/2），`/map/` 頁待做）**：全自動——build 時抓 CWA（**cbph 災防告警 polygon**（`cbph.cwa.gov.tw/api/`，免 key、官方座標、免 gazetteer；`build/cbph.py` 已掛 `site.py` 流水線，任何類型失敗只 warning、不中斷 build）＋特報/雨量站/氣旋）合成 `map.geo.json`（build 中間檔、gitignore）與地圖頁，掛在**現有每 2 小時排程**上，不新增排程/agent/金鑰；陸地特報紅區仍靠 gazetteer（`build/gazetteer.json`，存 repo）轉換文字。細節見 `TODO.md` §2；災情新聞點層（§2b）維持人工把關。
+- **地圖紅警層（CWA，2026/8/28 定案、2026/9/1 補 cbph API 實測；gazetteer（9/1）＋cbph→`build/map.geo.json`（9/2）＋`/map/` 骨架（9/2，DEV）均已完成，剩觀測層（步驟 4））**：全自動——build 時抓 CWA（**cbph 災防告警 polygon**（`cbph.cwa.gov.tw/api/`，免 key、官方座標、免 gazetteer；`build/cbph.py` 已掛 `site.py` 流水線，任何類型失敗只 warning、不中斷 build）＋特報/雨量站/氣旋）合成 `map.geo.json`（build 中間檔、gitignore）與 `/map/` 頁（`build/map_page.py`＋自託 Leaflet 1.9.4＋離線瓦片 `build/tiles.py`；瓦片來源 `tile.openstreetmap.de`——OSM 官方 server 對本機 IP 假 200 封鎖，見 `tiles.py` 頭註），掛在**現有每 2 小時排程**上，不新增排程/agent/金鑰；陸地特報紅區仍靠 gazetteer（`build/gazetteer.json`，存 repo）轉換文字。細節見 `TODO.md` §2；災情新聞點層（§2b）維持人工把關。
 
 ---
 
