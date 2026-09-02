@@ -11,11 +11,15 @@
 """
 import re
 import sys
+import json
+import shutil
 import datetime
 from pathlib import Path
 
 import cwa
 import cbph
+import tiles as tiles_mod
+import map_page
 from urllib.parse import quote
 
 import i18n
@@ -443,6 +447,7 @@ def build_nav(lang, events, home_link, base, current_url, groups):
     parts = ['<nav>']
     cls = " nav-current" if current_url == "__home__" else ""
     parts.append(f'<a class="nav-item{cls}" href="{home_link}">{t(lang, "nav_home")}</a>')
+    parts.append(f'<a class="nav-item" href="{base}map/index.html">{t(lang, "map_enter")}</a>')
 
     def item(e):
         cls = " nav-current" if current_url == "/".join(e["url"]) else ""
@@ -632,7 +637,7 @@ def risk_bar_html(lang, level, items, ts, stale):
 <section class="risk-bar {cls}">
 <div class="risk-label">{t(lang, f"risk_label_{level}")}</div>
 {body}
-<p class="meta">{t(lang, "risk_asof", ts=ts)}{stale_note}</p>
+<p class="meta">{t(lang, "risk_asof", ts=ts)}{stale_note}　<a href="map/index.html">{t(lang, "map_enter")}</a></p>
 </section>"""
 
 
@@ -758,6 +763,7 @@ def build_llms_files(events, ts, cwa_ctx):
              "## 網站結構",
              "",
              f"- [首頁（氣象彙整＋各縣市災情總覽）]({base}/index.html)",
+             f"- [災防告警地圖（目前生效 CWA 災防告警區域；離線 Leaflet 地圖，每 2 小時更新）]({base}/map/index.html)",
              f"- [日文介面（UI 為日文，事件正文為繁中原文）]({base}/ja/index.html)",
              "",
              "- 所有事件列表（含已結束）見首頁側邊欄，本檔下方亦分列進行中／已結束。",
@@ -843,12 +849,37 @@ def main():
     # 地圖紅警（TODO §2）：cbph 災防告警 → build/map.geo.json（build 中間檔，gitignore）。
     # 容錯：單類抓取失敗記 warning（cbph 內部已印）＋寫入 map.geo.json 的 warnings 欄、
     # 不中斷 build（沿用 RSS 守則）。
-    n_alerts, _cbph_warnings = cbph.build_map_geojson(Path(__file__).resolve().parent / "map.geo.json")
+    build_dir = Path(__file__).resolve().parent
+    n_alerts, _cbph_warnings = cbph.build_map_geojson(build_dir / "map.geo.json")
+
+    # 地圖紅警（TODO §2 執行順序 3）：/map/ 獨立頁＋離線瓦片＋自託 Leaflet。
+    # 全部容錯不中斷：瓦片缺 → 空白底；Leaflet/靜態檔缺失 → 地圖頁退化（noscript 清單仍在）。
+    geo_path = build_dir / "map.geo.json"
+    if geo_path.exists():
+        fc = json.loads(geo_path.read_text(encoding="utf-8"))
+        try:
+            n_tiles, n_fetched, n_cached, n_failed = tiles_mod.fetch_tiles(
+                build_dir / "_tile_cache", OUT / "assets", warnings=fc["warnings"])
+            print(f"map tiles：{n_tiles} 張（本次抓 {n_fetched}、快取 {n_cached}、失敗 {n_failed}）")
+        except Exception as e:
+            print(f"[warning] map tiles: 抓取失敗（{e}）— 地圖缺處顯示空白底")
+        try:
+            static = build_dir / "static"
+            for p in static.rglob("*"):
+                if p.is_file():
+                    dest = OUT / "assets" / p.relative_to(static)
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(p, dest)
+            map_page.build(OUT, fc, events)
+        except Exception as e:
+            print(f"[warning] /map/ 頁產出失敗（{e}）— 不中斷 build")
+    else:
+        print("[warning] map.geo.json 不存在，跳過 /map/ 頁")
 
     mode = cwa_ctx[3]
     src_note = {"live": "CWA live", "partial": "CWA partial（含舊資料）", "cache": "CWA 快取", "none": "CWA 無法取得"}[mode]
     risk, _ = cwa.current_risk_level("zh-Hant", cwa_ctx[0], cwa_ctx[2], mode)
-    print(f"build 完成：{len(events)} 個事件（active {sum(1 for e in events if e['status']=='active')} / ended {sum(1 for e in events if e['status']!='active')}）｜{src_note}｜目前風險：{risk}｜llms.txt + llms-full.txt 已產生｜map.geo.json：{n_alerts} 筆生效告警")
+    print(f"build 完成：{len(events)} 個事件（active {sum(1 for e in events if e['status']=='active')} / ended {sum(1 for e in events if e['status']!='active')}）｜{src_note}｜目前風險：{risk}｜llms.txt + llms-full.txt 已產生｜map.geo.json：{n_alerts} 筆生效告警｜/map/ 已產出")
     print(f"輸出：{OUT}")
     print(f"預覽：cd {OUT} && python3 -m http.server 8080")
 

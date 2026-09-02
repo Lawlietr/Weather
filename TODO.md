@@ -3,7 +3,7 @@
 > 專案背景、設計原則、技術架構與部署流程分別見 `README.md`、`AGENTS.md`、`WORKFLOW.md`，本文件只放**未完成的待辦**；已完成項目的設計史不留在此（看 git history 或各文件）。
 > 最後更新：2026/9/1
 
-> 優先級：§1 RSS 殘餘細項（高，隨事件順手做）、§2 地圖紅警（高，實作中：執行順序 1 gazetteer＋2 cbph→map.geo.json ✅（2026/9/2）、下一步 3 `/map/` 骨架；四大決策定案：cbph 採用、每 2 小時、自動層先上、獨立 `/map/` 頁；首批 = 執行順序 1–4＋6）、§3 平常天氣報導（中，構想待討論）、§4 ja 移除／§5 分享按鈕（低）。
+> 優先級：§1 RSS 殘餘細項（高，隨事件順手做）、§2 地圖紅警（高，實作中：執行順序 1 gazetteer＋2 cbph→map.geo.json＋3 `/map/` 骨架 ✅（2026/9/2）、下一步 4 觀測層；四大決策定案：cbph 採用、每 2 小時、自動層先上、獨立 `/map/` 頁；首批 = 執行順序 1–4＋6）、§3 平常天氣報導（中，構想待討論）、§4 ja 移除／§5 分享按鈕（低）。
 
 ---
 
@@ -96,7 +96,9 @@ cbph.cwa.gov.tw＝「預報中心資訊發布查詢系統」（CWA Broadcast Pro
 
 1. ~~gazetteer（鄉鎮/縣級 JSON，一次性建）~~ **✅ 完成（2026/9/1）**：`build/make_gazetteer.py` 產生 `build/gazetteer.json`（towns 368＝CWA 現存測站解析 331＋twTown1982 界線補位 37，counties 22；16 個解析不了的站降級縣級）。逐縣比對官方行政區劃確認**界線檔＋測站已覆蓋全部現行鄉鎮市，無需手動補位**（`MANUAL_TOWNS` 留空、保留機制）；桃園縣 13 鄉已換算為桃園市 X 區。陷阱：新竹市「北區」是現行正式區（海天一線測站所在，非垃圾 key）、嘉義市只有東/西 2 區、太麻里鄉在臺東縣（非花蓮）、南字無簡繁問題（同 U+5357，純字型渲染假象）。
 2. `build/cbph.py`：抓 4 類→驗證→合併進 `map.geo.json` — **✅ 完成（2026/9/2）**：`build/cbph.py`（4 類告警抓取、polygon→GeoJSON、UTC→UTC+8、503/404 容錯、生效判定；屏東縣單縣市採集測試通過：歷史池 40 筆、40/40 含官方 polygon）。掛 build 流水線：`site.py main()` 呼叫 `cbph.build_map_geojson()` → 寫 `build/map.geo.json`（build 中間檔、gitignore；含 `generated_at`/`warnings` 欄），build log 印生效告警數。公開 `/map/data.json` 與 `llms.txt` 註記屬步驟 6（v2）。注意：採集是全縣一次抓（`/api/global/` 不區縣），無逐縣市工作項——「單縣市採集」只是實作期的驗證方式。
-3. `/map/` 骨架：自託 Leaflet＋瓦片＋cbph polygon 層＋點擊詳情卡＋圖例＋產生時間
+3. `/map/` 骨架：自託 Leaflet＋瓦片＋cbph polygon 層＋點擊詳情卡＋圖例＋產生時間 — **✅ 完成（2026/9/2）**：`build/map_page.py`（獨立 `/map/` 頁＋`ja/map/`，繁中/日文 UI）、`build/tiles.py`（離線瓦片）、`build/static/leaflet/`（Leaflet 1.9.4 自託 dist，md5 `35b48eb991f383702f153452506e07b2`）。功能：官方 polygon 渲染（4 類分色）、hover tooltip、click→詳情卡（含影響鄉鎮/生效時段/細胞廣播狀態/官方 deep link/本 repo 相關事件連結）、圖層 checkbox 開關＋計數、產生時間、「每 2 小時更新、非即時」註記、`<noscript>` 靜態清單 fallback、行動版 bottom-sheet。入口：首頁 nav「災防告警地圖」＋ llms.txt 條目。
+   **瓦片來源陷阱（2026/9/2 實測）**：OSM 官方 server（含 a./c. 副域）對本機 IP 回**假 200＋封鎖頁 PNG**（967 張全中、換 UA 無效）；CARTO 全端點需 API key（瓦片帶浮水印）；**改用 OSM 德國社群 server `tile.openstreetmap.de`**（免 key、20 張抽樣全數乾淨）。`tiles.py` 已加 HTTP 狀態碼＋PNG magic 雙重驗證防再發。z8–z11 共 967 張（~15MB），`build/_tile_cache/` 持久化命中、缺的才補抓。
+   **驗證**：Obscura headless 端到端（合成 3 筆告警）：polygon 渲染✓、圖層計數 2/1/0/0✓、圖層開關✓、bottom-sheet 開關✓、`node --check` 兩頁 JS✓。已知引擎限制（不影響生產）：obscura 引擎缺 `SVGSVGElement.createSVGRect` 與 `HTMLElement.clientLeft/clientTop` → SVG 偵測 false（test page 注入 polyfill 補）＋引擎合成 click 缺座標→`mouseEventToContainerPoint` NaN→`fire` 前拋 Invalid LatLng（**真實瀏覽器無此問題**；handler 邏輯已以 `layer.fire("click")` 直接驗證 panel 開啟✓）。click 交互的最終確認建議合併前在真實瀏覽器看一眼。
 4. 雨量站＋颱風軌跡/風圈＋特報（gazetteer）層
 5. ~~2b 災情新聞點層（人工餵料）~~ **暫緩（2026/9/1 定），未來有時間再實作**
 6. v2：`/map/data.json` 公開＋deep link＋時間線快照

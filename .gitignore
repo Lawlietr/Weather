@@ -6,6 +6,7 @@ build/.venv/
 build/cwa_cache.json
 build/rss_candidates.json
 build/map.geo.json
+build/_tile_cache/
 build/__pycache__/
 .wrangler/
 build/_geo_cache_*.json
