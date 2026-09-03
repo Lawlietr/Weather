@@ -75,7 +75,7 @@
 
 **說明**：
 - `{MMDD}`：生成日期（月 + 日，補零，如 0702 表示 7 月 2 日）
-- `{NN}`：颱風編號（補零，如 09 表示第 9 號）**⚠️ 此編號為 CWA 熱帶氣旋編號（非 JTMA 國際編號）**，請以 CWA API W-C0034-005 回傳之 `CwaTdNo` 為準。檔名使用 CWA 編號可確保與網站「氣象總覽」區塊一致。
+- `{NN}`：颱風編號（補零）＝CWA 熱帶氣旋編號（非 JTMA），規則見下方「颱風編號規範」
 - 這樣命名可確保檔案按日期和編號自然排序
 
 ### 災情檔案（非颱風事件）
@@ -132,7 +132,7 @@
 - **交通影響**：以交通部或各縣市政府公告為主，新聞媒體為輔
 - **措辭跟隨來源、不自行解讀（2026/9/1 定）**：對路徑、強度、登陸與對台影響的判斷性表述，一律引來源原話（CWA API 數值、CWA 發言人/公告口吻），**不得加「二次登陸」「直接侵台」等推測性升級詞**——以 CWA 當時路徑為準（例：9/1 沙德爾返回時 CWA 預測登陸廣東、口徑為「直接侵台機會低」，就照此寫；CWA 修訂路徑後再更新）。
 - **災情來源優先級（build）**：repo 現有 `災情/` markdown → **RSS** → Obscura 抓取。每筆附**新聞來源**，僅給**少量摘要＋原連結**。
-- **RSS 半自動流程**：build 時 `build/rss.py` 自動抓 `rss_sources.json` 的 verified 來源，產出候選清單 `build/rss_candidates.json`（gitignored；**從不進 `public/`**）。相關性判斷**由人 / LLM 審查**，挑中者以 `- [標題](URL) — 媒體名` 寫入事件檔「XX災情新聞來源」章節才上線。流程與驗證見 `WORKFLOW.md` §1/§3。
+- **RSS 半自動流程**：build 時自動抓 verified RSS 來源產出候選清單 `build/rss_candidates.json`（**從不進 `public/`**）；相關性判斷**由人 / LLM 審查**，挑中者寫入事件檔「XX災情新聞來源」章節才上線。完整流程與驗證見 `WORKFLOW.md` §1/§3。
 
 > ⚠️ 使用新聞資料時，請確認時效性，避免使用舊聞；引用時請註明新聞來源與日期。
 
@@ -229,8 +229,7 @@ cbph.cwa.gov.tw＝「預報中心資訊發布查詢系統」，即 CWA「災防�
 - **首頁**：頂部「目前風險狀態列」（`build/cwa.py: current_risk_level()` 由 CWA 目前生效中之熱帶氣旋／海上颱風警報／災害天氣特報自動推導：紅/黃/綠/**中性**（無生效中項目但有 ≤48h 內解除紀錄）/未知；與事件 `severity` 無關）→ 氣象彙整（颱風軌跡/警報特報/雨量/風力；警報特報卡**混排、時間倒序**，已解除項置底灰化、超過 48h（`LIFTED_TTL_HOURS`）不顯示）→ 事件 Hero（中性入口卡，無 severity 色系與徽章）＋ 各縣市災情總覽（依縣市分組、時間倒序）→ 過去事件封存（含 severity 徽章）。
 - **各縣市子頁（選用）**：該縣市災情按時間倒序。
 
-### 部署（詳 `WORKFLOW.md` §6）
+### 部署（指令、域名與救回方式詳 `WORKFLOW.md` §6）
 
-- **Cloudflare Pages**（**主要公開通道**）：專案 `weather`，自訂域名 `weather.avpclub.eu.org`、`weather.avpclub.uk`、`weather.larch.dpdns.org`（CNAME 已建、proxied、自動 HTTPS）。更新：`npx wrangler pages deploy public --project-name weather`。
-- **GitHub Pages**（備用 mirror，只收 `public/`）：orphan `gh-pages` 分支、不共享 history；目前 404 不影響使用（救回方式與代價見 `WORKFLOW.md` §6）。
+- **Cloudflare Pages**（主要公開通道，`weather.avpclub.eu.org` 等 3 自訂域名）＋ **GitHub Pages**（備用 mirror，orphan `gh-pages` 分支、只收 `public/`）。
 - **GitHub 公開 repo 不接收**：build 腳本、災情/颱風 markdown 原文、內部倉庫資訊、金鑰——一律不外流到 `gh-pages` 或任何公開輸出。

@@ -3,7 +3,7 @@
 > **讀者**：接手本專案的 agent 或人工操作者。
 > **定位**：「怎麼做」的逐步流程。專案規範（檔案格式、CWA API 結構、設計原則）在
 > `AGENTS.md`，本文件不重複，只引用。
-> 最後更新：2026/9/1（§2.2 新增「復活/reopen」規則；風險狀態列新增 neutral 級；警報特報卡混排倒序＋解除項置底灰化＋48h TTL）
+> 最後更新：2026/9/3（§5/§7 去重精簡；§2.2 復活規則、風險狀態列 neutral 級、警報特報卡 48h TTL 見 git history）
 > 
 > **環境現況（2026/8/27）**：GitHub repo `Lawlietr/Weather` **已設為公開**（原私有）；`CWA_API_KEY`、
 > `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID` 已存入 **GitHub Actions Secrets**。公開網站由
@@ -134,12 +134,9 @@ cd public && python3 -m http.server 8080
    快取值為 `null`/缺失時 `cwa.py` 會跳過該來源，屬預期行為。
 4. 公開 GitHub repo 只應收到 `public/` 靜態產物，**不收 markdown 原文與 build 腳本**
    （金鑰不進輸出已驗證，但流程上仍分開）。
-5. **Actions 排程已停用（2026/8/29）**：GitHub Actions **已移除 `schedule`**，僅保留 `workflow_dispatch`（手動觸發）。
-   停用原因：Actions runner（Azure `westus2`）到 CWA API 連線不穩定（curl 超時），
-   導致 build 使用舊資料卻仍部署。`build/build.sh` 現已加入 CWA 前置檢查（3 次重試，
-   失敗則 `exit 1` 阻止部署）。
-   若需手動跑 Actions build：到 GitHub repo → Actions tab → "Build & Deploy" → "Run workflow"。
-   本地 cron 備用（`build/deploy-cron.sh`，每 2 小時，`build/cron-enable.sh` 安裝）為主要自動更新通道。
+5. **Actions 排程已停用（2026/8/29）**：僅保留 `workflow_dispatch`；原因：Actions runner 到 CWA
+   連線不穩定（曾推舊資料），`build/build.sh` 現已加入 CWA 前置檢查（3 次重試、失敗 `exit 1` 阻止部署）。
+   主力自動更新通道＝本地 cron（見 §7）。
    > 若日後要恢復 Actions 排程：確認 CWA API 可從海外連線（或改用 Cloudflare Worker 等中轉），
    > 再把 `schedule` 加回 `.github/workflows/build.yml` 即可。
 6. **Cloudflare token 限區域或失效**：code 9109。去 CF 後台重開 token 並更新 GitHub Secret 即可；
@@ -185,18 +182,12 @@ cd public && python3 -m http.server 8080
 ## 7. 排程與自動更新
 
 - **手動**：`MANUAL_UPDATE.md`（改 markdown → `./build/deploy.sh` → 上線）。
-- **本地 cron（主力，每 2 小時）**：本機或 Ubuntu LXC/VM 排 `build/deploy-cron.sh`。
-  - **安裝**：`bash build/cron-enable.sh`（冪等，重複執行會覆蓋舊排程）。
-  - **停用**：`bash build/cron-disable.sh`。
-  - **自檢**：`bash build/deploy-cron.sh --selfcheck`（驗證金鑰與網路，不部署）。
-  - **金鑰**：`build/deploy.env`（gitignore、600，由 `deploy-cron.sh` 載入；cron 不載入 `.zshrc`）；需該機器常醒著。
-  - **CWA 檢查**：執行前會先檢查 CWA 可用性（3 次重試，失敗中止），不會推舊資料。
-  - **日誌**：全程寫入 `build/logs/deploy-cron-YYYY-MM-DD.log`，方便除錯。
+- **本地 cron（主力，每 2 小時）**：本機或 Ubuntu LXC/VM 排 `build/deploy-cron.sh`（CWA 前置檢查 3 次重試、失敗中止、不推舊資料）。安裝/停用/自檢、金鑰（`build/deploy.env`）、日誌等細節見 `LOCAL_CRON.md`。
 - **GitHub Actions（手動 dispatch，備援）**：僅保留 `workflow_dispatch`（2026/8/29 起停用排程）。
   到 GitHub repo → Actions tab → "Build & Deploy" → "Run workflow"。
 - **更新 agent**：負責「查 CWA API/新聞 → 更新 markdown → build → push」。
   輸入就是本文件 §1～§3；agent 不需懂解析細節，照 check 清單驗收即可。
-- **地圖紅警層（CWA，2026/8/28 定案、2026/9/1 補 cbph API 實測，待實作）**：全自動——build 時抓 CWA（**cbph 災防告警 polygon**（`cbph.cwa.gov.tw/api/`，免 key、官方座標、免 gazetteer）＋特報/雨量站/氣旋）合成 `map.geo.json` 與地圖頁，掛在**現有每 2 小時排程**上，不新增排程/agent/金鑰；陸地特報紅區仍靠 gazetteer（鄉鎮級靜態 JSON，存 repo）轉換文字。細節見 `TODO.md` §2；災情新聞點層（§2b）維持人工把關。
+- **地圖紅警層（待實作）**：全自動——build 時抓 CWA（cbph 官方 polygon＋特報/雨量站/氣旋）合成 `map.geo.json` 與地圖頁，掛在現有每 2 小時排程上，不新增排程/agent/金鑰。細節見 `TODO.md` §2。
 
 ---
 

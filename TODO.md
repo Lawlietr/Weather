@@ -1,15 +1,15 @@
 # TODO：待辦事項
 
 > 專案背景、設計原則、技術架構與部署流程分別見 `README.md`、`AGENTS.md`、`WORKFLOW.md`，本文件只放**未完成的待辦**；已完成項目的設計史不留在此（看 git history 或各文件）。
-> 最後更新：2026/9/1
+> 最後更新：2026/9/3
 
-> 優先級：§1 RSS 殘餘細項（高，隨事件順手做）、§2 地圖紅警（高，已定案待實作；2026/9/1 四大決策定案：cbph 採用、每 2 小時、自動層先上、獨立 `/map/` 頁；首批 = 執行順序 1–4＋6）、§3 平常天氣報導（中，構想待討論）、§4 ja 移除／§5 分享按鈕（低）。
+> 優先級：§1 RSS 殘餘細項（高，隨事件順手做）、§2 地圖紅警（高，已定案待實作）、§4 平常天氣報導（中，構想待討論）、§3 ja 移除／§5 分享按鈕（低）。
 
 ---
 
 ## 1. RSS 災情抓取：殘餘細項（✅ 半自動方案已於 2026/8/30 實作）
 
-> 已實作部分：`build/rss.py` 於 build 時抓 verified feeds → 48h 時間過濾＋去重＋關鍵詞初判 → 產出 `build/rss_candidates.json`（gitignored、**從不進 `public/`**）；人 / LLM 審查後挑中者以 `- [標題](URL) — 媒體名` 寫入事件 markdown「XX災情新聞來源」章節才上線。設計定案與實測記錄見 git history（2026/8/29–8/30 commits），流程見 `AGENTS.md`「資料來源規範」與 `WORKFLOW.md` §1/§3。
+> 已實作：`build/rss.py` build 時自動抓 verified feeds 產出候選清單 `build/rss_candidates.json`（**從不進 `public/`**）；人 / LLM 審查後挑中者寫入事件檔「XX災情新聞來源」章節才上線（流程見 `WORKFLOW.md` §1）。
 
 **剩餘待辦**：
 - **風傳媒（storm.mg）待復查**：RSS 疑似移除（2026/8/30 再測仍回 HTML/404），但它是颱風/災情最重要新媒體之一；若確認失效，退而用 Obscura 抓其新聞頁（未自動接入，因需 headless 抓取）。
@@ -40,28 +40,14 @@
 
 #### cbph 災防告警 API（2026/9/1 實測，新增資料源）
 
-cbph.cwa.gov.tw＝「預報中心資訊發布查詢系統」（CWA Broadcast Product History），即 CWA「災防訊息彙整」（`/V8/C/P/PWS/PWS.html`，該頁本身只有文字清單）背後的地圖查詢系統。**公開 JSON API、免 key**（build 時抓取，無 CORS 問題；預設 curl UA 即可）。
-
-- **Endpoints**（實測 2026/9/1）：
-  - `GET https://cbph.cwa.gov.tw/api/global/` — 目前告警，依 4 類分組（前端再按 `is_active`＋`expires` 過濾）
-  - `GET https://cbph.cwa.gov.tw/api/{type}/?issuetime_after=&issuetime_before=&county=` — 歷史（預設最新 50 筆）
-  - type slugs：`cells`＝大雷雨即時訊息、`tywinds`＝颱風強風告警、`mountainstorms`＝山區暴雨警示訊息、`largesurfs`＝巨浪告警
-- **每筆欄位**：`identifier`（例 `cwa.gov.tw_thunderstorm_20260901142900_100`）、`official_id`、`sent`/`onset`/`effective`/`expires`（**UTC**，`Z` 結尾）、`is_active`、`msg_type`、`description`（告警原句）、`cmam_text`（細胞廣播原文）、`cb_enabled`、`county[]`/`town[]`（含鄉鎮）、`coastal_county[]`/`coastal_town[]`、**`polygon`**（字串：`lat,lon lat,lon ...`，多 ring 以 `;` 分開＝**官方影響區域座標**）、`geocode_dict`（實測 50 筆全空）
-- **官方頁 deep link**：`https://cbph.cwa.gov.tw/ui/?type={type}&identifier={identifier}`（點擊詳情卡可回連官方頁）
-- **實測陷阱**（2026/9/1）：
-  1. `largesurfs` 目前回 **503**（空類型/不存在路徑皆可能 503）——503/404 一律容錯跳過。
-  2. `county=` 過濾不可靠（實測宜蘭縣 0 筆，但資料裡有宜蘭）——build 端抓全量自行 filter。
-  3. 預設 50 筆 `is_active` 全 True（mountainstorms 例）——build 端仍須自行驗 `is_active`＋`expires`。
-  4. **非 Open Data 正式目錄**：無 SLA、無變更通知；build 端 try/except＋輕量 schema 驗證，失敗跳過＋warning、**不中斷 build**（沿用 RSS 守則）。
-  5. 時區 UTC——build 端一律轉 UTC+8（沿用固定 UTC+8 慣例）。
-  6. 引用措辭：UI 註明「資料來源：中央氣象署災防告警系統（PWS）」。
-- **更新頻率疑慮**：大雷雨即時訊息 lifespan 約 2 小時＝每 2 小時 cron 的下限，事件高峰期可能整筆錯過 → 見下方「待決定」。
+實測記錄（endpoints、每筆欄位——含 `polygon` 官方影響區域座標、`cmam_text` 細胞廣播、deep link——與 503/`county=` 過濾不可靠/`is_active` 須自行驗證/UTC/無 SLA 等陷阱）一律以 `AGENTS.md`「CWA cbph 災防告警 API」節為**單一事實來源**，實作前先讀它。
+- **更新頻率疑慮**：大雷雨即時訊息 lifespan 約 2 小時＝每 2 小時 cron 的下限，事件高峰期可能整筆錯過一週期——已接受 trade-off（見下方「決策」2；事件期間可加頻）。
 
 ### 2b. 災情新聞點層（人工/agent 餵料，可選疊層；**暫緩（2026/9/1 定）**）
 
 - 來源：RSS（見 §1）＋災情 markdown；鄉鎮名經 gazetteer 對照上圖，每筆附新聞來源連結。
 - 維持人工把關（核心原則：災情新聞不自動推）；缺了不影響 2a CWA 層運作。
-- 上線時程：**CWA 自動層先上、本層暫緩**，未來有時間再繼續實作（gazetteer 本就要建，2b 建好後可直接沿用）。
+- gazetteer 本就要建，2b 建好後可直接沿用。
 
 ### 選型（已定：Leaflet + OpenStreetMap，非 Google Maps）
 
@@ -85,12 +71,12 @@ cbph.cwa.gov.tw＝「預報中心資訊發布查詢系統」（CWA Broadcast Pro
 - OSM 瓦片署名義務：頁尾必顯示 `© OpenStreetMap contributors`。
 - 無 JS fallback：顯示既有靜態 SVG 總覽。
 
-### 決策（2026/9/1 提出並全部定案）
+### 決策（2026/9/1 全部定案）
 
-1. **cbph 採用為資料源** ✅：非正式 API、無 SLA（不保證穩定、改版/停用不通知、無支援）但資料本身是 CWA 公開資訊，以「轉引」措辭呈現；唯一提供官方影響區域 polygon 的來源；容錯沿用 RSS 守則（失敗跳過＋warning、不中斷 build）。
-2. **更新頻率＝與自動部署同頻，每 2 小時** ✅；有需求可於事件期間加頻至 30–60 分鐘。已接受 trade-off：大雷雨 lifespan 約 2 小時＝頻率下限，高峰期可能整筆錯過一期。
-3. **2b 新聞點層暫緩** ✅：CWA 自動層先上；2b 保留於本節，未來有時間再實作。
-4. **前端呈現＝選項 A：獨立 `/map/` 頁** ✅：先做完整獨立頁；「A＋首頁靜態 SVG 告警區快照」不在首批，獨立頁完成後有時間再實驗。
+1. 採用 cbph 為資料源（非正式 API、無 SLA，以「轉引」措辭呈現；容錯沿用 RSS 守則）
+2. 更新頻率＝與自動部署同頻、每 2 小時（事件期間可加頻至 30–60 分鐘；接受 trade-off：大雷雨 lifespan 約 2 小時）
+3. 2b 新聞點層暫緩
+4. 前端呈現＝選項 A：獨立 `/map/` 頁（「A＋首頁靜態 SVG 告警區快照」不在首批）
 
 ### 執行順序（2026/9/1 決策定案；首批＝1–4＋6，在 DEV 分支開發、經確認後合併 main）
 
@@ -98,7 +84,7 @@ cbph.cwa.gov.tw＝「預報中心資訊發布查詢系統」（CWA Broadcast Pro
 2. `build/cbph.py`：抓 4 類→驗證→合併進 `map.geo.json`
 3. `/map/` 骨架：自託 Leaflet＋瓦片＋cbph polygon 層＋點擊詳情卡＋圖例＋產生時間
 4. 雨量站＋颱風軌跡/風圈＋特報（gazetteer）層
-5. ~~2b 災情新聞點層（人工餵料）~~ **暫緩（2026/9/1 定），未來有時間再實作**
+5. ~~2b 災情新聞點層（人工餵料）~~ 暫緩（見 §2b）
 6. v2：`/map/data.json` 公開＋deep link＋時間線快照
 
 ---
@@ -209,12 +195,3 @@ ja 頁目前只有 UI 詞彙是日文、內容（新聞/CWA 資料）全為中�
 - Line 分享文字有長度上限，摘要需控制長度。
 - 分享按鈕只放「事件頁」；首頁「事件 Hero 入口卡」是中性入口（無 severity 色系），**不放**（符合 AGENTS.md 設計意圖）。
 - 建議執行順序：**A（Web Share ＋ 複製連結）→ B（＋ Line 一鍵）→ C（＋ OG 分享圖卡）**，目前全列為最低優先、暫未實作。
-
-## Agent 注意事項（2026/9/3 新增）
-
-### web_search provider 選擇
-- **不要硬編碼 `provider: "brave"`**，除非使用者明確要求
-- 預設應省略 `provider` 參數，讓工具使用 `/web-tools` 設定的預設引擎
-- 常見配置：SearXNG（免 key）、Brave（需 key）等
-- 若硬編碼的 provider 沒有 API key，搜尋會失敗
-- 若需要特定 provider，應先確認該 provider 的 key 是否存在
