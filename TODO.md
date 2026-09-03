@@ -209,3 +209,12 @@ ja 頁目前只有 UI 詞彙是日文、內容（新聞/CWA 資料）全為中�
 - Line 分享文字有長度上限，摘要需控制長度。
 - 分享按鈕只放「事件頁」；首頁「事件 Hero 入口卡」是中性入口（無 severity 色系），**不放**（符合 AGENTS.md 設計意圖）。
 - 建議執行順序：**A（Web Share ＋ 複製連結）→ B（＋ Line 一鍵）→ C（＋ OG 分享圖卡）**，目前全列為最低優先、暫未實作。
+
+## Agent 注意事項（2026/9/3 新增）
+
+### web_search provider 選擇
+- **不要硬編碼 `provider: "brave"`**，除非使用者明確要求
+- 預設應省略 `provider` 參數，讓工具使用 `/web-tools` 設定的預設引擎
+- 常見配置：SearXNG（免 key）、Brave（需 key）等
+- 若硬編碼的 provider 沒有 API key，搜尋會失敗
+- 若需要特定 provider，應先確認該 provider 的 key 是否存在
