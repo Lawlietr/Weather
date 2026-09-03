@@ -12,6 +12,15 @@
 - 若搜尋結果出現非當前事件的歷史資料，應主動過濾，避免將過去的事件誤植到當前紀錄中
 - 每次新增災情前，先確認該災情是否屬於「目前正在發生」的颱風事件
 
+## ⚠️ 網路搜尋（極度重要）
+
+**使用 `web_search` 時，不要硬編碼 `provider` 參數。**
+
+- 預設應省略 `provider` 參數，讓工具自動使用 `/web-tools` 設定的預設引擎（SearXNG）
+- 若硬編碼 `provider: "brave"` 而環境沒有 Brave API key，搜尋會失敗
+- 若需要特定 provider，應先確認該 provider 的 key 是否存在
+- 常見配置：SearXNG（免 key）、Brave（需 key）等
+
 ## 目錄與檔名
 
 ### 颱風檔案
