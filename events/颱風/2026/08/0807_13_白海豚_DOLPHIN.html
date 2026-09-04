@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>颱風白海豚（DOLPHIN）— 2026 年第 13 號</title>
+<style>
+:root{--red:#ef5350;--yellow:#ffb300;--green:#66bb6a;
+--bg:#14181c;--card:#1d242c;--line:#2f3944;--ink:#e4e8ec;--muted:#98a3af;
+--accent:#64b5f6;--chip-bg:#2a333e;--side-bg:#0f1317;--side-ink:#c9d1d9;
+--head-bg:#0c0f12;--table-head:#252e38;--ph-bg:#241f12;--ph-line:#6e5a1e;--ph-ink:#d3bd7d;
+color-scheme:dark;}
+:root[data-theme="light"]{--red:#c62828;--yellow:#ef8f00;--green:#2e7d32;
+--bg:#fff6dd;--card:#fffdf4;--line:#e6d7ae;--ink:#33280f;--muted:#7d6c48;
+--accent:#a05e00;--chip-bg:#f5e8c3;--side-bg:#fbf1d4;--side-ink:#4d3f22;
+--head-bg:#263238;--table-head:#f7edd0;--ph-bg:#fff8e1;--ph-line:#c9a227;--ph-ink:#6d5410;
+color-scheme:light;}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei","Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic","Meiryo",sans-serif;color:var(--ink);background:var(--bg);line-height:1.7;font-size:16px}
+/* 版面：左側欄 + 右側內容（內容置中） */
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
+.sidebar{background:var(--side-bg);border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow-y:auto;padding:16px 10px}
+.nav-group{font-size:.72rem;letter-spacing:.1em;color:var(--muted);margin:18px 10px 6px}
+.nav-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:8px;color:var(--side-ink);font-size:.88rem;line-height:1.45}
+.nav-item:hover{background:var(--chip-bg);text-decoration:none}
+.nav-item.nav-current{background:var(--chip-bg);color:var(--ink);font-weight:700}
+/* 側欄二層收合清單（純 CSS details/summary） */
+.nav-sub{margin:0}
+.nav-sub summary{display:flex;align-items:center;gap:2px;list-style:none;cursor:pointer}
+.nav-sub summary::-webkit-details-marker{display:none}
+.nav-sub summary:hover .nav-item{background:var(--chip-bg)}
+.nav-sub .caret{flex:none;font-size:.7rem;color:var(--muted);transition:transform .15s;margin:0 0 0 4px}
+.nav-sub[open] .caret{transform:rotate(90deg)}
+.nav-counties{margin:2px 0 6px 16px;border-left:1px solid var(--line);padding-left:4px}
+.nav-counties .nav-subitem{font-size:.8rem;padding:5px 8px}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;margin-top:6px}
+.dot-red{background:var(--red)}.dot-yellow{background:var(--yellow)}.dot-green{background:var(--green)}
+.page{display:flex;flex-direction:column;min-width:0}
+header.site{background:var(--head-bg);color:#fff;padding:10px 0;position:sticky;top:0;z-index:40}
+.site-bar{max-width:900px;margin:0 auto;padding:2px 16px;display:flex;align-items:center;gap:8px}
+.site-bar.updated-bar{justify-content:flex-end}
+header.site h1{font-size:1.1rem;margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.updated{color:#b0bec5;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon-btn{background:none;border:none;border-radius:8px;color:inherit;padding:6px;display:inline-flex;cursor:pointer;line-height:0;flex:none}
+.icon-btn:hover{background:rgba(255,255,255,.15)}
+.lang-switch{display:inline-flex;gap:2px;flex:none}
+.lang-switch a,.lang-switch .on{padding:2px 9px;border-radius:6px;font-size:.78rem;line-height:1.6}
+.lang-switch a{color:#b0bec5}
+.lang-switch a:hover{text-decoration:none;background:rgba(255,255,255,.15)}
+.lang-switch .on{background:rgba(255,255,255,.18);color:#fff;font-weight:700}
+#nav-toggle{display:none}
+[data-theme="dark"] .icon-moon{display:none}
+[data-theme="light"] .icon-sun{display:none}
+main.wrap{flex:1;width:100%;max-width:900px;margin:0 auto;padding:16px}
+section{margin:28px 0}
+h2{font-size:1.15rem;border-bottom:2px solid var(--line);padding-bottom:6px}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin:12px 0}
+/* hero：正常卡片底色 + 實色邊框（不填色），依嚴重度著色 */
+.hero{border:2px solid var(--line)}
+.hero.sev-red{border-color:var(--red)}
+.hero.sev-yellow{border-color:var(--yellow)}
+.hero.sev-green{border-color:var(--green)}
+.hero h2{font-size:1.45rem;font-weight:800;line-height:1.45;margin-top:0}
+.hero h2 a{color:var(--ink)}
+.hero h2 a:hover{color:var(--accent)}
+.hero .meta{color:var(--muted);font-size:.9rem}
+.hero-cta{display:inline-block;margin-top:16px;padding:8px 20px;border-radius:8px;background:var(--accent);color:var(--head-bg);font-size:.95rem;font-weight:700;text-decoration:none}
+.hero-cta:hover{filter:brightness(1.15);text-decoration:underline}
+/* 徽章：實心色塊小標籤（severity 背景色只限徽章，不污染卡片） */
+.badge{display:inline-block;padding:3px 12px;border-radius:12px;font-size:.85rem;font-weight:700;vertical-align:middle}
+.badge.sev-red{background:var(--red);color:#fff}
+.badge.sev-yellow{background:var(--yellow);color:#3e2723}
+.badge.sev-green{background:var(--green);color:#fff}
+.badge.sev-grey{background:#9e9e9e;color:#fff}
+.chips{margin:10px 0}
+.chip{display:inline-block;background:var(--chip-bg);border-radius:14px;padding:2px 12px;margin:2px 4px 2px 0;font-size:.85rem}
+.chip-link{color:var(--accent);text-decoration:none}
+.chip-link:hover{text-decoration:underline}
+.county-card{scroll-margin-top:88px}
+.meta{color:var(--muted);font-size:.85rem}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:.9rem;background:var(--card)}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--table-head)}
+ul.timeline{list-style:none;padding:0;margin:8px 0}
+ul.timeline li{padding:8px 0;border-bottom:1px dashed var(--line)}
+ul.timeline li:last-child{border-bottom:none}
+ul.news-list{list-style:none;margin:6px 0 0;padding-left:4px}
+ul.news-list li{padding:2px 0;font-size:.85rem}
+ul.news-list li a{word-break:break-all}
+.t-time{font-weight:700}
+.t-type{color:var(--accent);font-weight:600}
+.muted{color:var(--muted)}
+.placeholder{background:var(--ph-bg);border:1px dashed var(--ph-line);border-radius:10px;padding:14px;color:var(--ph-ink)}
+/* CWA 氣象總覽 */
+.cwa-warn{background:var(--chip-bg);border:1px solid var(--yellow);border-radius:8px;padding:10px 14px;margin:8px 0}
+.cwa-fail{border-color:var(--yellow)}
+/* 目前風險狀態列：由 CWA 目前之警報/特報推導（與事件歷史 severity 無關） */
+.risk-bar{border:2px solid var(--line);border-radius:10px;padding:12px 18px;margin:14px 0;background:var(--card)}
+.risk-bar.risk-red{border-color:var(--red);background:var(--red-bg)}
+.risk-bar.risk-yellow{border-color:var(--yellow);background:var(--yellow-bg)}
+.risk-bar.risk-green{border-color:var(--green)}
+.risk-bar.risk-neutral{border-color:var(--line);background:var(--bg)}
+.risk-bar.risk-unknown{border-style:dashed}
+.risk-bar .risk-label{font-weight:800;font-size:1rem}
+.risk-bar ul{list-style:none;margin:6px 0 0;padding:0}
+.risk-bar li{padding:2px 0;font-size:.95rem}
+.typhoon-row{display:flex;gap:18px;align-items:flex-start;margin:10px 0}
+.typhoon-row .map{flex:0 0 340px;max-width:46%}
+.typhoon-row .map svg{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.typhoon-row .typhoon-info{flex:1;min-width:0}
+.typhoon-row .typhoon-info table{font-size:.85rem}
+.alert-item{padding:10px 0;border-bottom:1px dashed var(--line)}
+.alert-item:last-child{border-bottom:none}
+.report-text{white-space:pre-wrap;font-size:.85rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0 0}
+@media(max-width:767px){.typhoon-row{flex-direction:column}.typhoon-row .map{max-width:100%;flex-basis:auto}}
+.event-content{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;overflow-x:auto}
+.event-content h1{font-size:1.3rem}
+.event-content h2{border-bottom:1px solid var(--line)}
+.event-content blockquote{border-left:4px solid var(--accent);margin:12px 0;padding:4px 14px;background:var(--chip-bg)}
+.event-content img{max-width:100%}
+.archive-list{list-style:none;padding:0}
+.archive-list li{padding:10px 0;border-bottom:1px solid var(--line)}
+footer{background:var(--head-bg);color:#cfd8dc;padding:20px 0;font-size:.85rem;margin-top:40px}
+footer .wrap{max-width:900px;margin:0 auto;padding:0 16px}
+.backlink{display:inline-block;margin-bottom:10px}
+.scrim{display:none}
+/* 平板與手機（<1024px）：側欄改為抽屜式 */
+@media (max-width:1023px){
+.layout{display:block}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:280px;transform:translateX(-100%);transition:transform .25s ease;z-index:60;box-shadow:0 0 30px rgba(0,0,0,.45)}
+.sidebar.open{transform:translateX(0)}
+#nav-toggle{display:inline-flex}
+.scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .25s;z-index:55}
+.scrim.show{opacity:1;pointer-events:auto}
+main.wrap{padding:12px}
+section{margin:20px 0}
+.card{padding:14px}
+.t-time{white-space:normal}
+}
+@media print{
+.sidebar,#scrim,.icon-btn{display:none}
+.layout{display:block}
+header.site,footer{background:none;color:#000}
+.card,.event-content{border-color:#999;break-inside:avoid}
+a::after{content:" (" attr(href) ")";font-size:.75em;color:#555}
+}
+</style>
+<script>/* 避免閃爍：先還原主題偏好再渲染 */(function(){var t=null;try{t=localStorage.getItem("wtf-theme")}catch(e){}if(t!=="light"&&t!=="dark")t="dark";document.documentElement.setAttribute("data-theme",t);})();</script>
+</head>
+<body id="top">
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+<nav><a class="nav-item" href="../../../../index.html">🏠 總覽</a><div class="nav-group">目前事件</div><details class="nav-sub" open><summary><span class="caret" aria-hidden="true">▸</span><a class="nav-item" href="../../../../events/%E7%81%BD%E6%83%85/2026/09/0904_%E4%BD%8E%E5%A3%93%E5%B8%B6_%E5%8D%97%E5%8C%97%E5%8F%B0%E7%81%A3%E8%B1%AA%E9%9B%A8.html"><span class="dot dot-yellow"></span><span>0904 低壓帶南北台灣豪雨</span></a></summary><div class="nav-counties"><a class="nav-item nav-subitem" href="../../../../index.html#%E5%9F%BA%E9%9A%86%E5%B8%82">基隆市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E5%8F%B0%E5%8C%97%E5%B8%82">台北市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E6%96%B0%E5%8C%97%E5%B8%82">新北市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E5%AE%9C%E8%98%AD%E7%B8%A3">宜蘭縣</a><a class="nav-item nav-subitem" href="../../../../index.html#%E6%A1%83%E5%9C%92%E5%B8%82">桃園市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E9%AB%98%E9%9B%84%E5%B8%82">高雄市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E5%B1%8F%E6%9D%B1%E7%B8%A3">屏東縣</a><a class="nav-item nav-subitem" href="../../../../index.html#%E5%8F%B0%E6%9D%B1%E7%B8%A3">台東縣</a></div></details><div class="nav-group">過去事件</div><a class="nav-item" href="../../../../events/%E9%A2%B1%E9%A2%A8/2026/08/0818_18_%E6%B2%99%E5%BE%B7%E7%88%BE_SAUDEL.html"><span class="dot dot-yellow"></span><span>颱風沙德爾（SAUDEL）— 2026 年第 20 號</span></a><a class="nav-item" href="../../../../events/%E7%81%BD%E6%83%85/2026/08/0828_%E8%A5%BF%E5%8D%97%E9%A2%A8_%E5%8D%97%E5%8F%B0%E7%81%A3%E5%BE%8C%E7%BA%8C%E6%B7%B9%E6%B0%B4.html"><span class="dot dot-yellow"></span><span>0828 西南風短延時豪雨後續災情</span></a><a class="nav-item" href="../../../../events/%E9%A2%B1%E9%A2%A8/2026/07/0702_09_%E5%B7%B4%E5%A8%81_BAVI.html"><span class="dot dot-red"></span><span>颱風巴威（BAVI）— 2026 年第 9 號</span></a><a class="nav-item" href="../../../../events/%E9%A2%B1%E9%A2%A8/2026/07/0722_12_%E7%B4%85%E9%9C%9E_Noul.html"><span class="dot dot-yellow"></span><span>颱風紅霞（NOUL）— 2026 年第 12 號</span></a><a class="nav-item nav-current" href="../../../../events/%E9%A2%B1%E9%A2%A8/2026/08/0807_13_%E7%99%BD%E6%B5%B7%E8%B1%9A_DOLPHIN.html"><span class="dot dot-yellow"></span><span>颱風白海豚（DOLPHIN）— 2026 年第 13 號</span></a><a class="nav-item" href="../../../../events/%E7%81%BD%E6%83%85/2026/08/0821_%E4%BD%8E%E5%A3%93%E5%B8%B6_%E5%8D%97%E5%8F%B0%E7%81%A3%E5%A4%A7%E9%9B%A8.html"><span class="dot dot-red"></span><span>0822 低壓帶及西南風豪雨事件</span></a></nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<div class="page">
+<header class="site">
+<div class="site-bar">
+<button id="nav-toggle" class="icon-btn" aria-label="開啟事件清單"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+<h1><a href="../../../../index.html" style="color:#fff;text-decoration:none">颱風白海豚（DOLPHIN）— 2026 年第 13 號</a></h1>
+<span class="lang-switch"><span class="on">繁體中文</span><a href="../../../../ja/index.html">日本語</a></span>
+<a class="icon-btn" href="https://github.com/Lawlietr/Weather" target="_blank" rel="noopener" title="GitHub" aria-label="GitHub"><svg viewBox="0 0 16 16" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
+<button id="theme-toggle" class="icon-btn" aria-label="切換日夜主題">
+<svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M1 12h2m18 0h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+<svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+</button>
+</div>
+<div class="site-bar updated-bar"><span class="updated">產生時間：2026/9/4 12:32（手動生成，非即時）</span></div>
+</header>
+<main class="wrap">
+
+<a class="backlink" href="../../../../index.html">← 返回總覽</a>
+<section class="card hero sev-yellow" style="padding:12px 18px">
+<span class="badge sev-yellow">🟡 警戒</span>　<span class="meta">已封存事件</span>
+
+
+</section>
+<div class="event-content">
+<h1>🌀 颱風白海豚（DOLPHIN）- 2026年第13號</h1>
+<p>最後修改：2026/8/26 16:35（補 front matter）</p>
+<blockquote>
+<p><strong>資料來源</strong>：
+- 中央氣象署 API (W-C0034-001) 海上颱風警報，2026/8/8 11:30 發布
+- 中央氣象署 API (W-C0034-005) 西北太平洋熱帶氣旋資料，2026/8/8 11:00 更新
+- 中央氣象署 API (W-C0033-001) 陸上強風特報，2026/8/8 11:30 發布
+- 中央氣象署 API (W-C0033-003) 災害性天氣特報（大雨特報），2026/8/8 發布</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>數據</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>國際命名</strong></td>
+<td>DOLPHIN</td>
+</tr>
+<tr>
+<td><strong>編號</strong></td>
+<td>2026年第13號</td>
+</tr>
+<tr>
+<td><strong>類型</strong></td>
+<td>中度颱風（持續向西移動，後期可能維持中颱或輕度颱上限）</td>
+</tr>
+<tr>
+<td><strong>生成時間</strong></td>
+<td>2026年7月27日 02:00（北緯12.9度、東經179.8度）</td>
+</tr>
+<tr>
+<td><strong>最強記錄</strong></td>
+<td>7/30 02:00 達超強颱風，最大風速60 m/s（16級風），中心氣壓895 hPa</td>
+</tr>
+<tr>
+<td><strong>最大風速</strong></td>
+<td>33公尺/秒（8/9 11時氣象署 API）</td>
+</tr>
+<tr>
+<td><strong>中心氣壓</strong></td>
+<td>968百帕（8/9 11時氣象署 API）</td>
+</tr>
+<tr>
+<td><strong>7級風暴風半徑</strong></td>
+<td>280公里（8/8 11時氣象署 API）—西北側330公里、東北側330公里、西南側230公里、東南側230公里</td>
+</tr>
+<tr>
+<td><strong>10級風暴風半徑</strong></td>
+<td>90公里（8/8 11時氣象署 API）—西北側100公里、東北側100公里、西南側70公里、東南側70公里</td>
+</tr>
+<tr>
+<td><strong>瞬間最大陣風</strong></td>
+<td>45公尺/秒（約每小時162公里，14級風）</td>
+</tr>
+<tr>
+<td><strong>7級風暴風半徑</strong></td>
+<td>250公里（8/8 23時氣象署 API）</td>
+</tr>
+<tr>
+<td><strong>移動速度</strong></td>
+<td>每小時21公里，向西北西進行</td>
+</tr>
+<tr>
+<td><strong>生成日期</strong></td>
+<td>2026年7月27日</td>
+</tr>
+<tr>
+<td><strong>消散日期</strong></td>
+<td>2026/8/10（已登陸浙江，減弱為熱帶風暴）</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>最新位置（2026/8/9 23時，氣象署 API W-C0034-001 最後一次報告）：北緯27.9度、東經119.8度，馬祖北方約190公里；以每小時16～21公里速度，向西北進行。預測8/10 23時中心位置在北緯29.9度、東經116.6度（馬祖西北方約530公里）。<strong>海上颱風警報已於 8/9 23:30 解除</strong>，對臺灣北部海面的威脅已解除。</p>
+</blockquote>
+<hr />
+<h2>警報時程</h2>
+<table>
+<thead>
+<tr>
+<th>日期時間</th>
+<th>事件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026/7/27 02:00</td>
+<td><strong>生成</strong>：北緯12.9度、東經179.8度，熱帶性低氣壓（15 m/s，1004 hPa）</td>
+</tr>
+<tr>
+<td>2026/7/27 14:00</td>
+<td>增強為輕度颱風（18 m/s，998 hPa）</td>
+</tr>
+<tr>
+<td>2026/7/28 14:00</td>
+<td>增強為中度颱風（35 m/s，965 hPa）</td>
+</tr>
+<tr>
+<td>2026/7/29 20:00</td>
+<td>增強為強烈颱風（55 m/s，910 hPa）</td>
+</tr>
+<tr>
+<td>2026/7/30 02:00</td>
+<td><strong>達超強颱風</strong>（60 m/s，895 hPa），為今年風王候選</td>
+</tr>
+<tr>
+<td>2026/7/31 20:00</td>
+<td>開始減弱（55 m/s，910 hPa）</td>
+</tr>
+<tr>
+<td>2026/8/3 14:00</td>
+<td>減弱為中度颱風（40 m/s，950 hPa）</td>
+</tr>
+<tr>
+<td>2026/8/7 17:00</td>
+<td>一度減速至每小時8公里（NNW）</td>
+</tr>
+<tr>
+<td>2026/8/7 23:00</td>
+<td>恢復移動速度23 km/hr（WSW）</td>
+</tr>
+<tr>
+<td>2026/8/6 10:27</td>
+<td>發布陸上強風特報（黃色燈號）</td>
+</tr>
+<tr>
+<td>2026/8/6 10:58</td>
+<td>發布長浪即時訊息（基隆北海岸、東半部、恆春半島、馬祖）</td>
+</tr>
+<tr>
+<td>2026/8/6 13:27</td>
+<td>發布高溫資訊（台北、宜蘭橙色燈號，38度極端高溫機率）</td>
+</tr>
+<tr>
+<td>2026/8/6 13:35</td>
+<td>發布大雨特報（午後對流雲系，苗栗以北、嘉義以南及山區）</td>
+</tr>
+<tr>
+<td>2026/8/8 07:45</td>
+<td><strong>發布大雨特報</strong>（颱風外圍環流影響），基隆北海岸、臺中以北山區有局部大雨發生機率</td>
+</tr>
+<tr>
+<td>2026/8/8 11:30</td>
+<td><strong>發布陸上強風特報</strong>（黃色燈號）：基隆市、臺北市、新北市、桃園市、新竹市、新竹縣、苗栗縣、臺中市、南投縣、宜蘭縣、屏東縣、臺東縣、澎湖縣、連江縣，有效至 8/9 20:00</td>
+</tr>
+<tr>
+<td>2026/8/9 09:11</td>
+<td><strong>發布豪雨特報</strong>（藍色燈號）：臺北市、基隆市、新北市、桃園市、新竹市、新竹縣、苗栗縣、臺中市、南投縣、宜蘭縣、雲林縣、嘉義縣、花蓮縣，有效至 8/9 23:00</td>
+</tr>
+<tr>
+<td>2026/8/9 10:31</td>
+<td><strong>發布陸上強風特報</strong>（黃色燈號）：臺東縣、彰化縣、臺北市、澎湖縣、基隆市、嘉義縣、新竹縣、新北市、新竹市、臺南市、連江縣、桃園市、臺中市、宜蘭縣、苗栗縣、屏東縣、雲林縣、南投縣，有效至 8/10 23:00</td>
+</tr>
+<tr>
+<td>2026/8/6 14時</td>
+<td>氣象署颱風報告：颱風略往西修、更靠近台灣；確認尚未發布颱風警報</td>
+</tr>
+<tr>
+<td>2026/8/7 14:30</td>
+<td><strong>發布海上颱風警報</strong>，首波警戒範圍：台灣北部海面、東北部海面、東部海面</td>
+</tr>
+<tr>
+<td>2026/8/7 17:30</td>
+<td><strong>發布海上颱風警報第2報</strong>，警戒範圍不變（台灣北部海面）；下次警報預計 20:30 發布</td>
+</tr>
+<tr>
+<td>2026/8/7 23:00</td>
+<td><strong>發布海上颱風警報第4報</strong>（中度颱風白海豚），警戒範圍：台灣北部海面、台灣東北部海面</td>
+</tr>
+<tr>
+<td>2026/8/8 11:30</td>
+<td><strong>發布海上颱風警報第5報</strong>（中度颱風白海豚），警戒範圍：台灣北部海面、台灣東北部海面（橙色燈號）</td>
+</tr>
+<tr>
+<td>2026/8/8 23:30</td>
+<td><strong>發布海上颱風警報第12報</strong>（中度颱風白海豚），警戒範圍：台灣北部海面、台灣東北部海面（橙色燈號）</td>
+</tr>
+<tr>
+<td>2026/8/9 02:00</td>
+<td><strong>發布海上颱風警報第13報</strong>（中度颱風白海豚），警戒範圍：台灣北部海面、台灣東北部海面（橙色燈號）</td>
+</tr>
+<tr>
+<td>2026/8/9 11:30</td>
+<td><strong>發布海上颱風警報第14報</strong>（中度颱風白海豚），警戒範圍：台灣北部海面、台灣東北部海面（橙色燈號）</td>
+</tr>
+<tr>
+<td>2026/8/9 23:30</td>
+<td><strong>海上颱風警報解除</strong>（第20報，最後一次報告），白海豚已減弱為輕度颱風（25 m/s，985 hPa），對臺灣北部海面威脅已解除</td>
+</tr>
+<tr>
+<td>2026/8/7 下午</td>
+<td>白海豚以超強颱風級別掠過日本沖繩本島北部（香港天文台預測）</td>
+</tr>
+<tr>
+<td>2026/8/7 22:53</td>
+<td><strong>陸上強風特報</strong>（黃色燈號）：基隆市、臺北市、新北市、桃園市、南投縣、屏東縣、宜蘭縣、臺東縣、連江縣，有效至 8/8 23:00</td>
+</tr>
+<tr>
+<td>2026/8/7 晚間起</td>
+<td>外圍環流降雨明顯增加，沿海風力增大</td>
+</tr>
+<tr>
+<td>2026/8/8～9（父親節週末）</td>
+<td>颱風最接近台灣，風雨最劇烈的「搖滾時段」</td>
+</tr>
+<tr>
+<td>2026/8/8～10</td>
+<td>最接近台灣期間；視北轉角度決定是否發布陸上颱風警報（馬祖相對較可能）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>颱風預報時程表</h2>
+<blockquote>
+<p>資料來源：氣象署 API W-C0034-005，以 8/7 23:00 為基準</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>時間</th>
+<th>預報時距</th>
+<th>中心位置</th>
+<th>最大風速</th>
+<th>中心氣壓</th>
+<th>移動速度</th>
+<th>備註</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8/8 11:00</td>
+<td>最新觀測</td>
+<td>北緯27.0度、東經125.5度</td>
+<td>35 m/s</td>
+<td>962 hPa</td>
+<td>20 km/hr W</td>
+<td>中度颱風</td>
+</tr>
+<tr>
+<td>8/8 17:00</td>
+<td>6小時</td>
+<td>北緯27.0度、東經125.1度</td>
+<td>35 m/s</td>
+<td>965 hPa</td>
+<td>10 km/hr W</td>
+<td>暴風半徑30km</td>
+</tr>
+<tr>
+<td>8/9 11:00</td>
+<td>12小時</td>
+<td>北緯27.1度、東經124.4度</td>
+<td>35 m/s</td>
+<td>965 hPa</td>
+<td>12 km/hr W</td>
+<td>暴風半徑40km</td>
+</tr>
+<tr>
+<td>8/9 17:00</td>
+<td>18小時</td>
+<td>北緯27.4度、東經123.6度</td>
+<td>35 m/s</td>
+<td>965 hPa</td>
+<td>14 km/hr WNW</td>
+<td>暴風半徑80km</td>
+</tr>
+<tr>
+<td>8/10 11:00</td>
+<td>24小時</td>
+<td>北緯27.5度、東經122.9度</td>
+<td>33 m/s</td>
+<td>970 hPa</td>
+<td>12 km/hr W</td>
+<td>暴風半徑90km</td>
+</tr>
+<tr>
+<td>8/11 11:00</td>
+<td>36小時</td>
+<td>北緯28.1度、東經121.3度</td>
+<td>30 m/s</td>
+<td>975 hPa</td>
+<td>14 km/hr WNW</td>
+<td>暴風半徑100km</td>
+</tr>
+<tr>
+<td>8/12 11:00</td>
+<td>48小時</td>
+<td>北緯28.8度、東經119.7度</td>
+<td>25 m/s</td>
+<td>985 hPa</td>
+<td>15 km/hr WNW</td>
+<td>暴風半徑140km</td>
+</tr>
+<tr>
+<td>8/13 11:00</td>
+<td>72小時</td>
+<td>北緯30.8度、東經116.4度</td>
+<td>18 m/s</td>
+<td>988 hPa</td>
+<td>16 km/hr NW</td>
+<td>暴風半徑200km</td>
+</tr>
+<tr>
+<td>8/14 11:00</td>
+<td>96小時</td>
+<td>北緯32.1度、東經115.5度</td>
+<td>10 m/s</td>
+<td>992 hPa</td>
+<td>7 km/hr NNW</td>
+<td>暴風半徑360km</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>停班停課</h2>
+<table>
+<thead>
+<tr>
+<th>日期</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026/8/7 目前</td>
+<td>無停班停課；各縣市將視海警發布與實際風雨情況滾動評估</td>
+</tr>
+<tr>
+<td>2026/8/8（週六）</td>
+<td>全台22縣市正常上班上課</td>
+</tr>
+<tr>
+<td>2026/8/9（週日）</td>
+<td><strong>連江縣宣布停班停課</strong>；8縣市部分區域達參考標準（桃園市山區、新竹縣山區、苗栗縣山區、台中市山區、新北市濱海鄉鎮、桃園市濱海鄉鎮、恆春半島、蘭嶼及綠島、連江縣）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>風力預測</h2>
+<table>
+<thead>
+<tr>
+<th>地區</th>
+<th>風力</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>新北市、南投縣、高雄市、屏東縣、宜蘭縣、臺東縣（蘭嶼）</td>
+<td>8/7 平均風6級以上或陣風8級以上（陸上強風特報黃色燈號）</td>
+</tr>
+<tr>
+<td>基隆市、臺北市、桃園市、南投縣、高雄市、屏東縣、宜蘭縣、臺東縣（含蘭嶼）、連江縣</td>
+<td>8/8 平均風6級以上或陣風8級以上（陸上強風特報黃色燈號）</td>
+</tr>
+<tr>
+<td>北部、東北部沿海</td>
+<td>8/7晚間起風力明顯增大</td>
+</tr>
+<tr>
+<td>北部沿海（8/8～8/9）</td>
+<td>預估強陣風，風雨最劇烈</td>
+</tr>
+<tr>
+<td>連江縣（馬祖）</td>
+<td>暴風侵襲機率67%，為全台最高；陸警警戒可能性相對較高</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>雨量預測</h2>
+<table>
+<thead>
+<tr>
+<th>時間</th>
+<th>地區</th>
+<th>預測雨量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8/7（週五）</td>
+<td>西半部至東北部</td>
+<td>局部短暫陣雨，晚間起降雨明顯增加；山區降雨開始累積</td>
+</tr>
+<tr>
+<td>8/8～8/9（週末）</td>
+<td>中北部山區</td>
+<td>豪雨</td>
+</tr>
+<tr>
+<td>8/8～8/9（週末）</td>
+<td>西半部至東北部平地</td>
+<td>局部大雨</td>
+</tr>
+<tr>
+<td>8/8～8/9（週末）</td>
+<td>花東（背風面）</td>
+<td>降雨相對少，防過山沉降的極端高溫</td>
+</tr>
+<tr>
+<td>8/10（週一）起</td>
+<td>中部以南、南部山區（高屏）</td>
+<td>大雨至豪雨，雨勢恐延續數日</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>浪高</h2>
+<table>
+<thead>
+<tr>
+<th>海域</th>
+<th>浪高</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>台東（成功、蘭嶼）、新北（龍洞）</td>
+<td>已觀測約1.5～5公尺長浪</td>
+</tr>
+<tr>
+<td>基隆北海岸、東半部沿海、恆春半島、馬祖</td>
+<td>長浪發生機率高</td>
+</tr>
+<tr>
+<td>北部、東北部海面</td>
+<td>海況轉差，浪高持續增大</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>災情紀錄</h2>
+<h3>🟡 警戒災害</h3>
+<table>
+<thead>
+<tr>
+<th>日期時間</th>
+<th>地點</th>
+<th>類型</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026/8/9 23:30</td>
+<td>台灣北部海面、東北部海面</td>
+<td><strong>海上颱風警報解除</strong></td>
+<td>氣象署發布第20報（最後一次報告），白海豚中心位於馬祖北方約190公里，已減弱為輕度颱風（25 m/s，985 hPa），7級風暴風半徑100公里，對臺灣北部海面威脅已解除（中央社）</td>
+</tr>
+<tr>
+<td>2026/8/7 14:30</td>
+<td>台灣北部海面、東北部海面、東部海面</td>
+<td>海上颱風警報</td>
+<td>氣象署發布海上颱風警報，白海豚持續向西移動，對北部海面構成威脅</td>
+</tr>
+<tr>
+<td>2026/8/8 11:30</td>
+<td>台灣北部海面、台灣東北部海面</td>
+<td>海上颱風警報（橙色燈號）</td>
+<td>氣象署發布海上颱風警報第5報，警戒範圍：台灣北部海面、台灣東北部海面</td>
+</tr>
+<tr>
+<td>2026/8/8 23:30</td>
+<td>台灣北部海面、台灣東北部海面</td>
+<td>海上颱風警報（橙色燈號）</td>
+<td>氣象署發布海上颱風警報第12報，警戒範圍：台灣北部海面、台灣東北部海面</td>
+</tr>
+<tr>
+<td>2026/8/9 02:00</td>
+<td>台灣北部海面、台灣東北部海面</td>
+<td>海上颱風警報（橙色燈號）</td>
+<td>氣象署發布海上颱風警報第13報，警戒範圍：台灣北部海面、台灣東北部海面</td>
+</tr>
+<tr>
+<td>2026/8/9 11:30</td>
+<td>台灣北部海面、台灣東北部海面</td>
+<td>海上颱風警報（橙色燈號）</td>
+<td>氣象署發布海上颱風警報第14報，警戒範圍：台灣北部海面、台灣東北部海面</td>
+</tr>
+<tr>
+<td>2026/8/7</td>
+<td>新北市、南投縣、高雄市、屏東縣、宜蘭縣、臺東縣（蘭嶼）</td>
+<td>陸上強風特報</td>
+<td>受颱風外圍環流影響，8/7平均風6級以上或陣風8級以上</td>
+</tr>
+<tr>
+<td>2026/8/8 11:30</td>
+<td>基隆市、臺北市、新北市、桃園市、新竹市、新竹縣、苗栗縣、臺中市、南投縣、宜蘭縣、屏東縣、臺東縣、澎湖縣、連江縣</td>
+<td>陸上強風特報（黃色燈號）</td>
+<td>颱風及其外圍環流影響，8/8～8/9平均風6級以上或陣風8級以上，有效至 8/9 20:00</td>
+</tr>
+<tr>
+<td>2026/8/9 09:11</td>
+<td>臺北市、基隆市、新北市、桃園市、新竹市、新竹縣、苗栗縣、臺中市、南投縣、宜蘭縣、雲林縣、嘉義縣、花蓮縣</td>
+<td>豪雨特報（藍色燈號）</td>
+<td>颱風及其外圍環流影響，局部豪雨或大雨，有效至 8/9 23:00</td>
+</tr>
+<tr>
+<td>2026/8/9 10:31</td>
+<td>臺東縣、彰化縣、臺北市、澎湖縣、基隆市、嘉義縣、新竹縣、新北市、新竹市、臺南市、連江縣、桃園市、臺中市、宜蘭縣、苗栗縣、屏東縣、雲林縣、南投縣</td>
+<td>陸上強風特報（黃色燈號）</td>
+<td>颱風及其外圍環流影響，平均風6級以上或陣風8級以上，有效至 8/10 23:00</td>
+</tr>
+<tr>
+<td>2026/8/8 07:45</td>
+<td>基隆北海岸、臺中以北山區</td>
+<td>大雨特報</td>
+<td>颱風外圍環流影響，局部大雨發生機率，注意雷擊及強陣風，山區防坍方、落石及溪水暴漲</td>
+</tr>
+<tr>
+<td>2026/8/7～8/8</td>
+<td>基隆北海岸、東半部（含蘭嶼、綠島）、恆春半島、馬祖</td>
+<td>長浪警報</td>
+<td>今明兩天易有長浪；明日中部以北沿海、澎湖亦將有長浪</td>
+</tr>
+<tr>
+<td>2026/8/8</td>
+<td>臺灣海峽北部</td>
+<td>大浪</td>
+<td>浪高3公尺以上</td>
+</tr>
+<tr>
+<td>2026/8/7～8/9</td>
+<td>北部沿海</td>
+<td>巨浪</td>
+<td>浪高可達6公尺以上，避免前往海邊活動</td>
+</tr>
+<tr>
+<td>2026/8/7</td>
+<td>台東成功外海</td>
+<td>巨浪</td>
+<td>已觀測到6公尺以上巨浪</td>
+</tr>
+<tr>
+<td>2026/8/7</td>
+<td>中央山脈高山稜線</td>
+<td>強陣風</td>
+<td>已觀測到7至8級強陣風</td>
+</tr>
+<tr>
+<td>2026/8/7～8/9</td>
+<td>中北部山區</td>
+<td>豪雨風險</td>
+<td>週末山區防豪雨，西半部至東北部平地防局部大雨</td>
+</tr>
+<tr>
+<td>2026/8/8</td>
+<td>宜蘭縣、花蓮縣</td>
+<td>高溫／焚風</td>
+<td>橙色燈號，有38度極端高溫出現機率（颱風外圍環流沉降影響）</td>
+</tr>
+<tr>
+<td>2026/8/8</td>
+<td>彰化縣、嘉義縣、臺南市、臺東縣、金門縣、連江縣</td>
+<td>高溫</td>
+<td>黃色燈號，注意極端高溫</td>
+</tr>
+<tr>
+<td>2026/8/7～8/8</td>
+<td>東半部地區</td>
+<td>焚風</td>
+<td>焚風發生機率</td>
+</tr>
+<tr>
+<td>2026/8/7</td>
+<td>日本沖繩</td>
+<td>颱風直擊</td>
+<td>白海豚以強烈颱風級別掠過沖繩，至少3傷、2200戶停電、240多人避難、691航班取消</td>
+</tr>
+<tr>
+<td>2026/8/8 17:51</td>
+<td>日本沖繩</td>
+<td>颱風災情更新</td>
+<td>白海豚挾豪風強風虐沖繩，釀6傷、逾1.8萬戶大停電、空中與陸上交通癱瘓，宮古島恐進入暴風圈</td>
+</tr>
+<tr>
+<td>2026/8/8 17:30</td>
+<td>台北市</td>
+<td>災情紀錄</td>
+<td>北市災防辦接獲75件災情通報，已處理54件，21件持續處理中，主要為路樹倒塌27件、建物輕微受損12件（圍籬倒塌、鐵皮掀開等）（中央社）</td>
+</tr>
+<tr>
+<td>2026/8/8 20:34</td>
+<td>基隆市</td>
+<td>海水倒灌</td>
+<td>愛四路積水深及小腿肚（中央社）</td>
+</tr>
+<tr>
+<td>2026/8/8 晚間</td>
+<td>新北淡水</td>
+<td>疑似龍捲風</td>
+<td>房屋鐵皮掉落、路樹倒塌、電桿傾斜（中央社）</td>
+</tr>
+<tr>
+<td>2026/8/8 晚間</td>
+<td>宜蘭縣</td>
+<td>災情</td>
+<td>中山路郵局磁磚兩次掉落（中央社）</td>
+</tr>
+<tr>
+<td>2026/8/9 凌晨</td>
+<td>台北市中山區</td>
+<td>路樹倒塌</td>
+<td>民生東路二段142號，長約15公尺、直徑約40公分大型路樹倒塌，占據道路（ETtoday）</td>
+</tr>
+<tr>
+<td>2026/8/9 凌晨</td>
+<td>台北市大安區</td>
+<td>路樹倒塌</td>
+<td>仁愛路三段與建國南路一段路口，路樹倒塌，已以鏈鋸切割清除（ETtoday）</td>
+</tr>
+<tr>
+<td>2026/8/9 凌晨</td>
+<td>台北市大同區</td>
+<td>路樹倒塌</td>
+<td>興城街再傳路樹倒塌，已圍設警戒線（ETtoday）</td>
+</tr>
+<tr>
+<td>2026/8/9 14:00</td>
+<td>全台</td>
+<td>災情紀錄</td>
+<td><strong>最新統計</strong>：全台累計 <strong>632 件</strong>一般災情、<strong>6 人受傷</strong>（無人員死亡或失蹤）；已處理 468 件，164 件處理中；主要災情為路樹倒塌、建築物受損、停電、交通設施受損等（星島日報、中央社）</td>
+</tr>
+<tr>
+<td>2026/8/9 08:00</td>
+<td>全台</td>
+<td>災情紀錄</td>
+<td>截至8時已釀222件一般災情、5人受傷；路樹倒塌78件最多；26處積淹水均已退水（中時）</td>
+</tr>
+<tr>
+<td>2026/8/9</td>
+<td>新北、基隆、台北、桃園、新竹縣市、苗栗</td>
+<td>淹水警戒</td>
+<td>共7縣市、18個行政區列淹水警戒；坡地應注意坍方、落石及溪水暴漲</td>
+</tr>
+<tr>
+<td>2026/8/9 上午</td>
+<td>基隆廟口夜市</td>
+<td>淹水</td>
+<td>夜市淹成河，店家怨：沒下雨就泡水（ETtoday）</td>
+</tr>
+<tr>
+<td>2026/8/9</td>
+<td>桃園復興</td>
+<td>道路封閉</td>
+<td>台7線巴陵至西村路段持續預警性封閉（ETtoday）</td>
+</tr>
+<tr>
+<td>2026/8/9</td>
+<td>基隆</td>
+<td>車禍</td>
+<td>小貨車90度側翻，駕駛一度受困獲救（ETtoday）</td>
+</tr>
+<tr>
+<td>2026/8/9</td>
+<td>桃園</td>
+<td>救援</td>
+<td>警冒雨救援倒地老婦、清除倒塌路樹（ETtoday）</td>
+</tr>
+<tr>
+<td>2026/8/9</td>
+<td>台中</td>
+<td>大雷雨</td>
+<td>半夜被白海豚叫醒，閃電點亮天空（ETtoday）</td>
+</tr>
+<tr>
+<td>2026/8/7</td>
+<td>日本鹿兒島縣、沖繩縣</td>
+<td>避難指示</td>
+<td>約25.8萬居民收到避難指示</td>
+</tr>
+<tr>
+<td>2026/8/7</td>
+<td>中國浙江、福建</td>
+<td>海上防颱風應急響應</td>
+<td>浙江、福建啟動四級應急響應；沿海漁船回港避風</td>
+</tr>
+<tr>
+<td>2026/8/8</td>
+<td>中國上海</td>
+<td>景點關閉</td>
+<td>上海迪士尼樂園、迪士尼小镇自8/9晚起關閉</td>
+</tr>
+<tr>
+<td>2026/8/8</td>
+<td>中國江蘇</td>
+<td>活動取消</td>
+<td>郁可唯「我怪」巡迴演唱會無錫站取消</td>
+</tr>
+<tr>
+<td>2026/8/8</td>
+<td>中國浙江</td>
+<td>活動延期</td>
+<td>溫州奧體中心「逐光」演唱會延期</td>
+</tr>
+<tr>
+<td>2026/8/8</td>
+<td>中國鐵路</td>
+<td>列車停运</td>
+<td>中國鐵路上海局集團停运部分鐵路列車</td>
+</tr>
+<tr>
+<td>2026/8/9 傍晚</td>
+<td>中國浙江</td>
+<td><strong>颱風登陸</strong></td>
+<td>白海豚颱風登陸中國浙江，已減弱為熱帶風暴級（23 m/s，988 hPa，8/10 10時位於浙江麗水龍泉市境內）（中央氣象台）</td>
+</tr>
+</tbody>
+</table>
+<h3>🔴 重大災害</h3>
+<h4>基隆港貨櫃倒塌意外（8/9）</h4>
+<table>
+<thead>
+<tr>
+<th>日期時間</th>
+<th>地點</th>
+<th>類型</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026/8/9 上午</td>
+<td>基隆港西岸陽明貨櫃場</td>
+<td>貨櫃倒塌</td>
+<td>7 只重達數十噸的貨櫃遭強風吹落，連環倒塌碰撞門式起重機，貨櫃外層鋼板嚴重凹陷變形、裂開破損，天秤鐵梯及樓梯扶手遭重壓扭曲變形；<strong>無人傷亡</strong>，基隆港務分公司已啟動緊急應變措施，封鎖現場清查損失（自由時報、聯合新聞網、星島日報）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>交通影響</h2>
+<table>
+<thead>
+<tr>
+<th>運具</th>
+<th>狀況</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>海運</td>
+<td>蘭嶼、綠島、馬祖航線停航至8/9；北部海面航行船隻應嚴加戒備；台北往返金門晚間多航班取消；9航線共79航次停航（航港局 8/9 10時）</td>
+</tr>
+<tr>
+<td>航空</td>
+<td>日本沖繩600+航班已取消（香港快運、大灣區航空、香港航空等）；台北往返金門晚間多航班取消</td>
+</tr>
+<tr>
+<td>體育</td>
+<td>中職新莊、桃園賽事延期（中央社）</td>
+</tr>
+<tr>
+<td>中國浙江</td>
+<td>沿海漁船回港避風；東海海域風力將達10～13級，部分海域14～16級</td>
+</tr>
+<tr>
+<td>中國鐵路</td>
+<td>中國鐵路上海局集團停运部分鐵路列車</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>防災作為</h2>
+<table>
+<thead>
+<tr>
+<th>日期時間</th>
+<th>作為</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026/8/6</td>
+<td>氣象署發布陸上強風特報、長浪即時訊息、高溫資訊及大雨特報</td>
+</tr>
+<tr>
+<td>2026/8/6</td>
+<td>提醒民眾週末避免前往海邊及山區，及早完成防颱準備</td>
+</tr>
+<tr>
+<td>2026/8/6</td>
+<td>台北市長蔣萬安主持「白海豚颱風整備會議」，估8/7下半天發布海警、8/8～8/9北市防豪大雨與7～9級陣風</td>
+</tr>
+<tr>
+<td>2026/8/7 起（預估）</td>
+<td>海上颱風警報發布後，相關防災單位將陸續啟動應變作業</td>
+</tr>
+<tr>
+<td>2026/8/7</td>
+<td>中國浙江、福建啟動防颱風四級應急響應</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>備註</h2>
+<ul>
+<li>白海豚（DOLPHIN）一名由香港提供，指生活在香港水域的中華白海豚，亦是香港的吉祥物</li>
+<li>7/27於中太平洋遠洋生成，7/30一度達超強颱風等級（中心氣壓895百帕、最大風速60公尺/秒），其後減弱為中度颱風</li>
+<li>各國模式多預測颱風中心掠過台灣北部海面後，橫過東海，於中國浙江一帶登陸；<strong>登陸台灣機率低</strong></li>
+<li><strong>海上颱風警報已於 8/9 23:30 解除</strong>（氣象署第 20 報，最後一次報告），白海豚已減弱為輕度颱風</li>
+<li><strong>颱風已登陸中國浙江</strong>，減弱為熱帶風暴級（23 m/s，988 hPa，8/10 10時）</li>
+<li><strong>對台灣北部海面的威脅已解除</strong></li>
+<li>颱風生命期長：自 7/27 生成至 8/10 登陸浙江，為繼 1983 年颱風艾倫後長生命期颱風</li>
+<li>最新災情：全台累計 632 件災情、6 人受傷（截至 8/9 14:00），無人員死亡或失蹤</li>
+<li><strong>颱風最接近台灣時間</strong>：8/8～8/10，其中 <strong>8/8～8/9（父親節週末）影響最明顯</strong></li>
+<li>基隆北海岸適逢大潮，滿潮前後沿海低窪地區需留意海水倒灌及積淹水</li>
+<li>未來一週天氣：以西南風影響為主，10～13日中南部有短暫陣雨，14～16日處於大低壓帶，各地降雨機會偏高</li>
+</ul>
+<hr />
+<h2>資料來源</h2>
+<ul>
+<li><strong>天氣／颱風數據（權威）</strong>：交通部中央氣象署（cwa.gov.tw）— 颱風強度、位置、暴風半徑、暴風侵襲機率、警報與特報，以氣象署每日觀測時間（02、08、14、20時）為準</li>
+<li><strong>縣市災情／防災作為</strong>：商周、TVBS、NOWnews、今周刊、公視、民視、ETtoday、聯合、三立等媒體報導（轉述地方縣市災害應變中心與地方政府資訊；氣象署不發布縣市災情）</li>
+<li><strong>停班停課</strong>：以行政院人事行政總處及各縣市政府公告為準</li>
+</ul>
+<hr />
+<h2>2026/8/8 11:30 更新</h2>
+<h3>基本資料更新</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>舊數據（8/7 23時）</th>
+<th>新數據（8/8 11時）</th>
+<th>變化</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>位置</strong></td>
+<td>北緯26.9度、東經126.6度</td>
+<td>北緯27.0度、東經125.5度</td>
+<td>向西移動約1.1度（約120km）</td>
+</tr>
+<tr>
+<td><strong>距台北</strong></td>
+<td>約550公里</td>
+<td>約450公里</td>
+<td>更接近</td>
+</tr>
+<tr>
+<td><strong>最大風速</strong></td>
+<td>40 m/s</td>
+<td>35 m/s</td>
+<td>減弱</td>
+</tr>
+<tr>
+<td><strong>陣風</strong></td>
+<td>50 m/s</td>
+<td>45 m/s</td>
+<td>減弱</td>
+</tr>
+<tr>
+<td><strong>中心氣壓</strong></td>
+<td>950 hPa</td>
+<td>962 hPa</td>
+<td>回升（減弱）</td>
+</tr>
+<tr>
+<td><strong>移動速度</strong></td>
+<td>23 km/hr WSW</td>
+<td>20 km/hr W</td>
+<td>略減慢</td>
+</tr>
+</tbody>
+</table>
+<h3>警報與特報更新</h3>
+<ul>
+<li><strong>海上颱風警報</strong>：已發布至第5報（8/8 11:30，橙色燈號），警戒範圍：台灣北部海面、台灣東北部海面</li>
+<li><strong>陸上強風特報</strong>：8/8 11:30 發布（黃色燈號），影響縣市擴增為14個（基隆市、臺北市、新北市、桃園市、新竹市、新竹縣、苗栗縣、臺中市、南投縣、宜蘭縣、屏東縣、臺東縣、澎湖縣、連江縣），有效至 8/9 20:00</li>
+<li><strong>大雨特報</strong>：8/8 07:45 發布，基隆北海岸、臺中以北山區有局部大雨發生機率</li>
+</ul>
+<h3>預測路徑更新（8/8 11時基準）</h3>
+<table>
+<thead>
+<tr>
+<th>時間</th>
+<th>位置</th>
+<th>最大風速</th>
+<th>氣壓</th>
+<th>備註</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>8/8 11:00</strong>（最新）</td>
+<td>27.0°N, 125.5°E</td>
+<td>35 m/s</td>
+<td>962 hPa</td>
+<td>距台北約450km</td>
+</tr>
+<tr>
+<td>8/9 11:00（12h）</td>
+<td>27.1°N, 124.4°E</td>
+<td>35 m/s</td>
+<td>965 hPa</td>
+<td>暴風半徑40km</td>
+</tr>
+<tr>
+<td>8/10 11:00（24h）</td>
+<td>27.5°N, 122.9°E</td>
+<td>33 m/s</td>
+<td>970 hPa</td>
+<td>暴風半徑90km</td>
+</tr>
+<tr>
+<td>8/11 11:00（36h）</td>
+<td>28.1°N, 121.3°E</td>
+<td>30 m/s</td>
+<td>975 hPa</td>
+<td>暴風半徑100km</td>
+</tr>
+<tr>
+<td>8/12 11:00（48h）</td>
+<td>28.8°N, 119.7°E</td>
+<td>25 m/s</td>
+<td>985 hPa</td>
+<td>暴風半徑140km</td>
+</tr>
+<tr>
+<td>8/13 11:00（72h）</td>
+<td>30.8°N, 116.4°E</td>
+<td>18 m/s</td>
+<td>988 hPa</td>
+<td>暴風半徑200km</td>
+</tr>
+</tbody>
+</table>
+<h3>災情更新</h3>
+<p><strong>日本沖繩</strong>（已受實際影響）
+- 傷亡：至少3傷
+- 停電：超過2,200戶停電
+- 避難：240多人入住避難中心
+- 疏散：鹿兒島縣、沖繩縣約25.8萬居民收到避難指示
+- 航班：691個航班取消（那霸機場、宮古機場、石垣機場全天關閉）</p>
+<p><strong>中國大陸</strong>
+- 浙江：沿海漁船回港避風；溫州演唱會延期
+- 江蘇：無錫演唱會取消
+- 上海：迪士尼樂園8/9晚起關閉；鐵路部分列車停运
+- 應急：國家防總對浙江、福建啟動防汛防颱風四級應急響應</p>
+<p><strong>台灣</strong>
+- 台電：動員7,215名人力、3,338輛車輛、3,902台機具投入防颱整備
+- 行政：行政院長卓榮泰指示高災害潛勢區加強預防性整備
+- 災情：目前無重大災情紀錄（淹水、樹倒、停電等）</p>
+<h3>重點提醒</h3>
+<ul>
+<li><strong>颱風最接近台灣時間</strong>：8/8～8/10，其中 <strong>8/8～8/9（父親節週末）影響最明顯</strong></li>
+<li><strong>登陸台灣機率低</strong>，但暴風圈龐大（7級風半徑280公里），北部海面仍受威脅</li>
+<li><strong>基隆北海岸適逢大潮</strong>，滿潮前後沿海低窪地區需留意海水倒灌</li>
+<li><strong>北部沿海浪高可達6公尺以上巨浪</strong>，避免前往海邊活動</li>
+</ul>
+<hr />
+<h2>2026/8/7 20:50 更新</h2>
+<h3>新增災情紀錄</h3>
+<table>
+<thead>
+<tr>
+<th>日期時間</th>
+<th>地點</th>
+<th>類型</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026/8/6 起</td>
+<td>龜山島</td>
+<td>景點關閉</td>
+<td>東北角風管處預警性封島4天（至8/9），因外圍環流導致長浪高達2公尺，臨時碼頭遭吞噬</td>
+</tr>
+<tr>
+<td>2026/8/7 起</td>
+<td>宜蘭烏石港</td>
+<td>航線停航</td>
+<td>賞鯨船8/7起停航</td>
+</tr>
+<tr>
+<td>2026/8/7 中午起</td>
+<td>台東綠島</td>
+<td>航線停航</td>
+<td>富岡綠島航線中午過後停航至8/9</td>
+</tr>
+<tr>
+<td>2026/8/6 下午起</td>
+<td>蘭嶼</td>
+<td>航線停航</td>
+<td>後壁湖蘭嶼航線6日下午起停航至8/9</td>
+</tr>
+<tr>
+<td>2026/8/6 起</td>
+<td>全台離島</td>
+<td>航港局淨空</td>
+<td>啟動「海警發布前近岸12浬海域淨空措施」預警機制</td>
+</tr>
+</tbody>
+</table>
+<h3>交通影響更新</h3>
+<table>
+<thead>
+<tr>
+<th>運具</th>
+<th>狀況</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>海運</td>
+<td>蘭嶼、綠島、馬祖航線停航至8/9；航港局啟動淨空措施；北部海面航行及作業船隻應嚴加戒備</td>
+</tr>
+<tr>
+<td>航空</td>
+<td>日本沖繩691航班取消（日航、全日空等）；華航取消6～8日沖繩航班共14架次；星宇8/7沖繩航班全取消</td>
+</tr>
+<tr>
+<td>景點</td>
+<td>龜山島封島4天（至8/9）；宜蘭烏石港賞鯨船8/7起停航；上海迪士尼8/9晚起關閉</td>
+</tr>
+<tr>
+<td>中國鐵路</td>
+<td>中國鐵路上海局集團停运部分鐵路列車</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<hr />
+<h2>2026/8/7 20:55 更新</h2>
+<h3>今晚天氣預報（氣象署）</h3>
+<table>
+<thead>
+<tr>
+<th>地區</th>
+<th>天氣</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>西半部</td>
+<td>局部短暫陣雨</td>
+<td>外圍環流接近，雨勢逐漸增多</td>
+</tr>
+<tr>
+<td>宜蘭</td>
+<td>零星短暫陣雨</td>
+<td>迎風面，降雨機率較高</td>
+</tr>
+<tr>
+<td>中南部</td>
+<td>局部大雨機率</td>
+<td>今晚至明晨需注意</td>
+</tr>
+<tr>
+<td>東部</td>
+<td>多雲到晴</td>
+<td>焚風潛在風險</td>
+</tr>
+</tbody>
+</table>
+<h3>侵襲機率更新（氣象署 120小時）</h3>
+<table>
+<thead>
+<tr>
+<th>縣市</th>
+<th>侵襲機率</th>
+<th>備註</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>連江（馬祖）</td>
+<td>59%</td>
+<td>全台最高</td>
+</tr>
+<tr>
+<td>基隆</td>
+<td>48%</td>
+<td></td>
+</tr>
+<tr>
+<td>台北</td>
+<td>39%</td>
+<td></td>
+</tr>
+<tr>
+<td>新北</td>
+<td>36%</td>
+<td></td>
+</tr>
+<tr>
+<td>桃園</td>
+<td>33%</td>
+<td></td>
+</tr>
+<tr>
+<td>宜蘭</td>
+<td>28%</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3>風浪警訊</h3>
+<ul>
+<li>北部海面及東半部海面浪高將逐漸增至3公尺以上</li>
+<li>台東成功外海已觀測到6公尺以上巨浪</li>
+<li>中央山脈高山稜線已出現7至8級強陣風</li>
+<li>龜山島周邊海象惡劣，臨時碼頭遭吞噬</li>
+<li>航港局啟動「海警發布前近岸 12 浬海域淨空措施」</li>
+</ul>
+<h3>海上颱風警報狀態</h3>
+<ul>
+<li><strong>已發布</strong>（2026/8/7 14:30，目前為第5報 8/8 11:30）</li>
+<li>警戒範圍：台灣北部海面、台灣東北部海面（橙色燈號）</li>
+<li>氣象署每3小時更新一次</li>
+<li>陸上颱風警報發布機率仍低，需視北轉角度而定</li>
+</ul>
+<hr />
+<hr />
+<h2>2026/8/8 23:30 更新</h2>
+<h3>基本資料更新</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>舊數據（8/8 11時）</th>
+<th>新數據（8/8 23時）</th>
+<th>變化</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>位置</strong></td>
+<td>北緯27.0度、東經125.5度</td>
+<td>北緯27.1度、東經124.3度</td>
+<td>向西移動約1.2度（約130km）</td>
+</tr>
+<tr>
+<td><strong>距台北</strong></td>
+<td>約450公里</td>
+<td>約410公里</td>
+<td>更接近</td>
+</tr>
+<tr>
+<td><strong>最大風速</strong></td>
+<td>35 m/s</td>
+<td>35 m/s</td>
+<td>維持</td>
+</tr>
+<tr>
+<td><strong>陣風</strong></td>
+<td>45 m/s</td>
+<td>45 m/s</td>
+<td>維持</td>
+</tr>
+<tr>
+<td><strong>中心氣壓</strong></td>
+<td>962 hPa</td>
+<td>962 hPa</td>
+<td>維持</td>
+</tr>
+<tr>
+<td><strong>移動速度</strong></td>
+<td>20 km/hr W</td>
+<td>17 km/hr WNW</td>
+<td>略減慢、方向北轉</td>
+</tr>
+<tr>
+<td><strong>7級風暴風半徑</strong></td>
+<td>280 km</td>
+<td>250 km</td>
+<td>縮小</td>
+</tr>
+</tbody>
+</table>
+<h3>警報與特報更新</h3>
+<ul>
+<li><strong>海上颱風警報</strong>：已發布至第12報（8/8 23:30，橙色燈號），警戒範圍：台灣北部海面、台灣東北部海面</li>
+<li><strong>陸上強風特報</strong>：持續有效（黃色燈號），影響縣市14個，有效至 8/9 20:00</li>
+</ul>
+<h3>災情更新</h3>
+<p><strong>台灣地區</strong>（截至8/8 17:30～20:30）
+- <strong>台北市</strong>：75件災情通報，已處理54件，21件持續處理中
+  - 路樹倒塌：27件
+  - 建物輕微受損：12件（圍籬倒塌、鐵皮掀開等）
+  - 施工鷹架倒塌1件、施工圍籬倒塌1件（將依建築法裁罰）
+- <strong>基隆市</strong>：愛四路積水深及小腿肚（海水倒灌）
+- <strong>新北淡水</strong>：疑似龍捲風，房屋鐵皮掉落、路樹倒塌、電桿傾斜
+- <strong>宜蘭縣</strong>：中山路郵局磁磚兩次掉落</p>
+<p><strong>日本沖繩</strong>（災情持續）
+- 傷亡：至少6傷（原3傷，已更新）
+- 停電：超過1.8萬戶停電（原2200戶，大幅更新）
+- 交通：空中與陸上交通癱瘓
+- 宮古島：恐進入暴風圈</p>
+<p><strong>中國大陸</strong>
+- 浙江：沿海漁船回港避風；溫州演唱會延期
+- 江蘇：無錫演唱會取消
+- 上海：迪士尼樂園8/9晚起關閉；鐵路部分列車停运
+- 應急：國家防總對浙江、福建啟動防汛防颱風四級應急響應</p>
+<h3>停班停課更新</h3>
+<ul>
+<li><strong>8/8（週六）</strong>：全台22縣市正常上班上課</li>
+<li><strong>8/9（週日）</strong>：</li>
+<li><strong>連江縣宣布停班停課</strong></li>
+<li>8縣市部分區域達參考標準：<ul>
+<li>雨量達標：桃園市山區、新竹縣山區、苗栗縣山區、台中市山區</li>
+<li>風力達標：新北市濱海鄉鎮、桃園市濱海鄉鎮、恆春半島、蘭嶼及綠島、連江縣</li>
+</ul>
+</li>
+</ul>
+<h3>交通影響更新</h3>
+<ul>
+<li><strong>海運</strong>：蘭嶼、綠島、馬祖航線停航至8/9；台北往返金門晚間多航班取消</li>
+<li><strong>航空</strong>：台北往返金門晚間多航班取消</li>
+<li><strong>體育</strong>：中職新莊、桃園賽事延期</li>
+</ul>
+<h3>重點提醒</h3>
+<ul>
+<li><strong>颱風最接近台灣時間</strong>：8/8～8/10，其中 <strong>8/8～8/9（父親節週末）影響最明顯</strong></li>
+<li><strong>登陸台灣機率低</strong>，但暴風圈龐大（7級風半徑250公里），北部海面仍受威脅</li>
+<li><strong>基隆北海岸適逢大潮</strong>，滿潮前後沿海低窪地區需留意海水倒灌</li>
+<li><strong>北部沿海浪高可達6公尺以上巨浪</strong>，避免前往海邊活動</li>
+<li><strong>台北市災情已達75件</strong>，持續處理中</li>
+<li><strong>連江縣8/9已宣布停班停課</strong>，其他縣市持續評估中</li>
+</ul>
+<hr />
+<h2>2026/8/9 12:00 更新</h2>
+<h3>基本資料更新</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>舊數據（8/8 23時）</th>
+<th>新數據（8/9 11時）</th>
+<th>變化</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>位置</strong></td>
+<td>北緯27.1度、東經124.3度</td>
+<td>北緯28.0度、東經122.7度</td>
+<td>向西移動約1.6度（約170km）</td>
+</tr>
+<tr>
+<td><strong>距台北</strong></td>
+<td>約410公里</td>
+<td>約350公里</td>
+<td>更接近</td>
+</tr>
+<tr>
+<td><strong>最大風速</strong></td>
+<td>35 m/s</td>
+<td>33 m/s</td>
+<td>減弱</td>
+</tr>
+<tr>
+<td><strong>陣風</strong></td>
+<td>45 m/s</td>
+<td>43 m/s</td>
+<td>減弱</td>
+</tr>
+<tr>
+<td><strong>中心氣壓</strong></td>
+<td>962 hPa</td>
+<td>968 hPa</td>
+<td>回升（減弱）</td>
+</tr>
+<tr>
+<td><strong>移動速度</strong></td>
+<td>17 km/hr WNW</td>
+<td>21 km/hr WNW</td>
+<td>加速</td>
+</tr>
+<tr>
+<td><strong>7級風暴風半徑</strong></td>
+<td>250 km</td>
+<td>250 km</td>
+<td>維持</td>
+</tr>
+<tr>
+<td><strong>10級風暴風半徑</strong></td>
+<td>80 km</td>
+<td>80 km</td>
+<td>維持</td>
+</tr>
+</tbody>
+</table>
+<h3>警報與特報更新</h3>
+<ul>
+<li><strong>海上颱風警報</strong>：已發布至第14報（8/9 11:30，橙色燈號），警戒範圍：台灣北部海面、台灣東北部海面</li>
+<li><strong>豪雨特報</strong>：8/9 09:11 發布（藍色燈號），影響地區：臺北市、基隆市、新北市、桃園市、新竹市、新竹縣、苗栗縣、臺中市、南投縣、宜蘭縣、雲林縣、嘉義縣、花蓮縣，有效至 8/9 23:00</li>
+<li><strong>陸上強風特報</strong>：8/9 10:31 發布（黃色燈號），影響地區擴增至18個縣市，有效至 8/10 23:00</li>
+</ul>
+<h3>災情更新（截至 8/9 08:00）</h3>
+<p><strong>台灣地區</strong>
+- <strong>總災情</strong>：222 件，已處理 179 件，43 件處理中
+  - 路樹倒塌：78 件（最多）
+  - 積淹水：26 處（均已退水）
+  - 受傷：5 人
+  - 自來水、電力及電信暫無災情
+- <strong>淹水警戒</strong>：新北、基隆、台北、桃園、新竹縣市及苗栗共 7 縣市、18 個行政區
+- <strong>台北市</strong>：
+  - 中山區：民生東路二段 142 號，長約 15 公尺、直徑約 40 公分大型路樹倒塌（ETtoday）
+  - 大安區：仁愛路三段與建國南路一段路口，路樹倒塌，已以鏈鋸切割清除（ETtoday）
+  - 大同區：興城街再傳路樹倒塌，已圍設警戒線（ETtoday）
+- <strong>基隆市</strong>：
+  - 廟口夜市淹成河，店家怨：沒下雨就泡水（ETtoday）
+  - 小貨車 90 度側翻，駕駛一度受困獲救（ETtoday）
+- <strong>新北市</strong>：
+  - 淡水：疑似龍捲風，房屋鐵皮掉落、路樹倒塌、電桿傾斜（中央社，8/8 晚間）
+- <strong>桃園市</strong>：
+  - 復興區：台 7 線巴陵至西村路段持續預警性封閉（ETtoday）
+  - 警方冒雨救援倒地老婦、清除倒塌路樹（ETtoday）
+- <strong>台中市</strong>：
+  - 大雷雨突襲，半夜閃電點亮天空（ETtoday）</p>
+<p><strong>日本沖繩</strong>（災情持續）
+- 傷亡：至少 6 傷
+- 停電：超過 5 萬戶（持續增加）
+- 交通：空中與陸上交通癱瘓</p>
+<p><strong>國軍整備</strong>
+- 國軍整備 29,155 人待命</p>
+<h3>交通影響更新</h3>
+<ul>
+<li><strong>海運</strong>：</li>
+<li>9 航線共 79 航次停航（航港局 8/9 10 時通報）</li>
+<li>包含：基隆至馬祖、台東至綠島及蘭嶼等航線</li>
+<li>東港至小琉球停航 41 航次</li>
+<li>航港局呼籲非必要勿赴離島，以免滯留</li>
+<li><strong>航空</strong>：台北往返金門晚間多航班取消</li>
+<li><strong>道路</strong>：桃園復興台 7 線巴陵至西村路段持續預警性封閉</li>
+</ul>
+<h3>災害應變中心</h3>
+<ul>
+<li><strong>中央災害應變中心</strong>：8/9 上午召開第 6 次工作會報，由副指揮官、農業部常務次長杜文珍主持</li>
+<li><strong>淹水警戒</strong>：新北、基隆、台北、桃園、新竹縣市及苗栗共 7 縣市、18 個行政區列淹水警戒</li>
+<li><strong>坡地警戒</strong>：應注意坍方、落石及溪水暴漲</li>
+</ul>
+<h3>重點提醒</h3>
+<ul>
+<li><strong>颱風最接近台灣時間</strong>：8/9 下午 2 時左右（氣象署預估）</li>
+<li><strong>暴風半徑縮小</strong>：7 級風半徑 250 公里，10 級風半徑 80 公里，颱風持續減弱中</li>
+<li><strong>今晚到明晨風雨最明顯</strong>：北部及中部山區須防短延時強降雨</li>
+<li><strong>北海岸浪高逾 6 公尺</strong>：今晚滿潮添海水倒灌風險，中央籲民眾遠離海邊、山區</li>
+<li><strong>災情持續增加</strong>：截至 8 時已達 222 件，路樹倒塌最多（78 件）</li>
+<li><strong>79 航次停航</strong>：9 條離島航線受影響，呼籲非必要勿赴離島</li>
+<li><strong>海上颱風警報持續有效</strong>：預計今晚到明晨風雨最明顯，周一才可能解除</li>
+</ul>
+<hr />
+<h2>2026/8/7 19:04 更新</h2>
+<h3>海上颱風警報發布</h3>
+<ul>
+<li><strong>氣象署已於 14:30 發布海上颱風警報</strong></li>
+<li>首波警戒範圍：台灣北部海面、東北部海面、東部海面</li>
+<li>白海豚 14 時位置：北緯 26.8 度，東經 128.0 度，台北東北東方約 680 公里</li>
+<li>移動速度：每小時 11 公里，向西進行</li>
+<li>強度：中度颱風，中心氣壓 950 百帕，近中心最大風速 40 公尺/秒，瞬間最大陣風 50 公尺/秒</li>
+<li>7 級風暴風半徑：280 公里；10 級風暴風半徑：90 公里</li>
+</ul>
+<h3>眼牆結構重整</h3>
+<ul>
+<li>白海豚昨（6）日晚間一度受乾空氣影響，眼牆結構明顯減弱</li>
+<li>今日清晨進入沖繩附近海域、海水熱含量較高區域後，中心附近眼牆再度爆發對流</li>
+<li>日本雷達清楚觀測到厚實的環狀眼牆結構，顯示颱風結構正在快速重整</li>
+<li>短時間內仍具有一定強度，可能出現強度回升</li>
+</ul>
+<h3>侵襲機率更新（氣象署 8/7 14時）</h3>
+<table>
+<thead>
+<tr>
+<th>縣市</th>
+<th>侵襲機率</th>
+<th>備註</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>連江（馬祖）</td>
+<td>59%</td>
+<td>全台最高</td>
+</tr>
+<tr>
+<td>基隆</td>
+<td>48%</td>
+<td></td>
+</tr>
+<tr>
+<td>台北</td>
+<td>39%</td>
+<td></td>
+</tr>
+<tr>
+<td>新北</td>
+<td>36%</td>
+<td></td>
+</tr>
+<tr>
+<td>桃園</td>
+<td>33%</td>
+<td></td>
+</tr>
+<tr>
+<td>宜蘭</td>
+<td>28%</td>
+<td></td>
+</tr>
+<tr>
+<td>新竹縣</td>
+<td>24%</td>
+<td></td>
+</tr>
+<tr>
+<td>新竹市</td>
+<td>23%</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h3>路徑趨勢</h3>
+<ul>
+<li>歐洲模式系集模擬顯示，8 日進入東海南部後，即模擬向北迴轉的路徑減少</li>
+<li>模擬偏西接近大陸，才逐漸迴轉的路徑增加</li>
+<li>暴風圈恐來不及閃過海上的警戒區</li>
+<li>預估 10 日晨登陸浙江</li>
+</ul>
+<h3>風雨預報</h3>
+<ul>
+<li><strong>8/7 晚間起</strong>：外圍環流影響明顯，沿海風力增大</li>
+<li><strong>8/8～8/9</strong>：北部及中南部山區有豪雨機率，西半部至東北部平地局部大雨</li>
+<li><strong>8/8～8/9</strong>：花東背風面防極端高溫（過山沉降效應）</li>
+<li><strong>浪高</strong>：北部沿海可能出現 6 公尺以上巨浪，避免前往海邊</li>
+</ul>
+<h3>交通異動</h3>
+<ul>
+<li><strong>海運</strong>：蘭嶼、綠島、馬祖航線停航至 8/9</li>
+<li><strong>航空</strong>：日本沖繩 400+ 航班取消；華航取消 6～8 日沖繩航班共 14 架次；星宇 8/7 沖繩航班全取消</li>
+<li><strong>景點</strong>：龜山島封島 4 天（至 8/9）；宜蘭烏石港賞鯨船 8/7 起停航</li>
+</ul>
+<h3>防災作為</h3>
+<ul>
+<li>海警發布後，相關防災單位將陸續啟動應變作業</li>
+<li>氣象署每 3 小時更新海上颱風警報</li>
+<li>各縣市將持續評估是否發布陸上颱風警報及停班停課</li>
+</ul>
+<hr />
+<h2>2026/8/10 11:30 更新</h2>
+<h3>海上颱風警報解除</h3>
+<ul>
+<li><strong>氣象署已於 8/9 23:30 解除海上颱風警報</strong>（第 20 報，最後一次報告）</li>
+<li>白海豚 9 日 23 時中心位置：北緯 27.9 度、東經 119.8 度，馬祖北方約 190 公里</li>
+<li>強度：輕度颱風，中心氣壓 985 hPa，最大風速 25 m/s（10 級風），瞬間陣風 33 m/s（12 級風）</li>
+<li>7 級風暴風半徑：100 公里</li>
+<li>移動速度：每小時 16～21 公里，向西北進行</li>
+<li>預測 8/10 23 時中心位置：北緯 29.9 度、東經 116.6 度，馬祖西北方約 530 公里</li>
+<li><strong>對臺灣北部海面的威脅已解除</strong></li>
+</ul>
+<h3>颱風登陸中國浙江</h3>
+<ul>
+<li><strong>白海豚已於 8/9 傍晚登陸中國浙江</strong></li>
+<li>8/10 10 時位置：北緯 28.2 度、東經 119.0 度，浙江麗水龍泉市境內</li>
+<li>強度：熱帶風暴級，最大風速 23 m/s（9 級風），中心氣壓 988 hPa</li>
+<li>預計以每小時 15～20 公里速度向西北方向移動，強度逐漸減弱</li>
+</ul>
+<h3>最新災情統計（截至 8/9 14:00）</h3>
+<p><strong>台灣地區</strong>
+- <strong>總災情</strong>：<strong>632 件</strong>，已處理 468 件，164 件處理中
+- <strong>受傷</strong>：<strong>6 人</strong>（無人員死亡或失蹤）
+- <strong>各縣市分布</strong>：
+  - 台北市：277 件（最多）
+  - 新北市：177 件
+  - 基隆市：84 件
+  - 桃園市：59 件
+- <strong>主要災情類型</strong>：路樹倒塌、建築物受損、停電、交通設施受損等
+- <strong>台北市災情細節</strong>：
+  - 民眾因施工圍籬、路樹倒塌及建築物磁磚掉落等原因受傷
+  - 中山區、大安區、大同區路樹倒塌多起
+  - 中山路郵局磁磚掉落
+- <strong>基隆市災情細節</strong>：
+  - 廟口夜市周邊海水倒灌淹水達 30 厘米
+  - 愛四路積水深及小腿肚（8/8）
+  - 基金路上小貨車翻覆
+  - 增設抽水機防愛四路積水，謝國樑表示遇滿潮將發警報</p>
+<p><strong>重大災情</strong>
+- <strong>基隆港貨櫃倒塌</strong>（8/9 上午）：
+  - 陽明海運基隆貨櫃場 7 只重達數十噸的貨櫃遭強風吹落
+  - 連環倒塌碰撞門式起重機，貨櫃外層鋼板嚴重凹陷變形、裂開破損
+  - 天秤鐵梯及樓梯扶手遭重壓扭曲變形
+  - <strong>無人傷亡</strong>，基隆港務分公司已啟動緊急應變措施，封鎖現場清查損失</p>
+<h3>觀測紀錄回顧</h3>
+<p><strong>累積雨量</strong>（7 日 0 時～9 日 23 時）
+- 台北市小油坑：410.5 毫米（最多）
+- 台中市雪山橋：392.5 毫米
+- 新竹縣樂山林道 6k：282.0 毫米
+- 苗栗縣雪見：262.0 毫米
+- 桃園市國一 S072K214.0 毫米
+- 新北市五指山：200.0 毫米</p>
+<p><strong>最大風力</strong>
+- 彭佳嶼：13 級
+- 蘭嶼：11 級
+- 基隆：10 級</p>
+<p><strong>最大浪高</strong>
+- 台東成功：6.5 公尺
+- 馬祖：6.3 公尺
+- 花蓮：6 公尺</p>
+<p><strong>高溫紀錄</strong>（颱風外圍環流沉降影響）
+- 馬祖：37°C（該站 2004 年設站以來最高溫紀錄）
+- 宜蘭：38.8°C
+- 花蓮：37.9°C
+- 台東：38.3°C
+- 金門：38.1°C</p>
+<h3>颱風特色總結</h3>
+<ul>
+<li><strong>生命期長</strong>：自 7/27 生成至 8/10 登陸浙江，為繼 1983 年颱風艾倫後長生命期颱風</li>
+<li><strong>生成位置遠</strong>：自東經 177 度遠方形成（艾倫在 171 度附近形成）</li>
+<li><strong>外圍環流寬廣</strong>：影響台灣期間有明顯的長浪及巨浪</li>
+<li><strong>背風沉降高溫明顯</strong>：馬祖創設站以來最高溫 37°C</li>
+<li><strong>擺線運動</strong>：路徑呈擺線運動且移動緩慢</li>
+</ul>
+<h3>未來天氣預報</h3>
+<ul>
+<li>未來一週以西南風影響的天氣情形為主</li>
+<li>10 日至 13 日中南部有短暫陣雨</li>
+<li>14 日至 16 日台灣處於大低壓帶的環境，各地降雨機會偏高</li>
+<li>中南部地區還是要留意斷斷續續的陣雨或雷雨</li>
+<li>其他各地午後則會有局部較強雷陣雨發生</li>
+</ul>
+<h3>重點提醒</h3>
+<ul>
+<li><strong>海上颱風警報已解除</strong>，颱風已遠離</li>
+<li><strong>颱風已登陸中國浙江</strong>，減弱為熱帶風暴級</li>
+<li><strong>對台灣北部海面的威脅已解除</strong></li>
+<li><strong>最新災情</strong>：全台累計 632 件災情、6 人受傷，無人員死亡或失蹤</li>
+<li><strong>基隆港貨櫃倒塌</strong>為本次颱風最嚴重的財產損失</li>
+<li><strong>馬祖創設站以來最高溫紀錄</strong>：37°C</li>
+<li><strong>台北小油坑累積雨量最高</strong>：410.5 毫米</li>
+<li>未來一週各地降雨機會仍偏高，需留意午後雷雨</li>
+</ul>
+</div>
+</main>
+<footer><div class="wrap">
+<p>本頁內容彙整自中央氣象署公開資料與新聞媒體公開報導，每筆災情請點入來源連結查證原文；官方資訊以中央氣象署與各縣市政府公告為準。本頁採手動更新，資訊可能落後。</p>
+</div></footer>
+</div>
+</div>
+<script>
+(function(){
+  var root = document.documentElement;
+  var themeBtn = document.getElementById('theme-toggle');
+  if (themeBtn) themeBtn.addEventListener('click', function(){
+    var t = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', t);
+    try { localStorage.setItem('wtf-theme', t); } catch (e) {}
+  });
+  var sb = document.getElementById('sidebar'),
+      sc = document.getElementById('scrim'),
+      hb = document.getElementById('nav-toggle');
+  function close(){ if(sb) sb.classList.remove('open'); if(sc) sc.classList.remove('show'); }
+  if (hb) hb.addEventListener('click', function(){
+    sb.classList.toggle('open'); sc.classList.toggle('show');
+  });
+  if (sc) sc.addEventListener('click', close);
+  if (sb) sb.querySelectorAll('a').forEach(function(a){ a.addEventListener('click', close); });
+})();
+</script>
+</body>
+</html>

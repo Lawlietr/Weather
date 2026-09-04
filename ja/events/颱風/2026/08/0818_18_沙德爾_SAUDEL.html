@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>颱風沙德爾（SAUDEL）— 2026 年第 20 號</title>
+<style>
+:root{--red:#ef5350;--yellow:#ffb300;--green:#66bb6a;
+--bg:#14181c;--card:#1d242c;--line:#2f3944;--ink:#e4e8ec;--muted:#98a3af;
+--accent:#64b5f6;--chip-bg:#2a333e;--side-bg:#0f1317;--side-ink:#c9d1d9;
+--head-bg:#0c0f12;--table-head:#252e38;--ph-bg:#241f12;--ph-line:#6e5a1e;--ph-ink:#d3bd7d;
+color-scheme:dark;}
+:root[data-theme="light"]{--red:#c62828;--yellow:#ef8f00;--green:#2e7d32;
+--bg:#fff6dd;--card:#fffdf4;--line:#e6d7ae;--ink:#33280f;--muted:#7d6c48;
+--accent:#a05e00;--chip-bg:#f5e8c3;--side-bg:#fbf1d4;--side-ink:#4d3f22;
+--head-bg:#263238;--table-head:#f7edd0;--ph-bg:#fff8e1;--ph-line:#c9a227;--ph-ink:#6d5410;
+color-scheme:light;}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei","Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic","Meiryo",sans-serif;color:var(--ink);background:var(--bg);line-height:1.7;font-size:16px}
+/* 版面：左側欄 + 右側內容（內容置中） */
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
+.sidebar{background:var(--side-bg);border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow-y:auto;padding:16px 10px}
+.nav-group{font-size:.72rem;letter-spacing:.1em;color:var(--muted);margin:18px 10px 6px}
+.nav-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:8px;color:var(--side-ink);font-size:.88rem;line-height:1.45}
+.nav-item:hover{background:var(--chip-bg);text-decoration:none}
+.nav-item.nav-current{background:var(--chip-bg);color:var(--ink);font-weight:700}
+/* 側欄二層收合清單（純 CSS details/summary） */
+.nav-sub{margin:0}
+.nav-sub summary{display:flex;align-items:center;gap:2px;list-style:none;cursor:pointer}
+.nav-sub summary::-webkit-details-marker{display:none}
+.nav-sub summary:hover .nav-item{background:var(--chip-bg)}
+.nav-sub .caret{flex:none;font-size:.7rem;color:var(--muted);transition:transform .15s;margin:0 0 0 4px}
+.nav-sub[open] .caret{transform:rotate(90deg)}
+.nav-counties{margin:2px 0 6px 16px;border-left:1px solid var(--line);padding-left:4px}
+.nav-counties .nav-subitem{font-size:.8rem;padding:5px 8px}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;margin-top:6px}
+.dot-red{background:var(--red)}.dot-yellow{background:var(--yellow)}.dot-green{background:var(--green)}
+.page{display:flex;flex-direction:column;min-width:0}
+header.site{background:var(--head-bg);color:#fff;padding:10px 0;position:sticky;top:0;z-index:40}
+.site-bar{max-width:900px;margin:0 auto;padding:2px 16px;display:flex;align-items:center;gap:8px}
+.site-bar.updated-bar{justify-content:flex-end}
+header.site h1{font-size:1.1rem;margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.updated{color:#b0bec5;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon-btn{background:none;border:none;border-radius:8px;color:inherit;padding:6px;display:inline-flex;cursor:pointer;line-height:0;flex:none}
+.icon-btn:hover{background:rgba(255,255,255,.15)}
+.lang-switch{display:inline-flex;gap:2px;flex:none}
+.lang-switch a,.lang-switch .on{padding:2px 9px;border-radius:6px;font-size:.78rem;line-height:1.6}
+.lang-switch a{color:#b0bec5}
+.lang-switch a:hover{text-decoration:none;background:rgba(255,255,255,.15)}
+.lang-switch .on{background:rgba(255,255,255,.18);color:#fff;font-weight:700}
+#nav-toggle{display:none}
+[data-theme="dark"] .icon-moon{display:none}
+[data-theme="light"] .icon-sun{display:none}
+main.wrap{flex:1;width:100%;max-width:900px;margin:0 auto;padding:16px}
+section{margin:28px 0}
+h2{font-size:1.15rem;border-bottom:2px solid var(--line);padding-bottom:6px}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin:12px 0}
+/* hero：正常卡片底色 + 實色邊框（不填色），依嚴重度著色 */
+.hero{border:2px solid var(--line)}
+.hero.sev-red{border-color:var(--red)}
+.hero.sev-yellow{border-color:var(--yellow)}
+.hero.sev-green{border-color:var(--green)}
+.hero h2{font-size:1.45rem;font-weight:800;line-height:1.45;margin-top:0}
+.hero h2 a{color:var(--ink)}
+.hero h2 a:hover{color:var(--accent)}
+.hero .meta{color:var(--muted);font-size:.9rem}
+.hero-cta{display:inline-block;margin-top:16px;padding:8px 20px;border-radius:8px;background:var(--accent);color:var(--head-bg);font-size:.95rem;font-weight:700;text-decoration:none}
+.hero-cta:hover{filter:brightness(1.15);text-decoration:underline}
+/* 徽章：實心色塊小標籤（severity 背景色只限徽章，不污染卡片） */
+.badge{display:inline-block;padding:3px 12px;border-radius:12px;font-size:.85rem;font-weight:700;vertical-align:middle}
+.badge.sev-red{background:var(--red);color:#fff}
+.badge.sev-yellow{background:var(--yellow);color:#3e2723}
+.badge.sev-green{background:var(--green);color:#fff}
+.badge.sev-grey{background:#9e9e9e;color:#fff}
+.chips{margin:10px 0}
+.chip{display:inline-block;background:var(--chip-bg);border-radius:14px;padding:2px 12px;margin:2px 4px 2px 0;font-size:.85rem}
+.chip-link{color:var(--accent);text-decoration:none}
+.chip-link:hover{text-decoration:underline}
+.county-card{scroll-margin-top:88px}
+.meta{color:var(--muted);font-size:.85rem}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:.9rem;background:var(--card)}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--table-head)}
+ul.timeline{list-style:none;padding:0;margin:8px 0}
+ul.timeline li{padding:8px 0;border-bottom:1px dashed var(--line)}
+ul.timeline li:last-child{border-bottom:none}
+ul.news-list{list-style:none;margin:6px 0 0;padding-left:4px}
+ul.news-list li{padding:2px 0;font-size:.85rem}
+ul.news-list li a{word-break:break-all}
+.t-time{font-weight:700}
+.t-type{color:var(--accent);font-weight:600}
+.muted{color:var(--muted)}
+.placeholder{background:var(--ph-bg);border:1px dashed var(--ph-line);border-radius:10px;padding:14px;color:var(--ph-ink)}
+/* CWA 氣象總覽 */
+.cwa-warn{background:var(--chip-bg);border:1px solid var(--yellow);border-radius:8px;padding:10px 14px;margin:8px 0}
+.cwa-fail{border-color:var(--yellow)}
+/* 目前風險狀態列：由 CWA 目前之警報/特報推導（與事件歷史 severity 無關） */
+.risk-bar{border:2px solid var(--line);border-radius:10px;padding:12px 18px;margin:14px 0;background:var(--card)}
+.risk-bar.risk-red{border-color:var(--red);background:var(--red-bg)}
+.risk-bar.risk-yellow{border-color:var(--yellow);background:var(--yellow-bg)}
+.risk-bar.risk-green{border-color:var(--green)}
+.risk-bar.risk-neutral{border-color:var(--line);background:var(--bg)}
+.risk-bar.risk-unknown{border-style:dashed}
+.risk-bar .risk-label{font-weight:800;font-size:1rem}
+.risk-bar ul{list-style:none;margin:6px 0 0;padding:0}
+.risk-bar li{padding:2px 0;font-size:.95rem}
+.typhoon-row{display:flex;gap:18px;align-items:flex-start;margin:10px 0}
+.typhoon-row .map{flex:0 0 340px;max-width:46%}
+.typhoon-row .map svg{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.typhoon-row .typhoon-info{flex:1;min-width:0}
+.typhoon-row .typhoon-info table{font-size:.85rem}
+.alert-item{padding:10px 0;border-bottom:1px dashed var(--line)}
+.alert-item:last-child{border-bottom:none}
+.report-text{white-space:pre-wrap;font-size:.85rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0 0}
+@media(max-width:767px){.typhoon-row{flex-direction:column}.typhoon-row .map{max-width:100%;flex-basis:auto}}
+.event-content{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;overflow-x:auto}
+.event-content h1{font-size:1.3rem}
+.event-content h2{border-bottom:1px solid var(--line)}
+.event-content blockquote{border-left:4px solid var(--accent);margin:12px 0;padding:4px 14px;background:var(--chip-bg)}
+.event-content img{max-width:100%}
+.archive-list{list-style:none;padding:0}
+.archive-list li{padding:10px 0;border-bottom:1px solid var(--line)}
+footer{background:var(--head-bg);color:#cfd8dc;padding:20px 0;font-size:.85rem;margin-top:40px}
+footer .wrap{max-width:900px;margin:0 auto;padding:0 16px}
+.backlink{display:inline-block;margin-bottom:10px}
+.scrim{display:none}
+/* 平板與手機（<1024px）：側欄改為抽屜式 */
+@media (max-width:1023px){
+.layout{display:block}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:280px;transform:translateX(-100%);transition:transform .25s ease;z-index:60;box-shadow:0 0 30px rgba(0,0,0,.45)}
+.sidebar.open{transform:translateX(0)}
+#nav-toggle{display:inline-flex}
+.scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .25s;z-index:55}
+.scrim.show{opacity:1;pointer-events:auto}
+main.wrap{padding:12px}
+section{margin:20px 0}
+.card{padding:14px}
+.t-time{white-space:normal}
+}
+@media print{
+.sidebar,#scrim,.icon-btn{display:none}
+.layout{display:block}
+header.site,footer{background:none;color:#000}
+.card,.event-content{border-color:#999;break-inside:avoid}
+a::after{content:" (" attr(href) ")";font-size:.75em;color:#555}
+}
+</style>
+<script>/* 避免閃爍：先還原主題偏好再渲染 */(function(){var t=null;try{t=localStorage.getItem("wtf-theme")}catch(e){}if(t!=="light"&&t!=="dark")t="dark";document.documentElement.setAttribute("data-theme",t);})();</script>
+</head>
+<body id="top">
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+<nav><a class="nav-item" href="../../../../index.html">🏠 総覧</a><div class="nav-group">現在進行中のイベント</div><details class="nav-sub" open><summary><span class="caret" aria-hidden="true">▸</span><a class="nav-item" href="../../../../events/%E7%81%BD%E6%83%85/2026/09/0904_%E4%BD%8E%E5%A3%93%E5%B8%B6_%E5%8D%97%E5%8C%97%E5%8F%B0%E7%81%A3%E8%B1%AA%E9%9B%A8.html"><span class="dot dot-yellow"></span><span>0904 低壓帶南北台灣豪雨</span></a></summary><div class="nav-counties"><a class="nav-item nav-subitem" href="../../../../index.html#%E5%9F%BA%E9%9A%86%E5%B8%82">基隆市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E5%8F%B0%E5%8C%97%E5%B8%82">台北市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E6%96%B0%E5%8C%97%E5%B8%82">新北市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E5%AE%9C%E8%98%AD%E7%B8%A3">宜蘭縣</a><a class="nav-item nav-subitem" href="../../../../index.html#%E6%A1%83%E5%9C%92%E5%B8%82">桃園市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E9%AB%98%E9%9B%84%E5%B8%82">高雄市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E5%B1%8F%E6%9D%B1%E7%B8%A3">屏東縣</a><a class="nav-item nav-subitem" href="../../../../index.html#%E5%8F%B0%E6%9D%B1%E7%B8%A3">台東縣</a></div></details><div class="nav-group">過去のイベント</div><a class="nav-item nav-current" href="../../../../events/%E9%A2%B1%E9%A2%A8/2026/08/0818_18_%E6%B2%99%E5%BE%B7%E7%88%BE_SAUDEL.html"><span class="dot dot-yellow"></span><span>颱風沙德爾（SAUDEL）— 2026 年第 20 號</span></a><a class="nav-item" href="../../../../events/%E7%81%BD%E6%83%85/2026/08/0828_%E8%A5%BF%E5%8D%97%E9%A2%A8_%E5%8D%97%E5%8F%B0%E7%81%A3%E5%BE%8C%E7%BA%8C%E6%B7%B9%E6%B0%B4.html"><span class="dot dot-yellow"></span><span>0828 西南風短延時豪雨後續災情</span></a><a class="nav-item" href="../../../../events/%E9%A2%B1%E9%A2%A8/2026/07/0702_09_%E5%B7%B4%E5%A8%81_BAVI.html"><span class="dot dot-red"></span><span>颱風巴威（BAVI）— 2026 年第 9 號</span></a><a class="nav-item" href="../../../../events/%E9%A2%B1%E9%A2%A8/2026/07/0722_12_%E7%B4%85%E9%9C%9E_Noul.html"><span class="dot dot-yellow"></span><span>颱風紅霞（NOUL）— 2026 年第 12 號</span></a><a class="nav-item" href="../../../../events/%E9%A2%B1%E9%A2%A8/2026/08/0807_13_%E7%99%BD%E6%B5%B7%E8%B1%9A_DOLPHIN.html"><span class="dot dot-yellow"></span><span>颱風白海豚（DOLPHIN）— 2026 年第 13 號</span></a><a class="nav-item" href="../../../../events/%E7%81%BD%E6%83%85/2026/08/0821_%E4%BD%8E%E5%A3%93%E5%B8%B6_%E5%8D%97%E5%8F%B0%E7%81%A3%E5%A4%A7%E9%9B%A8.html"><span class="dot dot-red"></span><span>0822 低壓帶及西南風豪雨事件</span></a></nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<div class="page">
+<header class="site">
+<div class="site-bar">
+<button id="nav-toggle" class="icon-btn" aria-label="開啟事件清單"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+<h1><a href="../../../../index.html" style="color:#fff;text-decoration:none">颱風沙德爾（SAUDEL）— 2026 年第 20 號</a></h1>
+<span class="lang-switch"><a href="../../../../../index.html">繁體中文</a><span class="on">日本語</span></span>
+<a class="icon-btn" href="https://github.com/Lawlietr/Weather" target="_blank" rel="noopener" title="GitHub" aria-label="GitHub"><svg viewBox="0 0 16 16" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
+<button id="theme-toggle" class="icon-btn" aria-label="切換日夜主題">
+<svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M1 12h2m18 0h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+<svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+</button>
+</div>
+<div class="site-bar updated-bar"><span class="updated">生成時間：2026/9/4 12:32（手動生成・リアルタイムではありません）</span></div>
+</header>
+<main class="wrap">
+
+<a class="backlink" href="../../../../index.html">← 総覧に戻る</a>
+<section class="card hero sev-yellow" style="padding:12px 18px">
+<span class="badge sev-yellow">🟡 警戒</span>　<span class="meta">アーカイブ済み</span>
+<p class="meta">※ 本文は原文（中国語）のまま表示しています。</p>
+<div class='chips'><span class="chip">連江縣</span><span class="chip">桃園市</span><span class="chip">新竹市</span><span class="chip">新竹縣</span><span class="chip">臺中市</span><span class="chip">南投縣</span><span class="chip">雲林縣</span><span class="chip">臺南市</span><span class="chip">高雄市</span><span class="chip">屏東縣</span><span class="chip">臺東縣</span></div>
+</section>
+<div class="event-content">
+<h1>🌀 颱風沙德爾（SAUDEL）- 2026年第20號</h1>
+<p>最後修改：2026/9/4 12:00（status 改為 ended，CWA API 已無沙德爾資料；事件歸入歷史）</p>
+<blockquote>
+<p><strong>資料來源</strong>：
+- 中央氣象署 API (W-C0034-005) 西北太平洋熱帶氣旋資料，2026/8/28 14:00 分析
+- 中央氣象署 API (W-C0034-001) 海上颱風警報，2026/8/28 14:30 第 11 報（最後一報，解除警報）
+- 中央社、自由時報、聯合新聞網、新頭條 8/25～8/28 相關報導</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>數據</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>國際命名</strong></td>
+<td>SAUDEL（沙德爾）</td>
+</tr>
+<tr>
+<td><strong>編號</strong></td>
+<td>2026 年第 20 號（CWA 熱帶氣旋編號）</td>
+</tr>
+<tr>
+<td><strong>生成時間</strong></td>
+<td>2026/8/18 20:00（北緯 7.7 度、東經 154.4 度，12 m/s，1004 hPa）</td>
+</tr>
+<tr>
+<td><strong>升格輕度颱風</strong></td>
+<td>2026/8/19 14:00（18 m/s，998 hPa，北緯 8.2 度、東經 153.8 度）</td>
+</tr>
+<tr>
+<td><strong>最強記錄</strong></td>
+<td>8/24 14:00 達 51 m/s、925 hPa（強颱級巔峰）</td>
+</tr>
+<tr>
+<td><strong>最後分析</strong></td>
+<td>9/3 08:00：北緯 23.9 度、東經 117.1 度（南海北部海面），18 m/s（輕度颱風）、998 hPa，向 NNW 16 km/hr；預報減弱為熱帶性低氣壓</td>
+</tr>
+<tr>
+<td><strong>7 級風暴風半徑</strong></td>
+<td>80 公里（8/28 14 時）</td>
+</tr>
+<tr>
+<td><strong>對台影響</strong></td>
+<td>未登陸台灣；8/28 08 時中心於浙江外海（北緯 28.1 度、東經 121.2 度），暴風圈外緣涵蓋馬祖近海與台灣北部海面</td>
+</tr>
+<tr>
+<td><strong>警報狀態</strong></td>
+<td>海上颱風警報 8/28 14:30 解除（第 11 報）；對台灣威脅已解除</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>警報時程</h2>
+<table>
+<thead>
+<tr>
+<th>日期時間</th>
+<th>事件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026/8/18 20:00</td>
+<td><strong>生成</strong>：熱帶性低氣壓（北緯 7.7 度、東經 154.4 度）</td>
+</tr>
+<tr>
+<td>2026/8/19 14:00</td>
+<td>升格輕度颱風（18 m/s，998 hPa）</td>
+</tr>
+<tr>
+<td>2026/8/24 14:00</td>
+<td><strong>達巔峰</strong>：51 m/s、925 hPa（CWA 分析）</td>
+</tr>
+<tr>
+<td>2026/8/25</td>
+<td>減弱為中度颱風；氣象署表示最快 8/26 下半天發布海警（中央社 8/25）</td>
+</tr>
+<tr>
+<td>2026/8/27（上半天）</td>
+<td><strong>發布海上颱風警報</strong>（依第 11 報推算 8/27 起發布，針對台灣北部海面、東北部海面；確切發布時次待補）</td>
+</tr>
+<tr>
+<td>2026/8/28 清晨</td>
+<td>暴風圈涵蓋馬祖近海，馬祖為全台受風浪影響最重地區（自由時報、聯合新聞網 8/28）</td>
+</tr>
+<tr>
+<td>2026/8/28 10:53</td>
+<td><strong>陸上強風特報</strong>（黃色燈號）：蘭嶼、綠島、桃園市、新竹市、新竹縣、屏東縣、連江縣，有效至 22:00</td>
+</tr>
+<tr>
+<td>2026/8/28 11:00</td>
+<td><strong>豪（大）雨特報</strong>：彰化以南 7 縣市有局部大雨，<strong>高雄市升為豪雨</strong>；短延時強降雨、山區坍方落石、溪水暴漲</td>
+</tr>
+<tr>
+<td>2026/8/28 14:26</td>
+<td><strong>高溫資訊</strong>（橙色燈號）：臺北市、新北市，38 度</td>
+</tr>
+<tr>
+<td>2026/8/28 14:30</td>
+<td><strong>海上颱風警報解除</strong>（第 11 報，最後一次報告）：「第 20 號颱風過去 3 小時強度減弱，暴風圈亦縮小，目前中心在馬祖北方，向西南西移動，對臺灣北部海面的威脅已解除」</td>
+</tr>
+<tr>
+<td>2026/8/29 02:00（預報）</td>
+<td>中心北緯 27.3 度、東經 116.6 度（馬祖西北西約 360 公里，浙江陸地附近），10 m/s、1005 hPa</td>
+</tr>
+<tr>
+<td>2026/9/2 08:00（分析）</td>
+<td>中心北緯 22.0 度、東經 116.8 度（南海北部），18 m/s、995 hPa，向 NNE 17 km/hr（持續北移遠離）</td>
+</tr>
+<tr>
+<td>2026/9/2 14:00（分析）</td>
+<td>中心北緯 22.1 度、東經 117.2 度（南海北部），18 m/s、995 hPa，向 ENE 7 km/hr（移動趨緩）</td>
+</tr>
+<tr>
+<td>2026/9/3 02:00（分析）</td>
+<td>中心北緯 23.1 度、東經 117.5 度（南海北部海面），18 m/s、995 hPa，向 NNW 10 km/hr</td>
+</tr>
+<tr>
+<td>2026/9/3 08:00（分析）</td>
+<td>中心北緯 23.9 度、東經 117.1 度（南海北部海面），18 m/s、998 hPa，向 NNW 16 km/hr；預報：以每小時 12 km 速度向西轉西南西進行，<strong>14:00 減弱為熱帶性低氣壓</strong></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>分析軌跡（CWA API W-C0034-005）</h2>
+<h3>巔峰期（8/24～8/28）</h3>
+<table>
+<thead>
+<tr>
+<th>時間</th>
+<th>位置</th>
+<th>風速</th>
+<th>氣壓</th>
+<th>移動</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8/24 14:00</td>
+<td>23.5°N, 125.8°E（沖繩南南東外海）</td>
+<td><strong>51 m/s</strong></td>
+<td><strong>925 hPa</strong></td>
+<td>—</td>
+</tr>
+<tr>
+<td>8/26 08:00</td>
+<td>27.9°N, 127.3°E</td>
+<td>35 m/s</td>
+<td>965 hPa</td>
+<td>WNW 14 km/hr</td>
+</tr>
+<tr>
+<td>8/27 08:00</td>
+<td>28.6°N, 124.9°E</td>
+<td>35 m/s</td>
+<td>965 hPa</td>
+<td>W 7 km/hr</td>
+</tr>
+<tr>
+<td>8/27 20:00</td>
+<td>28.2°N, 123.4°E</td>
+<td>35 m/s</td>
+<td>965 hPa</td>
+<td>WSW 15 km/hr</td>
+</tr>
+<tr>
+<td>8/28 02:00</td>
+<td>28.0°N, 122.6°E</td>
+<td>33 m/s</td>
+<td>970 hPa</td>
+<td>W 13 km/hr</td>
+</tr>
+<tr>
+<td>8/28 08:00</td>
+<td>28.1°N, 121.2°E（<strong>距台最近</strong>，浙江外海）</td>
+<td>30 m/s</td>
+<td>975 hPa</td>
+<td>W 26 km/hr</td>
+</tr>
+<tr>
+<td>8/28 11:00</td>
+<td>27.9°N, 120.5°E</td>
+<td>25 m/s</td>
+<td>985 hPa</td>
+<td>WSW 24 km/hr</td>
+</tr>
+<tr>
+<td>8/28 14:00</td>
+<td>27.8°N, 119.7°E（馬祖北方約 180 公里）</td>
+<td>20 m/s</td>
+<td>995 hPa</td>
+<td>W 27 km/hr</td>
+</tr>
+</tbody>
+</table>
+<h3>減弱與轉 TD（8/29～8/31）</h3>
+<table>
+<thead>
+<tr>
+<th>時間</th>
+<th>位置</th>
+<th>風速</th>
+<th>氣壓</th>
+<th>移動</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8/29 02:00</td>
+<td>27.3°N, 116.6°E（浙江陸地附近）</td>
+<td>10 m/s</td>
+<td>1005 hPa</td>
+<td>—</td>
+</tr>
+<tr>
+<td>8/31</td>
+<td>南海海域</td>
+<td>減弱為熱帶性低氣壓</td>
+<td>—</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3>復活與返回動態（9/1～9/2）</h3>
+<table>
+<thead>
+<tr>
+<th>時間</th>
+<th>位置</th>
+<th>風速</th>
+<th>氣壓</th>
+<th>移動</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>9/1 08:00</td>
+<td>19.5°N, 113.6°E（廣東東岸外海南海）</td>
+<td>18 m/s</td>
+<td>998 hPa</td>
+<td>31 km/h ENE</td>
+</tr>
+<tr>
+<td>9/1 14:00</td>
+<td>20.0°N, 114.4°E</td>
+<td>18 m/s</td>
+<td>995 hPa</td>
+<td>17 km/h NE</td>
+</tr>
+<tr>
+<td>9/1 20:00</td>
+<td>20.6°N, 115.6°E</td>
+<td>18 m/s</td>
+<td>995 hPa</td>
+<td>24 km/h ENE</td>
+</tr>
+<tr>
+<td>9/2 02:00</td>
+<td>21.2°N, 116.3°E</td>
+<td>18 m/s</td>
+<td>995 hPa</td>
+<td>16 km/h NE</td>
+</tr>
+<tr>
+<td>9/2 08:00</td>
+<td>22.0°N, 116.8°E（南海北部）</td>
+<td>18 m/s</td>
+<td>995 hPa</td>
+<td>17 km/h NNE</td>
+</tr>
+<tr>
+<td>9/3 02:00</td>
+<td>23.1°N, 117.5°E（南海北部海面）</td>
+<td>18 m/s</td>
+<td>995 hPa</td>
+<td>10 km/h NNW</td>
+</tr>
+<tr>
+<td>9/3 08:00</td>
+<td>23.9°N, 117.1°E（南海北部海面）</td>
+<td>18 m/s</td>
+<td>998 hPa</td>
+<td>16 km/h NNW</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>受風切影響，8/28 起出現高低層分離（高層中心偏南、低層中心偏北），結構受破壞、減弱明顯（自由時報、聯合新聞網 8/28）。媒體報導 8/28 上午風雨區已登陸浙江沿海（玉環坎門）；CWA 分析中心仍於海面上，預測 8/29 進入浙江陸地後減弱為熱帶性低氣壓。</p>
+</blockquote>
+<hr />
+<h2>停班停課</h2>
+<table>
+<thead>
+<tr>
+<th>日期</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026/8/27～28</td>
+<td>全台無大規模停班停課公告；連江縣未宣布停班停課，縣災害應變中心 8/28 14:30 隨海警解除而關閉</td>
+</tr>
+<tr>
+<td>2026/9/1</td>
+<td>屏東縣春日鄉士文村、滿州鄉長樂村停班停課（屏東縣政府，中央社 8/31）</td>
+</tr>
+<tr>
+<td>2026/9/2</td>
+<td>屏東縣春日鄉士文村停班停課（屏東縣政府，風傳媒 9/1）；其他 21 縣市未達停班停課標準（行政院人事行政總處，風傳媒 9/1）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>風力、雨量與浪高</h2>
+<h3>馬祖（直接影響最重）</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>數據</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>累積雨量</strong></td>
+<td>47～49 mm（8/27 夜～8/28）</td>
+</tr>
+<tr>
+<td><strong>瞬間最大陣風</strong></td>
+<td>東引 8 級風</td>
+</tr>
+<tr>
+<td><strong>浪高</strong></td>
+<td>沿海約 3 公尺大浪</td>
+</tr>
+<tr>
+<td><strong>災損</strong></td>
+<td>無通報（海警解除報導：馬祖無災情）</td>
+</tr>
+</tbody>
+</table>
+<h3>嘉義以南（外圍西南風帶＋季風影響，短延時豪雨）</h3>
+<table>
+<thead>
+<tr>
+<th>測站/區域</th>
+<th>雨量</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>屏東大漢山</strong></td>
+<td><strong>330.0 mm</strong></td>
+<td>CWA 8/27 0 時～8/28 14 時累積（氣象署解除警報原文）</td>
+</tr>
+<tr>
+<td><strong>高雄多納林道</strong></td>
+<td><strong>295.0 mm</strong></td>
+<td>同上</td>
+</tr>
+<tr>
+<td><strong>高雄茂林</strong></td>
+<td><strong>96 mm/小時</strong></td>
+<td>8/28 10～11 時，全國當時最大時雨量</td>
+</tr>
+<tr>
+<td><strong>屏東枋山</strong></td>
+<td>93 mm/小時</td>
+<td>8/28 07～08 時</td>
+</tr>
+<tr>
+<td>屏東枋山、新枋</td>
+<td>200 mm 以上</td>
+<td>8/28 11 時前當日累積</td>
+</tr>
+<tr>
+<td>屏東 7 鄉鎮</td>
+<td>100 mm 以上</td>
+<td>8/28 午前</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>屏東、高雄山區短延時豪雨與「0822 低壓帶及西南風豪雨事件」之後續西南風雨帶連續，土壤已飽和，災損紀錄見 <a href="../../災情/2026/08/0821_低壓帶_南台灣大雨.md">0821 低壓帶南台灣大雨</a>。</p>
+</blockquote>
+<h3>長浪</h3>
+<table>
+<thead>
+<tr>
+<th>地區</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>基隆北海岸、東半部沿海（含蘭嶼、綠島）、馬祖</td>
+<td>8/28 易有長浪發生</td>
+</tr>
+<tr>
+<td>馬祖沿海</td>
+<td>3 公尺左右大浪，台灣附近各海面風浪仍大（CWA 解除警報原文）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>災情紀錄</h2>
+<h3>🟡 警戒</h3>
+<table>
+<thead>
+<tr>
+<th>地點</th>
+<th>類型</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>馬祖</td>
+<td>強風、大浪</td>
+<td>東引瞬間 8 級陣風、3 公尺浪；無人員傷亡與財產損毀通報，應變中心 8/28 14:30 關閉</td>
+</tr>
+<tr>
+<td>屏東、高雄（山區）</td>
+<td>短延時豪雨</td>
+<td>茂林時雨量 96 mm、大漢山 330 mm；東港潮州河川溢流淹水（屬 0822 事件後續，另見災情檔）</td>
+</tr>
+</tbody>
+</table>
+<h3>🟢 一般</h3>
+<ul>
+<li>無直接登陸台灣之風災損毀通報（截至 8/28 15:00）</li>
+<li>南部多處道路積水、低窪地區積水（連續降雨所致）</li>
+</ul>
+<hr />
+<h2>交通影響</h2>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>客輪</strong></td>
+<td>8/28 共 5 航線、21 班次停航（含 3 航線全日停航），馬祖相關航線首當其衝</td>
+</tr>
+<tr>
+<td><strong>國內航線</strong></td>
+<td>8/28 上午 10 時前：32 班取消、2 班延遲</td>
+</tr>
+<tr>
+<td><strong>公路</strong></td>
+<td>無大規模封路；屏東山區道路因土石與積水局部管制（屬連續降雨影響）</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>資料來源：交通部航港局公告、中央社 8/28 交通報導</p>
+</blockquote>
+<hr />
+<h2>防災作為</h2>
+<ul>
+<li>連江縣災害應變中心 8/27 起持續監控，8/28 14:30 隨海警解除而關閉</li>
+<li>中央氣象署 8/28 持續發布陸上強風特報（至 22:00）與豪（大）雨特報，提醒嘉義以南短延時豪雨、山區坍方落石、溪水暴漲</li>
+<li>交通部航港局依風浪標準停航 5 航線；航空公司調整國內航線班次</li>
+<li>高溫：台北市、新北市 8/28 橙色燈號（38 度），注意防曬與補充水分</li>
+</ul>
+<hr />
+<h2>備註</h2>
+<ul>
+<li>本檔曾於 8/29 20:00 改為 <code>status: ended</code>（系統登陸浙江轉為熱帶性低氣壓）；9/1 系統於南海復活再升格輕度颱風，<code>status</code> 改回 <code>active</code>，返回動態見檔尾「復活與返回動態（9/1）」</li>
+<li>對台灣之影響以<strong>間接</strong>為主：外圍雲系與西南風帶造成嘉義以南短延時豪雨，直接風力影響僅及馬祖近海與北部海面；無人員傷亡通報</li>
+<li><strong>後續威脅</strong>：氣象專家鄭明典（新頭條 8/28）指出季風槽持續加深，熱帶低壓生成位置離台更近，下週熱帶擾動仍可能持續干擾</li>
+<li>另 2026 年第 21 號颱風（Aito）8/28 前後生成於西太平洋遠海，距台極遠，無直接影響，持續追蹤</li>
+</ul>
+<hr />
+<h2>資料來源</h2>
+<ul>
+<li>中央氣象署 Open Data API：W-C0034-005（熱帶氣旋分析軌跡，45 點）、W-C0034-001（海上颱風警報第 11 報解除內容，8/28 14:30）</li>
+<li>中央社：<a href="https://www.cna.com.tw/news/ahel/202608250059.aspx">颱風沙德爾持續逼近 最快26日下半天發海警</a>（8/25）</li>
+<li>自由時報：<a href="https://news.ltn.com.tw/news/life/breakingnews/5554904">沙德爾強度減弱 估8/28下半天解除警報</a>（8/28）</li>
+<li>聯合新聞網：<a href="https://udn.com/news/story/7266/9718944">沙德爾強度減弱 估8/28下半天解除颱風警報</a>（8/28）</li>
+<li>央廣 Rti：<a href="https://rti.org.tw/news?pid=228893">沙德爾颱風遠離 氣象署解除海警</a>（8/28）</li>
+<li>新頭條：<a href="https://newtalk.tw/news/view/2026-08-28/1056212">沙德爾颱風遠離持續大雨！鄭明典：季風槽加深 熱帶低壓生成位置離台更近</a>（8/28）、<a href="https://newtalk.tw/news/view/2026-08-28/1056211">南台灣雨彈未歇！沙德爾颱風遠離水氣持續</a>（8/28）</li>
+<li>自由時報、聯合新聞網：8/28 暴風圈涵蓋馬祖近海、登陸浙江沿海報導</li>
+<li>交通部航港局 8/28 客輪停航公告（5 航線 21 班次）</li>
+</ul>
+<hr />
+<h2>復活與返回動態（9/1）</h2>
+<h3>系統動態</h3>
+<ul>
+<li><strong>8/31</strong>：登陸浙江減弱後，殘餘環流入南海，與南海熱帶擾動合併發展為熱帶性低氣壓 TD-20（CWA 20 號；JTMA 18 號）（中央社 8/31）</li>
+<li><strong>9/1 清晨</strong>：日本氣象廳重新升格為颱風「沙德爾」——歷代罕見登陸中國後南墜出海、重新升格為颱風的紀錄；中央氣象署上午跟進升格為輕度颱風（中央社、新頭條 9/1）</li>
+<li>與低壓帶合併增強，氣象專家估 9/2 下半天～9/3 最接近台灣海峽（東沙以北海域），後續路徑各模式分歧大、變化空間大（新頭條 9/1）</li>
+<li>同時 9/1 08 時琉球東南方之 TD-27 升格為第 23 號颱風「科羅旺（KROVANH）」（JTMA 23 號），朝西北移動，對台無直接影響（CWA、中央社 9/1）</li>
+<li><strong>9/1 09:45 JMA 颱風情報</strong>：沙德爾中心位於北緯 19.3 度、東經 112.1 度（海南島以東南海），以 15 km/h 向東移動；中心氣壓 994 hPa、最大風速 18 m/s、最大瞬間風速 25 m/s（壹蘋新聞網 9/1）</li>
+<li><strong>9/2 08:00 CWA 分析</strong>：沙德爾持續北移，中心位於北緯 22.0 度、東經 116.8 度（南海北部），18 m/s、995 hPa，向 NNE 17 km/hr 移動，距離台灣漸遠，對台無直接威脅</li>
+<li><strong>9/1 15:00 CWA 颱風動態分析報告</strong>：路徑較過去預報明顯往北調整，週四（9/3）清晨達發布海上颱風警報條件；週四下半天至週五最接近台灣北方海域至馬祖近海，週五晚起通過浙江海面速度加快、預估週五登陸中國（商周 9/1）</li>
+<li><strong>雙颱共舞</strong>：科羅旺持續北上趨向日本，其北上過程將帶動東北風，導致北部及宜蘭地區出現明顯雨勢（風傳媒 9/1）</li>
+</ul>
+<h3>位置與強度</h3>
+<table>
+<thead>
+<tr>
+<th>時間</th>
+<th>來源</th>
+<th>中心位置</th>
+<th>最大風速</th>
+<th>中心氣壓</th>
+<th>移動</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>9/1 06:45</td>
+<td>JMA</td>
+<td>19.3°N, 112.1°E（海南島以南海南）</td>
+<td>18 m/s</td>
+<td>994 hPa</td>
+<td>15 km/h 向 E</td>
+</tr>
+<tr>
+<td>9/1 08:00</td>
+<td>CWA API W-C0034-005</td>
+<td>113.6°E, 19.5°N（廣東東岸外海南海）</td>
+<td>18 m/s</td>
+<td>998 hPa</td>
+<td>31 km/h 向 ENE</td>
+</tr>
+<tr>
+<td>9/1 09:45</td>
+<td>JMA</td>
+<td>19.3°N, 112.1°E（海南島以南海南）</td>
+<td>18 m/s</td>
+<td>994 hPa</td>
+<td>15 km/h 向 E</td>
+</tr>
+<tr>
+<td>9/2 08:00</td>
+<td>CWA</td>
+<td>22.0°N, 116.8°E（南海北部）</td>
+<td>18 m/s</td>
+<td>995 hPa</td>
+<td>17 km/h NNE</td>
+</tr>
+<tr>
+<td>9/2 14:00</td>
+<td>CWA</td>
+<td>22.1°N, 117.2°E（南海北部）</td>
+<td>18 m/s</td>
+<td>995 hPa</td>
+<td>7 km/h ENE</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>CWA API W-C0034-005 截至 9/2 14:00 回傳活躍颱風資料；位置/強度以 CWA 分析為準。</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>數值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CWA 預測（9/2 14:00 更新）</td>
+<td>+6h 至 117.7°E、22.6°N（20 m/s、998 hPa）；+12h 至 117.8°E、23.0°N（15 m/s、998 hPa）；+18h 至 117.5°E、23.4°N（15 m/s、998 hPa）；+24h 至 116.8°E、23.6°N（10 m/s、1002 hPa，減弱為熱帶性低氣壓）</td>
+</tr>
+<tr>
+<td>70% 機率半徑</td>
+<td>+24h 90 km、+36h 100 km（路徑不確定度大）</td>
+</tr>
+</tbody>
+</table>
+<h3>對台影響評估</h3>
+<ul>
+<li>CWA 目前路徑：<strong>不直接登陸台灣</strong>，持續北移遠離；「直接侵台機會低」（氣象署發言人吳德榮，中央社 9/1）</li>
+<li>商周 9/1 分析：路徑北修，週三（9/2）清晨將達發布海上颱風警報條件；週四下半天至週五最接近台灣北方海域至馬祖近海（商周 9/1）</li>
+<li>暴風侵襲機率：台灣本島與離島幾乎全數降到 0%，連江縣 31%、金門縣 3%、基隆市 1%（商周 9/1）</li>
+<li>主要風險：<strong>外圍西南風水氣</strong>——低壓帶＋西南風增強，9/1～9/5 劇烈天氣高峰期，6 日起水氣南移天氣回穩（吳德榮，中央社 9/1）</li>
+<li>CWA W-C0034-001 截至 9/1 21:00 仍僅 8/28 14:30 解除報，無新海警</li>
+</ul>
+<h3>氣象署警報與特報（9/1 返回期間）</h3>
+<ul>
+<li><strong>9/1 01:05 降雨（大雨）特報</strong>：臺南市、高雄市、屏東縣、臺東縣局部大雨</li>
+<li><strong>9/1 08:50 降雨（大雨）特報</strong>：擴至雲林以南及臺東等 7 縣市</li>
+<li><strong>9/1 11:55 豪雨特報（生效中）</strong>：「低氣壓及西南風影響，易有短延時強降雨，今(1)日高雄市及屏東縣有局部大雨或豪雨，雲林至臺南、臺東地區及蘭嶼、綠島有局部大雨發生的機率；今日午後對流雲系發展旺盛，桃園至苗栗地區亦有局部大雨發生的機率，請注意雷擊及強陣風，低窪地區請慎防積水，連日降雨，山區請慎防坍方、落石及溪水暴漲。」（CWA API W-C0033-003）</li>
+<li><strong>9/1 13:12 豪雨特報更新</strong>：桃園市、高雄市、屏東縣局部豪雨；雲林縣到台南市、台東地區及蘭嶼、綠島，新竹、苗栗縣及宜蘭地區局部大雨（中央社 9/1）</li>
+<li><strong>9/1 16:24 豪雨特報擴增</strong>：桃園市、高雄市、屏東縣、宜蘭縣山區豪雨；新北市山區、新竹市、新竹縣、苗栗縣、雲林縣、嘉義市、嘉義縣、台南市、台東縣、綠島、蘭嶼、澎湖縣大雨（EBC 東森 9/1）</li>
+<li><strong>9/1 19:05 豪雨特報更新</strong>：澎湖、蘭嶼、綠島局部大雨（中央社 9/1）</li>
+<li>9/1 凌晨～上午屏東、高雄、臺南多輪「大雷雨即時訊息」</li>
+</ul>
+<h3>氣象署警報與特報（9/2）</h3>
+<ul>
+<li><strong>9/2 09:56 大雨特報</strong>：屏東縣、臺東縣局部大雨，有效至 23:00（CWA API W-C0033-002/003）</li>
+<li><strong>9/2 16:29 陸上強風特報</strong>：基隆市、新北市、桃園市、臺南市、臺東縣、金門縣、高雄市、澎湖縣、屏東縣，有效至 9/3 19:00（CWA API W-C0033-001）</li>
+<li>9/2 南部及東半部沿海（含蘭嶼、綠島）、恆春半島及澎湖有長浪發生（CWA 預報）</li>
+</ul>
+<h3>災情（9/1 返回期間，依分級）</h3>
+<h4>🔴 重大</h4>
+<ul>
+<li><strong>南台灣淹水災情（累計 199 件）</strong>：受低壓帶及西南季風影響，南部連日強降雨。經濟部水利署統計，台南、高雄、屏東累計 199 件淹水災情，其中高雄市 130 件最多、台南市 52 件、屏東縣 17 件；截至 9/1 仍有 42 件尚未退水（高雄 37 件、台南 5 件）。經濟部 9/1 上午 9 時將應變小組提升為二級開設。水利署支援 16 台大型移動式抽水機（高雄田寮區 3 台、台南仁德區 3 台、新化區 1 台、新市區 1 台）。（FTNN 新聞網 8/23 報導，9/1 持續更新中）</li>
+</ul>
+<h4>🟡 警戒</h4>
+<ul>
+<li><strong>南投信義</strong>：8/30 五名遊客於孫海橋上游泛舟，溪水暴漲翻船三人受困；8/31 消防救生艇搜救時翻覆，伍姓消防員（50 歲）落水殉職，送醫不治；內政部長劉世芳 9/1 慰問，將予最高撫卹；消防局成立災害事故調查委員會（中央社 8/31、9/1）</li>
+<li><strong>高雄南橫公路</strong>：台 20 線 87K 500（桃源路段）9/1 上午邊坡坍方、道路封閉搶修；利稻至向陽段昨晚預警性封閉，9/1 08:00 恢復通行（新頭條、中央社 9/1）</li>
+<li><strong>屏東</strong>：受低壓帶及西南風影響大雨不斷，9/2 春日鄉士文村停班停課（屏東縣政府，風傳媒 9/1）</li>
+<li><strong>屏東潮州</strong>：大排水水位持續升高，當地居民透露今年已淹三次，趕緊架高家電、撤離愛車（鏡新聞 9/1）</li>
+</ul>
+<h4>🟢 一般</h4>
+<ul>
+<li><strong>屏東枋山</strong>：8/31 夜台 1 線聯結車失控撞電桿，嘉和地區停電，2 人輕傷（中央社 9/1）</li>
+<li><strong>高雄前鎮區</strong>：民權二路上出現 2 公尺深天坑，養工處施工時意外挖破自來水管線，馬路上噴泉（鏡新聞 9/1）</li>
+<li><strong>高雄小港區</strong>：松富街 8/28 擋土牆崩塌後剛收拾好，8/30 晚上一旁擋土牆二度崩落，日前住戶已提前撤離（鏡新聞 9/1）</li>
+<li><strong>高雄燕巢</strong>：民宅受損（中央社 9/1）</li>
+<li><strong>高雄大寮</strong>：農路塌成坑（中央社 9/1）</li>
+</ul>
+<h3>復活與返回動態新聞來源</h3>
+<ul>
+<li>中央社：<a href="https://www.cna.com.tw/news/ahel/202609010042.aspx">颱風沙德爾重組海警機會低但不排除 南部及台東防豪雨</a>（9/1）、<a href="https://www.cna.com.tw/news/ahel/202609010033.aspx">颱風沙德爾「復活」影響待觀察 科羅旺生成對台無影響</a>（9/1）、<a href="https://www.cna.com.tw/news/ahel/202609010017.aspx">7縣市大雨特報 吳德榮：劇烈天氣持續至5日</a>（9/1）、<a href="https://www.cna.com.tw/news/ahel/202609010020.aspx">低壓帶影響 氣象署發布高屏豪雨特報</a>（9/1）、<a href="https://www.cna.com.tw/news/acn/202608310031.aspx">中國氣象單位：颱風沙德爾殘餘環流入南海 可能重新發展為熱帶低壓</a>（8/31）、<a href="https://www.cna.com.tw/news/ahel/202609020010.aspx">高屏台東防局部大雨 吳德榮：5日起天氣趨穩</a>（9/2）</li>
+<li>中央社：<a href="https://www.cna.com.tw/news/asoc/202609010043.aspx">南投勇消救泛舟受困者殉職 劉世芳慰問家屬、給予最高撫卹</a>（9/1）、<a href="https://www.cna.com.tw/news/asoc/202608310247.aspx">民眾南投泛舟3人受困 救援艇翻覆1消防員落水不治</a>（8/31）</li>
+<li>中央社：<a href="https://www.cna.com.tw/news/ahel/202609010028.aspx">南橫公路利稻至向陽段 上午恢復正常通行</a>（9/1）、<a href="https://www.cna.com.tw/news/aloc/202608310316.aspx">屏東大雨不斷 滿州鄉長樂村9/1停班停課</a>（8/31）、<a href="https://www.cna.com.tw/news/aloc/202609010015.aspx">屏東大雨不斷 春日鄉士文村9/2停班停課</a>（9/1）、<a href="https://www.cna.com.tw/news/asoc/202609010003.aspx">聯結車屏東枋山失控撞電桿 嘉和地區停電2人輕傷</a>（9/1）</li>
+<li>新頭條：<a href="https://newtalk.tw/news/view/2026-09-01/1056988">打不死的戰士！沙德爾颱風復活 專家曝「神奇迴轉」路徑</a>（9/1）、<a href="https://newtalk.tw/news/view/2026-09-01/1057012">沙德爾颱風大復活後怎走？氣象專家提「2關鍵」</a>（9/1）、<a href="https://newtalk.tw/news/view/2026-09-01/1056996">快訊》雙颱共舞！輕颱「沙德爾、科羅旺」同時生成</a>（9/1）、<a href="https://newtalk.tw/news/view/2026-09-01/1057001">豪雨狂襲高雄！南橫桃源路段邊坡坍方 禮觀路段暫不開放</a>（9/1）、<a href="https://newtalk.tw/news/view/2026-09-02/1057100">沙德爾颱風有3種可能路徑 專家：不向命運低頭的戰士 估再活5天</a>（9/2）</li>
+<li>風傳媒：<a href="https://www.storm.mg/lifestyle/11160923">颱風動態／沙德爾路徑北修估明晨發海警！最新路徑、暴風侵襲機率、颱風假一次看</a>（9/1）、<a href="https://www.storm.mg/lifestyle/11161087">屏東大雨不斷 春日鄉士文村9/2停班停課</a>（9/1）</li>
+<li>鏡新聞：<a href="https://www.mirrorsmedia.com.tw/news/2026-08-31/20260831220034">高屏週二估「下到紫爆」 沙德爾恐再發海警 居民：淹怕了</a>（9/1）、<a href="https://www.mirrorsmedia.com.tw/news/2026-09-01/20260901100012">高雄大雨不斷頻釀災 地基掏空、擋土牆3天二度倒塌</a>（9/1）</li>
+<li>自由時報：<a href="https://news.ltn.com.tw/news/life/breakingnews/5558881">11縣市豪、大雨特報！氣象署：慎防短延時強降雨</a>（9/1）</li>
+<li>中央社：<a href="https://www.cna.com.tw/news/ahel/202609010115.aspx">桃高屏豪雨特報 9縣市留意大雨</a>（9/1）</li>
+<li>EBC 東森：<a href="https://www.ettoday.net/news/20260901/2786543.htm">快訊》南北輪流炸雨！13縣市豪大雨特報 警戒區域曝光</a>（9/1）</li>
+<li>聯合新聞網：<a href="https://udn.com/news/story/7266/9725178">颱風沙德爾最快深夜復活、海警機會偏低 9/3前中南部台東防豪雨</a>（8/31）</li>
+<li>ELLE：<a href="https://www.elle.com/tw/life/hot-news/g73575549/saudel-typhoon-sep/">沙德爾颱風復活！9/2、9/3最接近台灣，會放颱風假嗎？最新路徑一次看</a>（9/1）</li>
+<li>大紀元：<a href="https://www.epochtimes.com/b5/26/9/1/n14840991.htm">颱風沙德爾捲土重來 福建多地暴雨成災</a>（9/2）</li>
+<li>星島日報：<a href="https://www.singtaousa.com/2026/09/02/news/china/typhoon-saudel-revives-south-china-sea/">颱風沙德爾停編32小時後在南海復活 華南多地發預警防持續暴雨</a>（9/2）</li>
+</ul>
+</div>
+</main>
+<footer><div class="wrap">
+<p>本ページの情報は中央気象局（CWA）の公開データと各ニュースメディアの公開報道をまとめたものです。個別の災害については出典リンクから原文を確認してください。公式情報は中央気象局および各市県政府の発表を基準とします。本ページは手動更新のため、情報が遅れている可能性があります。</p>
+</div></footer>
+</div>
+</div>
+<script>
+(function(){
+  var root = document.documentElement;
+  var themeBtn = document.getElementById('theme-toggle');
+  if (themeBtn) themeBtn.addEventListener('click', function(){
+    var t = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', t);
+    try { localStorage.setItem('wtf-theme', t); } catch (e) {}
+  });
+  var sb = document.getElementById('sidebar'),
+      sc = document.getElementById('scrim'),
+      hb = document.getElementById('nav-toggle');
+  function close(){ if(sb) sb.classList.remove('open'); if(sc) sc.classList.remove('show'); }
+  if (hb) hb.addEventListener('click', function(){
+    sb.classList.toggle('open'); sc.classList.toggle('show');
+  });
+  if (sc) sc.addEventListener('click', close);
+  if (sb) sb.querySelectorAll('a').forEach(function(a){ a.addEventListener('click', close); });
+})();
+</script>
+</body>
+</html>

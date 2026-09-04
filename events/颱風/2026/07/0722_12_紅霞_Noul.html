@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>颱風紅霞（NOUL）— 2026 年第 12 號</title>
+<style>
+:root{--red:#ef5350;--yellow:#ffb300;--green:#66bb6a;
+--bg:#14181c;--card:#1d242c;--line:#2f3944;--ink:#e4e8ec;--muted:#98a3af;
+--accent:#64b5f6;--chip-bg:#2a333e;--side-bg:#0f1317;--side-ink:#c9d1d9;
+--head-bg:#0c0f12;--table-head:#252e38;--ph-bg:#241f12;--ph-line:#6e5a1e;--ph-ink:#d3bd7d;
+color-scheme:dark;}
+:root[data-theme="light"]{--red:#c62828;--yellow:#ef8f00;--green:#2e7d32;
+--bg:#fff6dd;--card:#fffdf4;--line:#e6d7ae;--ink:#33280f;--muted:#7d6c48;
+--accent:#a05e00;--chip-bg:#f5e8c3;--side-bg:#fbf1d4;--side-ink:#4d3f22;
+--head-bg:#263238;--table-head:#f7edd0;--ph-bg:#fff8e1;--ph-line:#c9a227;--ph-ink:#6d5410;
+color-scheme:light;}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei","Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic","Meiryo",sans-serif;color:var(--ink);background:var(--bg);line-height:1.7;font-size:16px}
+/* 版面：左側欄 + 右側內容（內容置中） */
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
+.sidebar{background:var(--side-bg);border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow-y:auto;padding:16px 10px}
+.nav-group{font-size:.72rem;letter-spacing:.1em;color:var(--muted);margin:18px 10px 6px}
+.nav-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:8px;color:var(--side-ink);font-size:.88rem;line-height:1.45}
+.nav-item:hover{background:var(--chip-bg);text-decoration:none}
+.nav-item.nav-current{background:var(--chip-bg);color:var(--ink);font-weight:700}
+/* 側欄二層收合清單（純 CSS details/summary） */
+.nav-sub{margin:0}
+.nav-sub summary{display:flex;align-items:center;gap:2px;list-style:none;cursor:pointer}
+.nav-sub summary::-webkit-details-marker{display:none}
+.nav-sub summary:hover .nav-item{background:var(--chip-bg)}
+.nav-sub .caret{flex:none;font-size:.7rem;color:var(--muted);transition:transform .15s;margin:0 0 0 4px}
+.nav-sub[open] .caret{transform:rotate(90deg)}
+.nav-counties{margin:2px 0 6px 16px;border-left:1px solid var(--line);padding-left:4px}
+.nav-counties .nav-subitem{font-size:.8rem;padding:5px 8px}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;margin-top:6px}
+.dot-red{background:var(--red)}.dot-yellow{background:var(--yellow)}.dot-green{background:var(--green)}
+.page{display:flex;flex-direction:column;min-width:0}
+header.site{background:var(--head-bg);color:#fff;padding:10px 0;position:sticky;top:0;z-index:40}
+.site-bar{max-width:900px;margin:0 auto;padding:2px 16px;display:flex;align-items:center;gap:8px}
+.site-bar.updated-bar{justify-content:flex-end}
+header.site h1{font-size:1.1rem;margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.updated{color:#b0bec5;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon-btn{background:none;border:none;border-radius:8px;color:inherit;padding:6px;display:inline-flex;cursor:pointer;line-height:0;flex:none}
+.icon-btn:hover{background:rgba(255,255,255,.15)}
+.lang-switch{display:inline-flex;gap:2px;flex:none}
+.lang-switch a,.lang-switch .on{padding:2px 9px;border-radius:6px;font-size:.78rem;line-height:1.6}
+.lang-switch a{color:#b0bec5}
+.lang-switch a:hover{text-decoration:none;background:rgba(255,255,255,.15)}
+.lang-switch .on{background:rgba(255,255,255,.18);color:#fff;font-weight:700}
+#nav-toggle{display:none}
+[data-theme="dark"] .icon-moon{display:none}
+[data-theme="light"] .icon-sun{display:none}
+main.wrap{flex:1;width:100%;max-width:900px;margin:0 auto;padding:16px}
+section{margin:28px 0}
+h2{font-size:1.15rem;border-bottom:2px solid var(--line);padding-bottom:6px}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin:12px 0}
+/* hero：正常卡片底色 + 實色邊框（不填色），依嚴重度著色 */
+.hero{border:2px solid var(--line)}
+.hero.sev-red{border-color:var(--red)}
+.hero.sev-yellow{border-color:var(--yellow)}
+.hero.sev-green{border-color:var(--green)}
+.hero h2{font-size:1.45rem;font-weight:800;line-height:1.45;margin-top:0}
+.hero h2 a{color:var(--ink)}
+.hero h2 a:hover{color:var(--accent)}
+.hero .meta{color:var(--muted);font-size:.9rem}
+.hero-cta{display:inline-block;margin-top:16px;padding:8px 20px;border-radius:8px;background:var(--accent);color:var(--head-bg);font-size:.95rem;font-weight:700;text-decoration:none}
+.hero-cta:hover{filter:brightness(1.15);text-decoration:underline}
+/* 徽章：實心色塊小標籤（severity 背景色只限徽章，不污染卡片） */
+.badge{display:inline-block;padding:3px 12px;border-radius:12px;font-size:.85rem;font-weight:700;vertical-align:middle}
+.badge.sev-red{background:var(--red);color:#fff}
+.badge.sev-yellow{background:var(--yellow);color:#3e2723}
+.badge.sev-green{background:var(--green);color:#fff}
+.badge.sev-grey{background:#9e9e9e;color:#fff}
+.chips{margin:10px 0}
+.chip{display:inline-block;background:var(--chip-bg);border-radius:14px;padding:2px 12px;margin:2px 4px 2px 0;font-size:.85rem}
+.chip-link{color:var(--accent);text-decoration:none}
+.chip-link:hover{text-decoration:underline}
+.county-card{scroll-margin-top:88px}
+.meta{color:var(--muted);font-size:.85rem}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:.9rem;background:var(--card)}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--table-head)}
+ul.timeline{list-style:none;padding:0;margin:8px 0}
+ul.timeline li{padding:8px 0;border-bottom:1px dashed var(--line)}
+ul.timeline li:last-child{border-bottom:none}
+ul.news-list{list-style:none;margin:6px 0 0;padding-left:4px}
+ul.news-list li{padding:2px 0;font-size:.85rem}
+ul.news-list li a{word-break:break-all}
+.t-time{font-weight:700}
+.t-type{color:var(--accent);font-weight:600}
+.muted{color:var(--muted)}
+.placeholder{background:var(--ph-bg);border:1px dashed var(--ph-line);border-radius:10px;padding:14px;color:var(--ph-ink)}
+/* CWA 氣象總覽 */
+.cwa-warn{background:var(--chip-bg);border:1px solid var(--yellow);border-radius:8px;padding:10px 14px;margin:8px 0}
+.cwa-fail{border-color:var(--yellow)}
+/* 目前風險狀態列：由 CWA 目前之警報/特報推導（與事件歷史 severity 無關） */
+.risk-bar{border:2px solid var(--line);border-radius:10px;padding:12px 18px;margin:14px 0;background:var(--card)}
+.risk-bar.risk-red{border-color:var(--red);background:var(--red-bg)}
+.risk-bar.risk-yellow{border-color:var(--yellow);background:var(--yellow-bg)}
+.risk-bar.risk-green{border-color:var(--green)}
+.risk-bar.risk-neutral{border-color:var(--line);background:var(--bg)}
+.risk-bar.risk-unknown{border-style:dashed}
+.risk-bar .risk-label{font-weight:800;font-size:1rem}
+.risk-bar ul{list-style:none;margin:6px 0 0;padding:0}
+.risk-bar li{padding:2px 0;font-size:.95rem}
+.typhoon-row{display:flex;gap:18px;align-items:flex-start;margin:10px 0}
+.typhoon-row .map{flex:0 0 340px;max-width:46%}
+.typhoon-row .map svg{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.typhoon-row .typhoon-info{flex:1;min-width:0}
+.typhoon-row .typhoon-info table{font-size:.85rem}
+.alert-item{padding:10px 0;border-bottom:1px dashed var(--line)}
+.alert-item:last-child{border-bottom:none}
+.report-text{white-space:pre-wrap;font-size:.85rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0 0}
+@media(max-width:767px){.typhoon-row{flex-direction:column}.typhoon-row .map{max-width:100%;flex-basis:auto}}
+.event-content{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;overflow-x:auto}
+.event-content h1{font-size:1.3rem}
+.event-content h2{border-bottom:1px solid var(--line)}
+.event-content blockquote{border-left:4px solid var(--accent);margin:12px 0;padding:4px 14px;background:var(--chip-bg)}
+.event-content img{max-width:100%}
+.archive-list{list-style:none;padding:0}
+.archive-list li{padding:10px 0;border-bottom:1px solid var(--line)}
+footer{background:var(--head-bg);color:#cfd8dc;padding:20px 0;font-size:.85rem;margin-top:40px}
+footer .wrap{max-width:900px;margin:0 auto;padding:0 16px}
+.backlink{display:inline-block;margin-bottom:10px}
+.scrim{display:none}
+/* 平板與手機（<1024px）：側欄改為抽屜式 */
+@media (max-width:1023px){
+.layout{display:block}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:280px;transform:translateX(-100%);transition:transform .25s ease;z-index:60;box-shadow:0 0 30px rgba(0,0,0,.45)}
+.sidebar.open{transform:translateX(0)}
+#nav-toggle{display:inline-flex}
+.scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .25s;z-index:55}
+.scrim.show{opacity:1;pointer-events:auto}
+main.wrap{padding:12px}
+section{margin:20px 0}
+.card{padding:14px}
+.t-time{white-space:normal}
+}
+@media print{
+.sidebar,#scrim,.icon-btn{display:none}
+.layout{display:block}
+header.site,footer{background:none;color:#000}
+.card,.event-content{border-color:#999;break-inside:avoid}
+a::after{content:" (" attr(href) ")";font-size:.75em;color:#555}
+}
+</style>
+<script>/* 避免閃爍：先還原主題偏好再渲染 */(function(){var t=null;try{t=localStorage.getItem("wtf-theme")}catch(e){}if(t!=="light"&&t!=="dark")t="dark";document.documentElement.setAttribute("data-theme",t);})();</script>
+</head>
+<body id="top">
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+<nav><a class="nav-item" href="../../../../index.html">🏠 總覽</a><div class="nav-group">目前事件</div><details class="nav-sub" open><summary><span class="caret" aria-hidden="true">▸</span><a class="nav-item" href="../../../../events/%E7%81%BD%E6%83%85/2026/09/0904_%E4%BD%8E%E5%A3%93%E5%B8%B6_%E5%8D%97%E5%8C%97%E5%8F%B0%E7%81%A3%E8%B1%AA%E9%9B%A8.html"><span class="dot dot-yellow"></span><span>0904 低壓帶南北台灣豪雨</span></a></summary><div class="nav-counties"><a class="nav-item nav-subitem" href="../../../../index.html#%E5%9F%BA%E9%9A%86%E5%B8%82">基隆市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E5%8F%B0%E5%8C%97%E5%B8%82">台北市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E6%96%B0%E5%8C%97%E5%B8%82">新北市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E5%AE%9C%E8%98%AD%E7%B8%A3">宜蘭縣</a><a class="nav-item nav-subitem" href="../../../../index.html#%E6%A1%83%E5%9C%92%E5%B8%82">桃園市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E9%AB%98%E9%9B%84%E5%B8%82">高雄市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E5%B1%8F%E6%9D%B1%E7%B8%A3">屏東縣</a><a class="nav-item nav-subitem" href="../../../../index.html#%E5%8F%B0%E6%9D%B1%E7%B8%A3">台東縣</a></div></details><div class="nav-group">過去事件</div><a class="nav-item" href="../../../../events/%E9%A2%B1%E9%A2%A8/2026/08/0818_18_%E6%B2%99%E5%BE%B7%E7%88%BE_SAUDEL.html"><span class="dot dot-yellow"></span><span>颱風沙德爾（SAUDEL）— 2026 年第 20 號</span></a><a class="nav-item" href="../../../../events/%E7%81%BD%E6%83%85/2026/08/0828_%E8%A5%BF%E5%8D%97%E9%A2%A8_%E5%8D%97%E5%8F%B0%E7%81%A3%E5%BE%8C%E7%BA%8C%E6%B7%B9%E6%B0%B4.html"><span class="dot dot-yellow"></span><span>0828 西南風短延時豪雨後續災情</span></a><a class="nav-item" href="../../../../events/%E9%A2%B1%E9%A2%A8/2026/07/0702_09_%E5%B7%B4%E5%A8%81_BAVI.html"><span class="dot dot-red"></span><span>颱風巴威（BAVI）— 2026 年第 9 號</span></a><a class="nav-item nav-current" href="../../../../events/%E9%A2%B1%E9%A2%A8/2026/07/0722_12_%E7%B4%85%E9%9C%9E_Noul.html"><span class="dot dot-yellow"></span><span>颱風紅霞（NOUL）— 2026 年第 12 號</span></a><a class="nav-item" href="../../../../events/%E9%A2%B1%E9%A2%A8/2026/08/0807_13_%E7%99%BD%E6%B5%B7%E8%B1%9A_DOLPHIN.html"><span class="dot dot-yellow"></span><span>颱風白海豚（DOLPHIN）— 2026 年第 13 號</span></a><a class="nav-item" href="../../../../events/%E7%81%BD%E6%83%85/2026/08/0821_%E4%BD%8E%E5%A3%93%E5%B8%B6_%E5%8D%97%E5%8F%B0%E7%81%A3%E5%A4%A7%E9%9B%A8.html"><span class="dot dot-red"></span><span>0822 低壓帶及西南風豪雨事件</span></a></nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<div class="page">
+<header class="site">
+<div class="site-bar">
+<button id="nav-toggle" class="icon-btn" aria-label="開啟事件清單"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+<h1><a href="../../../../index.html" style="color:#fff;text-decoration:none">颱風紅霞（NOUL）— 2026 年第 12 號</a></h1>
+<span class="lang-switch"><span class="on">繁體中文</span><a href="../../../../ja/index.html">日本語</a></span>
+<a class="icon-btn" href="https://github.com/Lawlietr/Weather" target="_blank" rel="noopener" title="GitHub" aria-label="GitHub"><svg viewBox="0 0 16 16" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
+<button id="theme-toggle" class="icon-btn" aria-label="切換日夜主題">
+<svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M1 12h2m18 0h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+<svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+</button>
+</div>
+<div class="site-bar updated-bar"><span class="updated">產生時間：2026/9/4 12:32（手動生成，非即時）</span></div>
+</header>
+<main class="wrap">
+
+<a class="backlink" href="../../../../index.html">← 返回總覽</a>
+<section class="card hero sev-yellow" style="padding:12px 18px">
+<span class="badge sev-yellow">🟡 警戒</span>　<span class="meta">已封存事件</span>
+
+<div class='chips'><span class="chip">花蓮縣</span><span class="chip">台東縣</span><span class="chip">屏東縣</span></div>
+</section>
+<div class="event-content">
+<h1>🌀 颱風紅霞（NOUL）- 2026年第12號</h1>
+<p>最後修改：2026/8/26 16:35（補 front matter）</p>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>數據</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>國際命名</strong></td>
+<td>NOUL</td>
+</tr>
+<tr>
+<td><strong>編號</strong></td>
+<td>2026年第12號</td>
+</tr>
+<tr>
+<td><strong>類型</strong></td>
+<td>強烈熱帶風暴</td>
+</tr>
+<tr>
+<td><strong>最大風速</strong></td>
+<td>33公尺/秒（14級風），瞬間陣風43公尺/秒（16級風）</td>
+</tr>
+<tr>
+<td><strong>中心氣壓</strong></td>
+<td>975百帕</td>
+</tr>
+<tr>
+<td><strong>生成日期</strong></td>
+<td>2026年7月22日</td>
+</tr>
+<tr>
+<td><strong>預計登陸</strong></td>
+<td>2026年7月26日清晨（惠州至揭陽一帶）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>警報時程</h2>
+<table>
+<thead>
+<tr>
+<th>日期時間</th>
+<th>事件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026/7/23 23:30</td>
+<td>台灣發布海上颱風警報，首波警戒：巴士海峽、東沙島海面</td>
+</tr>
+<tr>
+<td>2026/7/24 20:40</td>
+<td>香港發出一號戒備信號</td>
+</tr>
+<tr>
+<td>2026/7/24 22:00</td>
+<td>澳門發出一號風球</td>
+</tr>
+<tr>
+<td>2026/7/25 08:30</td>
+<td>台灣解除海上颱風警報</td>
+</tr>
+<tr>
+<td>2026/7/25 13:20</td>
+<td>香港改發三號強風信號</td>
+</tr>
+<tr>
+<td>2026/7/25 晚上</td>
+<td>澳門評估改發三號風球</td>
+</tr>
+<tr>
+<td>2026/7/26 清晨</td>
+<td>預計於惠州至揭陽一帶登陸</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>停班停課</h2>
+<h3>中國大陸地區</h3>
+<table>
+<thead>
+<tr>
+<th>日期</th>
+<th>地區</th>
+<th>措施</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026/7/25</td>
+<td>惠州市、汕尾市、深汕特別合作區（廣東省）</td>
+<td>五停（停課、停工、停產、停運、停業）</td>
+</tr>
+</tbody>
+</table>
+<h3>台灣地區</h3>
+<table>
+<thead>
+<tr>
+<th>日期</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026/7/24～25</td>
+<td>無停班停課（颱風從台灣西南方海面擦邊通過）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>風力預測</h2>
+<h3>台灣地區</h3>
+<table>
+<thead>
+<tr>
+<th>地區</th>
+<th>風力</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>花東、恆春半島及南部山區</td>
+<td>迎風面雨勢最猛烈，8～9級強陣風</td>
+</tr>
+<tr>
+<td>台灣南北兩端沿海</td>
+<td>地形性強陣風</td>
+</tr>
+<tr>
+<td>西半部地區</td>
+<td>午後大雷雨，9～10級強陣風</td>
+</tr>
+</tbody>
+</table>
+<h3>中國大陸地區</h3>
+<table>
+<thead>
+<tr>
+<th>地區</th>
+<th>風力</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>廣東東部沿海</td>
+<td>10～12級強陣風</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>雨量預測</h2>
+<h3>台灣地區</h3>
+<table>
+<thead>
+<tr>
+<th>地區</th>
+<th>預測雨量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>花東、恆春半島及南部山區</td>
+<td>局部大雨</td>
+</tr>
+<tr>
+<td>西半部地區</td>
+<td>午後大雷雨（24日～28日）</td>
+</tr>
+<tr>
+<td>大台北及基隆北海岸、宜蘭</td>
+<td>零星短暫陣雨</td>
+</tr>
+</tbody>
+</table>
+<h3>中國大陸地區</h3>
+<table>
+<thead>
+<tr>
+<th>地區</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>廣東東部沿海</td>
+<td>強降雨</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>災情紀錄</h2>
+<h3>台灣地區</h3>
+<h4>🟡 警戒災害</h4>
+<table>
+<thead>
+<tr>
+<th>日期時間</th>
+<th>地點</th>
+<th>類型</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026/7/24～25</td>
+<td>花東、恆春半島</td>
+<td>強降雨</td>
+<td>迎風面雨勢最猛烈，需防範局部大雨</td>
+</tr>
+<tr>
+<td>2026/7/24～28</td>
+<td>西半部地區</td>
+<td>午後大雷雨</td>
+<td>受背風沉降影響初期炎熱，隨後大雷雨</td>
+</tr>
+<tr>
+<td>2026/7/25</td>
+<td>台灣南北兩端沿海</td>
+<td>地形性強陣風</td>
+<td>沿海強陣風影響</td>
+</tr>
+</tbody>
+</table>
+<h3>中國大陸地區</h3>
+<h4>🟡 警戒災害</h4>
+<table>
+<thead>
+<tr>
+<th>日期時間</th>
+<th>地點</th>
+<th>類型</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026/7/25</td>
+<td>惠州市、汕尾市、深汕特別合作區</td>
+<td>五停</td>
+<td>停課、停工、停產、停運、停業</td>
+</tr>
+<tr>
+<td>2026/7/25</td>
+<td>廣東省</td>
+<td>鐵路停运</td>
+<td>省內鐵路旅客列車陸續停运</td>
+</tr>
+<tr>
+<td>2026/7/25</td>
+<td>廣東省</td>
+<td>足球賽延期</td>
+<td>省城市足球超級聯賽10場比賽延期至8月1日</td>
+</tr>
+<tr>
+<td>2026/7/24</td>
+<td>廣東省</td>
+<td>客渡運停运</td>
+<td>受影響區域客渡運航線全部停运</td>
+</tr>
+<tr>
+<td>2026/7/24</td>
+<td>廣東省</td>
+<td>人員撤離</td>
+<td>海域風電平台、石油平台人員已完成撤離</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>交通影響</h2>
+<h3>台灣地區</h3>
+<h4>海運</h4>
+<table>
+<thead>
+<tr>
+<th>航線</th>
+<th>狀況</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>巴士海峽、東沙島海面</td>
+<td>航行注意</td>
+</tr>
+</tbody>
+</table>
+<h3>中國大陸地區</h3>
+<h4>陸運</h4>
+<table>
+<thead>
+<tr>
+<th>運具</th>
+<th>狀況</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>廣東省鐵路</td>
+<td>2026/7/25 起陸續停运</td>
+</tr>
+<tr>
+<td>廣東省客渡運</td>
+<td>全部停运</td>
+</tr>
+<tr>
+<td>廣東省城市足球超級聯賽</td>
+<td>10場比賽延期至8月1日</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>防災作為</h2>
+<h3>台灣地區</h3>
+<table>
+<thead>
+<tr>
+<th>日期時間</th>
+<th>作為</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026/7/23</td>
+<td>氣象署發布海上颱風警報，提醒航行巴士海峽、東沙島海面作業安全</td>
+</tr>
+</tbody>
+</table>
+<h3>中國大陸地區</h3>
+<table>
+<thead>
+<tr>
+<th>日期時間</th>
+<th>作為</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026/7/24 09:00</td>
+<td>國家防總針對廣東、福建啟動防汛防颱風四級應急響應</td>
+</tr>
+<tr>
+<td>2026/7/24 09:00</td>
+<td>廣東省防指啟動防風Ⅳ級應急響應</td>
+</tr>
+<tr>
+<td>2026/7/24 09:00</td>
+<td>福建省防指啟動防颱風四級應急響應</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>備註</h2>
+<ul>
+<li>紅霞（NOUL）一名由北韓提供，意指日落後的晚霞</li>
+<li>菲律賓命名：Kiyapo</li>
+<li>路徑從台灣西南方海面擦邊通過，登陸台灣機率偏低</li>
+<li>24日與25日為距離台灣最近的影響高峰期</li>
+<li>若路徑往北偏，將更接近台灣海峽南部，風雨影響時間拉長</li>
+<li>中國大陸廣東省：啟動防汛防颱風四級應急響應，惠州、汕尾等地實施五停</li>
+</ul>
+</div>
+</main>
+<footer><div class="wrap">
+<p>本頁內容彙整自中央氣象署公開資料與新聞媒體公開報導，每筆災情請點入來源連結查證原文；官方資訊以中央氣象署與各縣市政府公告為準。本頁採手動更新，資訊可能落後。</p>
+</div></footer>
+</div>
+</div>
+<script>
+(function(){
+  var root = document.documentElement;
+  var themeBtn = document.getElementById('theme-toggle');
+  if (themeBtn) themeBtn.addEventListener('click', function(){
+    var t = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', t);
+    try { localStorage.setItem('wtf-theme', t); } catch (e) {}
+  });
+  var sb = document.getElementById('sidebar'),
+      sc = document.getElementById('scrim'),
+      hb = document.getElementById('nav-toggle');
+  function close(){ if(sb) sb.classList.remove('open'); if(sc) sc.classList.remove('show'); }
+  if (hb) hb.addEventListener('click', function(){
+    sb.classList.toggle('open'); sc.classList.toggle('show');
+  });
+  if (sc) sc.addEventListener('click', close);
+  if (sb) sb.querySelectorAll('a').forEach(function(a){ a.addEventListener('click', close); });
+})();
+</script>
+</body>
+</html>

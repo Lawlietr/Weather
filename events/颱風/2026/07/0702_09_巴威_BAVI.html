@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>颱風巴威（BAVI）— 2026 年第 9 號</title>
+<style>
+:root{--red:#ef5350;--yellow:#ffb300;--green:#66bb6a;
+--bg:#14181c;--card:#1d242c;--line:#2f3944;--ink:#e4e8ec;--muted:#98a3af;
+--accent:#64b5f6;--chip-bg:#2a333e;--side-bg:#0f1317;--side-ink:#c9d1d9;
+--head-bg:#0c0f12;--table-head:#252e38;--ph-bg:#241f12;--ph-line:#6e5a1e;--ph-ink:#d3bd7d;
+color-scheme:dark;}
+:root[data-theme="light"]{--red:#c62828;--yellow:#ef8f00;--green:#2e7d32;
+--bg:#fff6dd;--card:#fffdf4;--line:#e6d7ae;--ink:#33280f;--muted:#7d6c48;
+--accent:#a05e00;--chip-bg:#f5e8c3;--side-bg:#fbf1d4;--side-ink:#4d3f22;
+--head-bg:#263238;--table-head:#f7edd0;--ph-bg:#fff8e1;--ph-line:#c9a227;--ph-ink:#6d5410;
+color-scheme:light;}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei","Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic","Meiryo",sans-serif;color:var(--ink);background:var(--bg);line-height:1.7;font-size:16px}
+/* 版面：左側欄 + 右側內容（內容置中） */
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
+.sidebar{background:var(--side-bg);border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow-y:auto;padding:16px 10px}
+.nav-group{font-size:.72rem;letter-spacing:.1em;color:var(--muted);margin:18px 10px 6px}
+.nav-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:8px;color:var(--side-ink);font-size:.88rem;line-height:1.45}
+.nav-item:hover{background:var(--chip-bg);text-decoration:none}
+.nav-item.nav-current{background:var(--chip-bg);color:var(--ink);font-weight:700}
+/* 側欄二層收合清單（純 CSS details/summary） */
+.nav-sub{margin:0}
+.nav-sub summary{display:flex;align-items:center;gap:2px;list-style:none;cursor:pointer}
+.nav-sub summary::-webkit-details-marker{display:none}
+.nav-sub summary:hover .nav-item{background:var(--chip-bg)}
+.nav-sub .caret{flex:none;font-size:.7rem;color:var(--muted);transition:transform .15s;margin:0 0 0 4px}
+.nav-sub[open] .caret{transform:rotate(90deg)}
+.nav-counties{margin:2px 0 6px 16px;border-left:1px solid var(--line);padding-left:4px}
+.nav-counties .nav-subitem{font-size:.8rem;padding:5px 8px}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;margin-top:6px}
+.dot-red{background:var(--red)}.dot-yellow{background:var(--yellow)}.dot-green{background:var(--green)}
+.page{display:flex;flex-direction:column;min-width:0}
+header.site{background:var(--head-bg);color:#fff;padding:10px 0;position:sticky;top:0;z-index:40}
+.site-bar{max-width:900px;margin:0 auto;padding:2px 16px;display:flex;align-items:center;gap:8px}
+.site-bar.updated-bar{justify-content:flex-end}
+header.site h1{font-size:1.1rem;margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.updated{color:#b0bec5;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon-btn{background:none;border:none;border-radius:8px;color:inherit;padding:6px;display:inline-flex;cursor:pointer;line-height:0;flex:none}
+.icon-btn:hover{background:rgba(255,255,255,.15)}
+.lang-switch{display:inline-flex;gap:2px;flex:none}
+.lang-switch a,.lang-switch .on{padding:2px 9px;border-radius:6px;font-size:.78rem;line-height:1.6}
+.lang-switch a{color:#b0bec5}
+.lang-switch a:hover{text-decoration:none;background:rgba(255,255,255,.15)}
+.lang-switch .on{background:rgba(255,255,255,.18);color:#fff;font-weight:700}
+#nav-toggle{display:none}
+[data-theme="dark"] .icon-moon{display:none}
+[data-theme="light"] .icon-sun{display:none}
+main.wrap{flex:1;width:100%;max-width:900px;margin:0 auto;padding:16px}
+section{margin:28px 0}
+h2{font-size:1.15rem;border-bottom:2px solid var(--line);padding-bottom:6px}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin:12px 0}
+/* hero：正常卡片底色 + 實色邊框（不填色），依嚴重度著色 */
+.hero{border:2px solid var(--line)}
+.hero.sev-red{border-color:var(--red)}
+.hero.sev-yellow{border-color:var(--yellow)}
+.hero.sev-green{border-color:var(--green)}
+.hero h2{font-size:1.45rem;font-weight:800;line-height:1.45;margin-top:0}
+.hero h2 a{color:var(--ink)}
+.hero h2 a:hover{color:var(--accent)}
+.hero .meta{color:var(--muted);font-size:.9rem}
+.hero-cta{display:inline-block;margin-top:16px;padding:8px 20px;border-radius:8px;background:var(--accent);color:var(--head-bg);font-size:.95rem;font-weight:700;text-decoration:none}
+.hero-cta:hover{filter:brightness(1.15);text-decoration:underline}
+/* 徽章：實心色塊小標籤（severity 背景色只限徽章，不污染卡片） */
+.badge{display:inline-block;padding:3px 12px;border-radius:12px;font-size:.85rem;font-weight:700;vertical-align:middle}
+.badge.sev-red{background:var(--red);color:#fff}
+.badge.sev-yellow{background:var(--yellow);color:#3e2723}
+.badge.sev-green{background:var(--green);color:#fff}
+.badge.sev-grey{background:#9e9e9e;color:#fff}
+.chips{margin:10px 0}
+.chip{display:inline-block;background:var(--chip-bg);border-radius:14px;padding:2px 12px;margin:2px 4px 2px 0;font-size:.85rem}
+.chip-link{color:var(--accent);text-decoration:none}
+.chip-link:hover{text-decoration:underline}
+.county-card{scroll-margin-top:88px}
+.meta{color:var(--muted);font-size:.85rem}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:.9rem;background:var(--card)}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--table-head)}
+ul.timeline{list-style:none;padding:0;margin:8px 0}
+ul.timeline li{padding:8px 0;border-bottom:1px dashed var(--line)}
+ul.timeline li:last-child{border-bottom:none}
+ul.news-list{list-style:none;margin:6px 0 0;padding-left:4px}
+ul.news-list li{padding:2px 0;font-size:.85rem}
+ul.news-list li a{word-break:break-all}
+.t-time{font-weight:700}
+.t-type{color:var(--accent);font-weight:600}
+.muted{color:var(--muted)}
+.placeholder{background:var(--ph-bg);border:1px dashed var(--ph-line);border-radius:10px;padding:14px;color:var(--ph-ink)}
+/* CWA 氣象總覽 */
+.cwa-warn{background:var(--chip-bg);border:1px solid var(--yellow);border-radius:8px;padding:10px 14px;margin:8px 0}
+.cwa-fail{border-color:var(--yellow)}
+/* 目前風險狀態列：由 CWA 目前之警報/特報推導（與事件歷史 severity 無關） */
+.risk-bar{border:2px solid var(--line);border-radius:10px;padding:12px 18px;margin:14px 0;background:var(--card)}
+.risk-bar.risk-red{border-color:var(--red);background:var(--red-bg)}
+.risk-bar.risk-yellow{border-color:var(--yellow);background:var(--yellow-bg)}
+.risk-bar.risk-green{border-color:var(--green)}
+.risk-bar.risk-neutral{border-color:var(--line);background:var(--bg)}
+.risk-bar.risk-unknown{border-style:dashed}
+.risk-bar .risk-label{font-weight:800;font-size:1rem}
+.risk-bar ul{list-style:none;margin:6px 0 0;padding:0}
+.risk-bar li{padding:2px 0;font-size:.95rem}
+.typhoon-row{display:flex;gap:18px;align-items:flex-start;margin:10px 0}
+.typhoon-row .map{flex:0 0 340px;max-width:46%}
+.typhoon-row .map svg{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.typhoon-row .typhoon-info{flex:1;min-width:0}
+.typhoon-row .typhoon-info table{font-size:.85rem}
+.alert-item{padding:10px 0;border-bottom:1px dashed var(--line)}
+.alert-item:last-child{border-bottom:none}
+.report-text{white-space:pre-wrap;font-size:.85rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0 0}
+@media(max-width:767px){.typhoon-row{flex-direction:column}.typhoon-row .map{max-width:100%;flex-basis:auto}}
+.event-content{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;overflow-x:auto}
+.event-content h1{font-size:1.3rem}
+.event-content h2{border-bottom:1px solid var(--line)}
+.event-content blockquote{border-left:4px solid var(--accent);margin:12px 0;padding:4px 14px;background:var(--chip-bg)}
+.event-content img{max-width:100%}
+.archive-list{list-style:none;padding:0}
+.archive-list li{padding:10px 0;border-bottom:1px solid var(--line)}
+footer{background:var(--head-bg);color:#cfd8dc;padding:20px 0;font-size:.85rem;margin-top:40px}
+footer .wrap{max-width:900px;margin:0 auto;padding:0 16px}
+.backlink{display:inline-block;margin-bottom:10px}
+.scrim{display:none}
+/* 平板與手機（<1024px）：側欄改為抽屜式 */
+@media (max-width:1023px){
+.layout{display:block}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:280px;transform:translateX(-100%);transition:transform .25s ease;z-index:60;box-shadow:0 0 30px rgba(0,0,0,.45)}
+.sidebar.open{transform:translateX(0)}
+#nav-toggle{display:inline-flex}
+.scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .25s;z-index:55}
+.scrim.show{opacity:1;pointer-events:auto}
+main.wrap{padding:12px}
+section{margin:20px 0}
+.card{padding:14px}
+.t-time{white-space:normal}
+}
+@media print{
+.sidebar,#scrim,.icon-btn{display:none}
+.layout{display:block}
+header.site,footer{background:none;color:#000}
+.card,.event-content{border-color:#999;break-inside:avoid}
+a::after{content:" (" attr(href) ")";font-size:.75em;color:#555}
+}
+</style>
+<script>/* 避免閃爍：先還原主題偏好再渲染 */(function(){var t=null;try{t=localStorage.getItem("wtf-theme")}catch(e){}if(t!=="light"&&t!=="dark")t="dark";document.documentElement.setAttribute("data-theme",t);})();</script>
+</head>
+<body id="top">
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+<nav><a class="nav-item" href="../../../../index.html">🏠 總覽</a><div class="nav-group">目前事件</div><details class="nav-sub" open><summary><span class="caret" aria-hidden="true">▸</span><a class="nav-item" href="../../../../events/%E7%81%BD%E6%83%85/2026/09/0904_%E4%BD%8E%E5%A3%93%E5%B8%B6_%E5%8D%97%E5%8C%97%E5%8F%B0%E7%81%A3%E8%B1%AA%E9%9B%A8.html"><span class="dot dot-yellow"></span><span>0904 低壓帶南北台灣豪雨</span></a></summary><div class="nav-counties"><a class="nav-item nav-subitem" href="../../../../index.html#%E5%9F%BA%E9%9A%86%E5%B8%82">基隆市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E5%8F%B0%E5%8C%97%E5%B8%82">台北市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E6%96%B0%E5%8C%97%E5%B8%82">新北市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E5%AE%9C%E8%98%AD%E7%B8%A3">宜蘭縣</a><a class="nav-item nav-subitem" href="../../../../index.html#%E6%A1%83%E5%9C%92%E5%B8%82">桃園市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E9%AB%98%E9%9B%84%E5%B8%82">高雄市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E5%B1%8F%E6%9D%B1%E7%B8%A3">屏東縣</a><a class="nav-item nav-subitem" href="../../../../index.html#%E5%8F%B0%E6%9D%B1%E7%B8%A3">台東縣</a></div></details><div class="nav-group">過去事件</div><a class="nav-item" href="../../../../events/%E9%A2%B1%E9%A2%A8/2026/08/0818_18_%E6%B2%99%E5%BE%B7%E7%88%BE_SAUDEL.html"><span class="dot dot-yellow"></span><span>颱風沙德爾（SAUDEL）— 2026 年第 20 號</span></a><a class="nav-item" href="../../../../events/%E7%81%BD%E6%83%85/2026/08/0828_%E8%A5%BF%E5%8D%97%E9%A2%A8_%E5%8D%97%E5%8F%B0%E7%81%A3%E5%BE%8C%E7%BA%8C%E6%B7%B9%E6%B0%B4.html"><span class="dot dot-yellow"></span><span>0828 西南風短延時豪雨後續災情</span></a><a class="nav-item nav-current" href="../../../../events/%E9%A2%B1%E9%A2%A8/2026/07/0702_09_%E5%B7%B4%E5%A8%81_BAVI.html"><span class="dot dot-red"></span><span>颱風巴威（BAVI）— 2026 年第 9 號</span></a><a class="nav-item" href="../../../../events/%E9%A2%B1%E9%A2%A8/2026/07/0722_12_%E7%B4%85%E9%9C%9E_Noul.html"><span class="dot dot-yellow"></span><span>颱風紅霞（NOUL）— 2026 年第 12 號</span></a><a class="nav-item" href="../../../../events/%E9%A2%B1%E9%A2%A8/2026/08/0807_13_%E7%99%BD%E6%B5%B7%E8%B1%9A_DOLPHIN.html"><span class="dot dot-yellow"></span><span>颱風白海豚（DOLPHIN）— 2026 年第 13 號</span></a><a class="nav-item" href="../../../../events/%E7%81%BD%E6%83%85/2026/08/0821_%E4%BD%8E%E5%A3%93%E5%B8%B6_%E5%8D%97%E5%8F%B0%E7%81%A3%E5%A4%A7%E9%9B%A8.html"><span class="dot dot-red"></span><span>0822 低壓帶及西南風豪雨事件</span></a></nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<div class="page">
+<header class="site">
+<div class="site-bar">
+<button id="nav-toggle" class="icon-btn" aria-label="開啟事件清單"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+<h1><a href="../../../../index.html" style="color:#fff;text-decoration:none">颱風巴威（BAVI）— 2026 年第 9 號</a></h1>
+<span class="lang-switch"><span class="on">繁體中文</span><a href="../../../../ja/index.html">日本語</a></span>
+<a class="icon-btn" href="https://github.com/Lawlietr/Weather" target="_blank" rel="noopener" title="GitHub" aria-label="GitHub"><svg viewBox="0 0 16 16" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
+<button id="theme-toggle" class="icon-btn" aria-label="切換日夜主題">
+<svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M1 12h2m18 0h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+<svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+</button>
+</div>
+<div class="site-bar updated-bar"><span class="updated">產生時間：2026/9/4 12:32（手動生成，非即時）</span></div>
+</header>
+<main class="wrap">
+
+<a class="backlink" href="../../../../index.html">← 返回總覽</a>
+<section class="card hero sev-red" style="padding:12px 18px">
+<span class="badge sev-red">🔴 重大</span>　<span class="meta">已封存事件</span>
+
+<div class='chips'><span class="chip">台北市</span><span class="chip">新北市</span><span class="chip">基隆市</span><span class="chip">桃園市</span><span class="chip">新竹縣</span><span class="chip">新竹市</span><span class="chip">苗栗縣</span><span class="chip">臺中市</span><span class="chip">南投縣</span><span class="chip">宜蘭縣</span><span class="chip">花蓮縣</span><span class="chip">連江縣</span><span class="chip">高雄市</span><span class="chip">屏東縣</span></div>
+</section>
+<div class="event-content">
+<h1>🌀 颱風巴威（BAVI）- 2026年第9號</h1>
+<p>最後修改：2026/8/26 16:35（補 front matter）</p>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>數據</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>國際命名</strong></td>
+<td>BAVI</td>
+</tr>
+<tr>
+<td><strong>編號</strong></td>
+<td>2026年第9號</td>
+</tr>
+<tr>
+<td><strong>類型</strong></td>
+<td>中度颱風</td>
+</tr>
+<tr>
+<td><strong>最大風速</strong></td>
+<td>45公尺/秒（14級風），瞬間陣風55公尺/秒（16級風）</td>
+</tr>
+<tr>
+<td><strong>中心氣壓</strong></td>
+<td>940百帕</td>
+</tr>
+<tr>
+<td><strong>7級風暴風半徑</strong></td>
+<td>380公里（近30年最大）</td>
+</tr>
+<tr>
+<td><strong>10級風暴風半徑</strong></td>
+<td>180公里</td>
+</tr>
+<tr>
+<td><strong>生成日期</strong></td>
+<td>2026年7月2日</td>
+</tr>
+<tr>
+<td><strong>消散日期</strong></td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>警報時程</h2>
+<table>
+<thead>
+<tr>
+<th>日期時間</th>
+<th>事件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026/7/9 下午</td>
+<td>發布海上颱風警報</td>
+</tr>
+<tr>
+<td>2026/7/10 05:30</td>
+<td>發布陸上颱風警報，首波警戒：新北、宜蘭、花蓮</td>
+</tr>
+<tr>
+<td>2026/7/10 11:30</td>
+<td>陸警擴大至12縣市（中部以北及東半部全入列）</td>
+</tr>
+<tr>
+<td>2026/7/11 上午</td>
+<td>颱風最接近台灣，距台約150公里，從北部海面通過，暴風圈籠罩北北基桃</td>
+</tr>
+<tr>
+<td>2026/7/11 下午</td>
+<td>台北盆地出現10-12級強陣風，淡水河口暴潮倒灌</td>
+</tr>
+<tr>
+<td>2026/7/11 晚間</td>
+<td>風雨逐漸趨緩，北部脫離暴風圈</td>
+</tr>
+<tr>
+<td>2026/7/12 凌晨4時</td>
+<td>預估解除警報</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>停班停課</h2>
+<h3>2026/7/10</h3>
+<table>
+<thead>
+<tr>
+<th>類型</th>
+<th>縣市</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>全日停班停課</strong></td>
+<td>基隆市、台北市、新北市、桃園市、新竹縣、新竹市、苗栗縣、宜蘭縣、花蓮縣、連江縣</td>
+</tr>
+<tr>
+<td><strong>半日/晚間起停班停課</strong></td>
+<td>台中市（18時起）、南投縣（18時起）、高雄市山區5區（那瑪夏、桃源、茂林、甲仙、六龜，18時起）</td>
+</tr>
+</tbody>
+</table>
+<h3>2026/7/11</h3>
+<table>
+<thead>
+<tr>
+<th>類型</th>
+<th>縣市</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>全日停班停課</strong></td>
+<td>基隆市、台北市、新北市、桃園市、新竹縣、新竹市、苗栗縣、台中市、彰化縣、南投縣、雲林縣、嘉義縣、嘉義市、台南市、高雄市、屏東縣、宜蘭縣、花蓮縣、連江縣、澎湖縣（共20縣市）</td>
+</tr>
+<tr>
+<td><strong>部分地區停班停課</strong></td>
+<td>台東縣（僅蘭嶼鄉、綠島鄉）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>風力預測</h2>
+<table>
+<thead>
+<tr>
+<th>地區</th>
+<th>風力</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>北部沿海</td>
+<td>9～11級強陣風</td>
+</tr>
+<tr>
+<td>桃園以北、宜蘭、馬祖、蘭嶼、綠島</td>
+<td>12級強陣風（118～133km/h）</td>
+</tr>
+<tr>
+<td>中南部沿海、恆春半島</td>
+<td>9～10級強陣風</td>
+</tr>
+<tr>
+<td>東半部</td>
+<td>8～9級強陣風</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>雨量預測</h2>
+<table>
+<thead>
+<tr>
+<th>地區</th>
+<th>預測雨量</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>北部地區、宜蘭山區、中部山區</td>
+<td>豪雨以上等級</td>
+</tr>
+<tr>
+<td>新竹、桃園、新北、苗栗</td>
+<td>總雨量 600～900mm</td>
+</tr>
+<tr>
+<td>台中市山區</td>
+<td>500～800mm</td>
+</tr>
+<tr>
+<td>南部山區</td>
+<td>局部大雨</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>浪高</h2>
+<table>
+<thead>
+<tr>
+<th>海域</th>
+<th>浪高</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>北部海面</td>
+<td>3～10公尺</td>
+</tr>
+<tr>
+<td>東半部海面</td>
+<td>6公尺以上</td>
+</tr>
+<tr>
+<td>海峽北部、東部海面</td>
+<td>3～5公尺</td>
+</tr>
+<tr>
+<td>各沿海</td>
+<td>2～4公尺</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>災情紀錄</h2>
+<h3>🔴 重大災害</h3>
+<table>
+<thead>
+<tr>
+<th>日期時間</th>
+<th>地點</th>
+<th>類型</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026/7/10</td>
+<td>花蓮萬里溪</td>
+<td>堰塞湖紅色警戒</td>
+<td>水位達1,076.86m，距壩頂僅剩約9公尺，蓄水量369.05萬立方公尺（占總庫容72.36%）。若溢流預估30分鐘～1小時內潰決，下游萬榮鄉、鳳林鎮強制撤離6,017人</td>
+</tr>
+<tr>
+<td>2026/7/11 下午</td>
+<td>新北烏來</td>
+<td>土石流/道路中斷</td>
+<td>信賢里、孝義里發生土石流沖入民宅，2戶房屋受損，3人輕傷送醫，聯外道路中斷</td>
+</tr>
+<tr>
+<td>2026/7/11 下午</td>
+<td>新北新店</td>
+<td>溪水暴漲/淹水</td>
+<td>北勢溪暴漲，新烏路三段路面積水達半個輪胎高，部分路段實施封鎖</td>
+</tr>
+<tr>
+<td>2026/7/11 下午</td>
+<td>台北市</td>
+<td>路樹倒塌致災</td>
+<td>全市通報路樹倒塌逾150件，其中和平東路三段大型路樹倒塌壓毀2輛轎車、1輛機車，所幸無人傷亡</td>
+</tr>
+<tr>
+<td>2026/7/11 下午</td>
+<td>台北大安</td>
+<td>路樹倒塌/交通中斷</td>
+<td>復興南路二段路樹倒塌橫跨車道，雙向交通中斷3小時</td>
+</tr>
+<tr>
+<td>2026/7/11 下午</td>
+<td>台北信義</td>
+<td>招牌掉落/交通管制</td>
+<td>忠孝東路五段多處大樓招牌掉落，現場封鎖警戒</td>
+</tr>
+<tr>
+<td>2026/7/11 下午</td>
+<td>台北士林</td>
+<td>淹水災情</td>
+<td>社子島及洲美地區積淹水深度達30-50公分，消防隊出動抽水機</td>
+</tr>
+<tr>
+<td>2026/7/11 下午</td>
+<td>台北南港</td>
+<td>淹水災情</td>
+<td>研究院路四段涵洞淹水無法通行，封閉雙向車道</td>
+</tr>
+<tr>
+<td>2026/7/11 下午</td>
+<td>新北三重</td>
+<td>停電</td>
+<td>強風吹斷高壓電線，三重地區約2,300戶停電，台電緊急搶修</td>
+</tr>
+<tr>
+<td>2026/7/11 下午</td>
+<td>新北中和</td>
+<td>停電</td>
+<td>中正路、景平路一帶逾1,500戶停電，因變電箱遭強風損毀</td>
+</tr>
+<tr>
+<td>2026/7/11 下午</td>
+<td>淡水河口</td>
+<td>暴潮</td>
+<td>暴潮造成淡水老街後側堤防越浪，淡水捷運站周邊積水，公所緊急堆置沙包</td>
+</tr>
+<tr>
+<td>2026/7/11 下午</td>
+<td>台北橋</td>
+<td>水位警戒</td>
+<td>淡水河水位暴漲達一級警戒，台北橋水位監測值達警戒線</td>
+</tr>
+</tbody>
+</table>
+<h3>🟡 警戒災害</h3>
+<table>
+<thead>
+<tr>
+<th>日期時間</th>
+<th>地點</th>
+<th>類型</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026/7/10</td>
+<td>新北烏來</td>
+<td>土石流/崩塌</td>
+<td>崩塌發生機率超過90%，已啟動預防性撤離，市府預佈機具</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>新北三峽</td>
+<td>土石流/崩塌</td>
+<td>崩塌機率中高，列為預防性撤離區域</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>新北山區（深坑、石碇、坪林、貢寮、汐止）</td>
+<td>超大豪雨</td>
+<td>南側山區總雨量預估500-800mm，為超大豪雨等級</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>新北沿海</td>
+<td>強風巨浪</td>
+<td>沿海陣風11-13級，浪高可達7公尺，暴潮預估1.2公尺</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>新北災害應變中心</td>
+<td>一級開設</td>
+<td>市長侯友宜坐鎮指揮，全面防災動員</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>台北內湖</td>
+<td>淹水風險</td>
+<td>民眾緊急堆疊沙包，公所連續3天供應數百個沙包仍供不應求</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>台北南港</td>
+<td>淹水風險</td>
+<td>市府前往視察易淹水區域</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>台北盆地</td>
+<td>強陣風</td>
+<td>預估7/11中午過後至晚上有9-11級強陣風，風從淡水河口灌入</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>台北橋、秀朗橋、新海橋</td>
+<td>水位警戒</td>
+<td>可能達三級警戒</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>台北市疏散門</td>
+<td>管制措施</td>
+<td>上午10時起「只出不進」，下午2時起全面拖吊堤外車輛</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>宜蘭蘇澳</td>
+<td>淹水風險</td>
+<td>鎮公所7,000多個沙包已被領取完畢，加發1,000多個</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>東半部海面</td>
+<td>巨浪</td>
+<td>成功、台東、蘭嶼浮標觀測6～8公尺浪高</td>
+</tr>
+</tbody>
+</table>
+<h3>🟢 一般災害</h3>
+<table>
+<thead>
+<tr>
+<th>日期時間</th>
+<th>地點</th>
+<th>類型</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026/7/9 晚間</td>
+<td>全台</td>
+<td>物資搶購</td>
+<td>賣場葉菜類被掃空，泡麵部分品項售罄</td>
+</tr>
+<tr>
+<td>2026/7/11 上午</td>
+<td>大台北地區</td>
+<td>停電</td>
+<td>台北市、新北市合計逾6,000戶一度停電，集中於新店、三重、中和及北投區</td>
+</tr>
+<tr>
+<td>2026/7/11 下午</td>
+<td>台北市</td>
+<td>工安意外</td>
+<td>信義計畫區一處工地圍籬倒塌，幸無人受傷</td>
+</tr>
+<tr>
+<td>2026/7/11 下午</td>
+<td>新北八里</td>
+<td>貨車翻覆</td>
+<td>強風導致一台聯結車在台64線八里段翻覆，駕駛輕傷送醫</td>
+</tr>
+<tr>
+<td>2026/7/11 傍晚</td>
+<td>台北市</td>
+<td>交通恢復</td>
+<td>北捷全線恢復正常班距，疏散門預計12日清晨陸續開啟</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3>🟡 屏東災害（巴威颱風）</h3>
+<table>
+<thead>
+<tr>
+<th>日期時間</th>
+<th>地點</th>
+<th>類型</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026/7/9</td>
+<td>屏東縣</td>
+<td>三級開設</td>
+<td>屏東災害應變中心擴大三級開設，周春米召開第一次工作會報，要求落實各項防颱整備</td>
+</tr>
+<tr>
+<td>2026/7/9</td>
+<td>原鄉、恆春半島</td>
+<td>預防性撤離</td>
+<td>高災害潛勢區明早8時起預防性撤離，周春米巡視5鄉鎮防颱清淤</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>士文部落</td>
+<td>預防性撤離</td>
+<td>枋寮警深入士文部落協助預防性撤離</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>屏東山區</td>
+<td>預防性撤離</td>
+<td>山區撤離161人</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>屏東縣</td>
+<td>海上交通停駛</td>
+<td>海上交通全面停駛</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>屏東縣</td>
+<td>停班停課</td>
+<td>7/11全縣停班停課</td>
+</tr>
+<tr>
+<td>2026/7/11</td>
+<td>恆春半島</td>
+<td>強風</td>
+<td>颳破全台最高13級風</td>
+</tr>
+<tr>
+<td>2026/7/11</td>
+<td>牡丹水庫</td>
+<td>預警性放水</td>
+<td>牡丹水庫預警性放水</td>
+</tr>
+<tr>
+<td>2026/7/11</td>
+<td>屏東縣</td>
+<td>停電</td>
+<td>全台2.7萬戶待復電，新北、屏東、高雄災情最重</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>交通影響</h2>
+<h3>航空</h3>
+<table>
+<thead>
+<tr>
+<th>航空公司</th>
+<th>影響</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>華航、長榮</td>
+<td>2026/7/10 18時～2026/7/12 凌晨4時停飛</td>
+</tr>
+<tr>
+<td>星宇航空、台灣虎航</td>
+<td>2026/7/11 航班全數取消</td>
+</tr>
+<tr>
+<td>國泰航空</td>
+<td>2026/7/10 港台多班取消；2026/7/11 全天取消港台/港高雄航班</td>
+</tr>
+</tbody>
+</table>
+<h3>海運</h3>
+<table>
+<thead>
+<tr>
+<th>航線</th>
+<th>狀況</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>14條航線共114航次</td>
+<td>停航（含東港往返小琉球、富岡往返蘭嶼等）</td>
+</tr>
+<tr>
+<td>澎湖對外海運</td>
+<td>幾乎全面停擺</td>
+</tr>
+<tr>
+<td>金門至泉州石井（小三通）</td>
+<td>2026/7/10 11:10起停航</td>
+</tr>
+<tr>
+<td>金門往返廈門五通、泉州石井（小三通）</td>
+<td>2026/7/11 全天停航</td>
+</tr>
+<tr>
+<td>金門國內線航班</td>
+<td>2026/7/11 全天取消</td>
+</tr>
+</tbody>
+</table>
+<h3>陸運</h3>
+<table>
+<thead>
+<tr>
+<th>運具</th>
+<th>狀況</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>高鐵</td>
+<td>2026/7/10～11 全日正常營運</td>
+</tr>
+<tr>
+<td>台鐵</td>
+<td>2026/7/10 18時前全線正常行駛；東西幹線2026/7/11 18:00前停駛；內灣線邊坡坍方，視風雨狀況巡查搶修</td>
+</tr>
+<tr>
+<td>北捷</td>
+<td>7/10班距調整約12分鐘一班；7/11上午文湖線、淡水信義線高架段因風速過大降速，下午全線恢復正常</td>
+</tr>
+<tr>
+<td>新北捷運（淡海/安坑輕軌）</td>
+<td>7/10班距調整為30分鐘一班；7/11全線停駛至15時後恢復營運</td>
+</tr>
+<tr>
+<td>新北捷運（環狀線/三鶯線）</td>
+<td>7/10班距調整為15分鐘一班；7/11三鶯線停駛</td>
+</tr>
+<tr>
+<td>公車（基隆、新北）</td>
+<td>7/10～7/11減班行駛</td>
+</tr>
+<tr>
+<td>公車（台北）</td>
+<td>7/10～7/11部分路線停駛，平均風力達10級以上暫停</td>
+</tr>
+<tr>
+<td>foodpanda / Uber Eats</td>
+<td>配合停班課，7/10～7/11全面暫停部分縣市外送</td>
+</tr>
+<tr>
+<td>台北市疏散門及越堤坡道</td>
+<td>2026/7/10 16時起陸續關閉，7/11全市疏散門持續關閉</td>
+</tr>
+<tr>
+<td>淡江大橋</td>
+<td>7/11上午因強風封閉2小時，午後恢復降速通行；晚間再度封閉，來往車輛改行關渡大橋</td>
+</tr>
+<tr>
+<td>國道1號五股-汐止高架段</td>
+<td>7/11下午因強風實施降速至60km/h</td>
+</tr>
+<tr>
+<td>台3線</td>
+<td>7/11大湖段雙向中斷，大片竹林滑落、路樹倒塌，搶通中</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>防災作為</h2>
+<table>
+<thead>
+<tr>
+<th>日期時間</th>
+<th>作為</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026/7/10</td>
+<td>國防部部署約2.9萬兵力待命，整備2,000餘輛AAV7兩棲突擊車、膠舟等災防裝備</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>新北烏來、台北市、花蓮縣提出國軍兵力與防災支援需求</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>新北災害應變中心一級開設，市長侯友宜坐鎮指揮</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>新北完成28台移動式抽水機預佈、備妥近5.6萬包砂包</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>新北烏來、三峽、深坑、石碇、坪林等地啟動預防性撤離</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>新北高灘地園區傍晚6時前完成撤離</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>新北嚴禁河川溪流水域戲水，「勸不聽就是罰」</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>台北市10時起疏散門「只出不進」，下午2時起拖吊堤外車輛</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>台北市開放全市8公尺以上道路紅黃線臨時停車，路邊停車格暫停收費</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>宜蘭蘇澳進駐兩棲突擊車及救生艇</td>
+</tr>
+<tr>
+<td>2026/7/10 07:00</td>
+<td>林保署花蓮分署發布萬里溪堰塞湖紅色警戒，要求下游施工單位立即停工撤離</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>台北市政府前往南港、內湖等易淹水區域視察</td>
+</tr>
+<tr>
+<td>2026/7/10</td>
+<td>台北市消防局建議民眾備妥至少3天份乾糧與飲用水</td>
+</tr>
+<tr>
+<td>2026/7/11 上午</td>
+<td>台北市工務局出動高空鏈鋸車，優先處理主要幹道倒塌路樹</td>
+</tr>
+<tr>
+<td>2026/7/11 上午</td>
+<td>新北市開設37處收容所，安置烏來、三峽等地撤離民眾計1,200人</td>
+</tr>
+<tr>
+<td>2026/7/11 下午</td>
+<td>台北市成立災害應變中心二級開設，副市長進駐指揮</td>
+</tr>
+<tr>
+<td>2026/7/11 下午</td>
+<td>新北市長侯友宜前往烏來勘災，指示搶通聯外道路</td>
+</tr>
+<tr>
+<td>2026/7/11 傍晚</td>
+<td>台北市環保局動員2,000人力進行市容復原，清運倒塌路樹及廢棄物</td>
+</tr>
+<tr>
+<td>2026/7/11 傍晚</td>
+<td>新北市應變中心統計：全市路樹倒塌387件、廣告招牌掉落89件、積淹水34處</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>備註</h2>
+<ul>
+<li>巴威為近30年來暴風半徑最大颱風（7級風暴風半徑380公里）</li>
+<li>2025年颱風丹娜絲造成全台近100萬戶停電、2.3萬戶房屋受損，本次國軍部署兵力（2.9萬）遠超丹娜絲（1萬餘人）</li>
+<li>花蓮馬太鞍溪堰塞湖於2025年9月颱風樺加沙襲台時潰堤，重創光復鄉、鳳林鎮，造成19人死亡、5人失蹤、157人受傷，本次萬里溪堰塞湖為新形成之堰塞湖</li>
+<li>氣象專家林得恩警告：本次「風害遠大於雨害」，東北角及北海岸接近颱風眼牆，需注意「毀滅性」強風</li>
+</ul>
+</div>
+</main>
+<footer><div class="wrap">
+<p>本頁內容彙整自中央氣象署公開資料與新聞媒體公開報導，每筆災情請點入來源連結查證原文；官方資訊以中央氣象署與各縣市政府公告為準。本頁採手動更新，資訊可能落後。</p>
+</div></footer>
+</div>
+</div>
+<script>
+(function(){
+  var root = document.documentElement;
+  var themeBtn = document.getElementById('theme-toggle');
+  if (themeBtn) themeBtn.addEventListener('click', function(){
+    var t = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', t);
+    try { localStorage.setItem('wtf-theme', t); } catch (e) {}
+  });
+  var sb = document.getElementById('sidebar'),
+      sc = document.getElementById('scrim'),
+      hb = document.getElementById('nav-toggle');
+  function close(){ if(sb) sb.classList.remove('open'); if(sc) sc.classList.remove('show'); }
+  if (hb) hb.addEventListener('click', function(){
+    sb.classList.toggle('open'); sc.classList.toggle('show');
+  });
+  if (sc) sc.addEventListener('click', close);
+  if (sb) sb.querySelectorAll('a').forEach(function(a){ a.addEventListener('click', close); });
+})();
+</script>
+</body>
+</html>

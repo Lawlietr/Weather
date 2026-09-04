@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🌦 台灣天氣與災情總覽</title>
+<style>
+:root{--red:#ef5350;--yellow:#ffb300;--green:#66bb6a;
+--bg:#14181c;--card:#1d242c;--line:#2f3944;--ink:#e4e8ec;--muted:#98a3af;
+--accent:#64b5f6;--chip-bg:#2a333e;--side-bg:#0f1317;--side-ink:#c9d1d9;
+--head-bg:#0c0f12;--table-head:#252e38;--ph-bg:#241f12;--ph-line:#6e5a1e;--ph-ink:#d3bd7d;
+color-scheme:dark;}
+:root[data-theme="light"]{--red:#c62828;--yellow:#ef8f00;--green:#2e7d32;
+--bg:#fff6dd;--card:#fffdf4;--line:#e6d7ae;--ink:#33280f;--muted:#7d6c48;
+--accent:#a05e00;--chip-bg:#f5e8c3;--side-bg:#fbf1d4;--side-ink:#4d3f22;
+--head-bg:#263238;--table-head:#f7edd0;--ph-bg:#fff8e1;--ph-line:#c9a227;--ph-ink:#6d5410;
+color-scheme:light;}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei","Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic","Meiryo",sans-serif;color:var(--ink);background:var(--bg);line-height:1.7;font-size:16px}
+/* 版面：左側欄 + 右側內容（內容置中） */
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
+.sidebar{background:var(--side-bg);border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow-y:auto;padding:16px 10px}
+.nav-group{font-size:.72rem;letter-spacing:.1em;color:var(--muted);margin:18px 10px 6px}
+.nav-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:8px;color:var(--side-ink);font-size:.88rem;line-height:1.45}
+.nav-item:hover{background:var(--chip-bg);text-decoration:none}
+.nav-item.nav-current{background:var(--chip-bg);color:var(--ink);font-weight:700}
+/* 側欄二層收合清單（純 CSS details/summary） */
+.nav-sub{margin:0}
+.nav-sub summary{display:flex;align-items:center;gap:2px;list-style:none;cursor:pointer}
+.nav-sub summary::-webkit-details-marker{display:none}
+.nav-sub summary:hover .nav-item{background:var(--chip-bg)}
+.nav-sub .caret{flex:none;font-size:.7rem;color:var(--muted);transition:transform .15s;margin:0 0 0 4px}
+.nav-sub[open] .caret{transform:rotate(90deg)}
+.nav-counties{margin:2px 0 6px 16px;border-left:1px solid var(--line);padding-left:4px}
+.nav-counties .nav-subitem{font-size:.8rem;padding:5px 8px}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;margin-top:6px}
+.dot-red{background:var(--red)}.dot-yellow{background:var(--yellow)}.dot-green{background:var(--green)}
+.page{display:flex;flex-direction:column;min-width:0}
+header.site{background:var(--head-bg);color:#fff;padding:10px 0;position:sticky;top:0;z-index:40}
+.site-bar{max-width:900px;margin:0 auto;padding:2px 16px;display:flex;align-items:center;gap:8px}
+.site-bar.updated-bar{justify-content:flex-end}
+header.site h1{font-size:1.1rem;margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.updated{color:#b0bec5;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon-btn{background:none;border:none;border-radius:8px;color:inherit;padding:6px;display:inline-flex;cursor:pointer;line-height:0;flex:none}
+.icon-btn:hover{background:rgba(255,255,255,.15)}
+.lang-switch{display:inline-flex;gap:2px;flex:none}
+.lang-switch a,.lang-switch .on{padding:2px 9px;border-radius:6px;font-size:.78rem;line-height:1.6}
+.lang-switch a{color:#b0bec5}
+.lang-switch a:hover{text-decoration:none;background:rgba(255,255,255,.15)}
+.lang-switch .on{background:rgba(255,255,255,.18);color:#fff;font-weight:700}
+#nav-toggle{display:none}
+[data-theme="dark"] .icon-moon{display:none}
+[data-theme="light"] .icon-sun{display:none}
+main.wrap{flex:1;width:100%;max-width:900px;margin:0 auto;padding:16px}
+section{margin:28px 0}
+h2{font-size:1.15rem;border-bottom:2px solid var(--line);padding-bottom:6px}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin:12px 0}
+/* hero：正常卡片底色 + 實色邊框（不填色），依嚴重度著色 */
+.hero{border:2px solid var(--line)}
+.hero.sev-red{border-color:var(--red)}
+.hero.sev-yellow{border-color:var(--yellow)}
+.hero.sev-green{border-color:var(--green)}
+.hero h2{font-size:1.45rem;font-weight:800;line-height:1.45;margin-top:0}
+.hero h2 a{color:var(--ink)}
+.hero h2 a:hover{color:var(--accent)}
+.hero .meta{color:var(--muted);font-size:.9rem}
+.hero-cta{display:inline-block;margin-top:16px;padding:8px 20px;border-radius:8px;background:var(--accent);color:var(--head-bg);font-size:.95rem;font-weight:700;text-decoration:none}
+.hero-cta:hover{filter:brightness(1.15);text-decoration:underline}
+/* 徽章：實心色塊小標籤（severity 背景色只限徽章，不污染卡片） */
+.badge{display:inline-block;padding:3px 12px;border-radius:12px;font-size:.85rem;font-weight:700;vertical-align:middle}
+.badge.sev-red{background:var(--red);color:#fff}
+.badge.sev-yellow{background:var(--yellow);color:#3e2723}
+.badge.sev-green{background:var(--green);color:#fff}
+.badge.sev-grey{background:#9e9e9e;color:#fff}
+.chips{margin:10px 0}
+.chip{display:inline-block;background:var(--chip-bg);border-radius:14px;padding:2px 12px;margin:2px 4px 2px 0;font-size:.85rem}
+.chip-link{color:var(--accent);text-decoration:none}
+.chip-link:hover{text-decoration:underline}
+.county-card{scroll-margin-top:88px}
+.meta{color:var(--muted);font-size:.85rem}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:.9rem;background:var(--card)}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--table-head)}
+ul.timeline{list-style:none;padding:0;margin:8px 0}
+ul.timeline li{padding:8px 0;border-bottom:1px dashed var(--line)}
+ul.timeline li:last-child{border-bottom:none}
+ul.news-list{list-style:none;margin:6px 0 0;padding-left:4px}
+ul.news-list li{padding:2px 0;font-size:.85rem}
+ul.news-list li a{word-break:break-all}
+.t-time{font-weight:700}
+.t-type{color:var(--accent);font-weight:600}
+.muted{color:var(--muted)}
+.placeholder{background:var(--ph-bg);border:1px dashed var(--ph-line);border-radius:10px;padding:14px;color:var(--ph-ink)}
+/* CWA 氣象總覽 */
+.cwa-warn{background:var(--chip-bg);border:1px solid var(--yellow);border-radius:8px;padding:10px 14px;margin:8px 0}
+.cwa-fail{border-color:var(--yellow)}
+/* 目前風險狀態列：由 CWA 目前之警報/特報推導（與事件歷史 severity 無關） */
+.risk-bar{border:2px solid var(--line);border-radius:10px;padding:12px 18px;margin:14px 0;background:var(--card)}
+.risk-bar.risk-red{border-color:var(--red);background:var(--red-bg)}
+.risk-bar.risk-yellow{border-color:var(--yellow);background:var(--yellow-bg)}
+.risk-bar.risk-green{border-color:var(--green)}
+.risk-bar.risk-neutral{border-color:var(--line);background:var(--bg)}
+.risk-bar.risk-unknown{border-style:dashed}
+.risk-bar .risk-label{font-weight:800;font-size:1rem}
+.risk-bar ul{list-style:none;margin:6px 0 0;padding:0}
+.risk-bar li{padding:2px 0;font-size:.95rem}
+.typhoon-row{display:flex;gap:18px;align-items:flex-start;margin:10px 0}
+.typhoon-row .map{flex:0 0 340px;max-width:46%}
+.typhoon-row .map svg{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.typhoon-row .typhoon-info{flex:1;min-width:0}
+.typhoon-row .typhoon-info table{font-size:.85rem}
+.alert-item{padding:10px 0;border-bottom:1px dashed var(--line)}
+.alert-item:last-child{border-bottom:none}
+.report-text{white-space:pre-wrap;font-size:.85rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0 0}
+@media(max-width:767px){.typhoon-row{flex-direction:column}.typhoon-row .map{max-width:100%;flex-basis:auto}}
+.event-content{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;overflow-x:auto}
+.event-content h1{font-size:1.3rem}
+.event-content h2{border-bottom:1px solid var(--line)}
+.event-content blockquote{border-left:4px solid var(--accent);margin:12px 0;padding:4px 14px;background:var(--chip-bg)}
+.event-content img{max-width:100%}
+.archive-list{list-style:none;padding:0}
+.archive-list li{padding:10px 0;border-bottom:1px solid var(--line)}
+footer{background:var(--head-bg);color:#cfd8dc;padding:20px 0;font-size:.85rem;margin-top:40px}
+footer .wrap{max-width:900px;margin:0 auto;padding:0 16px}
+.backlink{display:inline-block;margin-bottom:10px}
+.scrim{display:none}
+/* 平板與手機（<1024px）：側欄改為抽屜式 */
+@media (max-width:1023px){
+.layout{display:block}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:280px;transform:translateX(-100%);transition:transform .25s ease;z-index:60;box-shadow:0 0 30px rgba(0,0,0,.45)}
+.sidebar.open{transform:translateX(0)}
+#nav-toggle{display:inline-flex}
+.scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .25s;z-index:55}
+.scrim.show{opacity:1;pointer-events:auto}
+main.wrap{padding:12px}
+section{margin:20px 0}
+.card{padding:14px}
+.t-time{white-space:normal}
+}
+@media print{
+.sidebar,#scrim,.icon-btn{display:none}
+.layout{display:block}
+header.site,footer{background:none;color:#000}
+.card,.event-content{border-color:#999;break-inside:avoid}
+a::after{content:" (" attr(href) ")";font-size:.75em;color:#555}
+}
+</style>
+<script>/* 避免閃爍：先還原主題偏好再渲染 */(function(){var t=null;try{t=localStorage.getItem("wtf-theme")}catch(e){}if(t!=="light"&&t!=="dark")t="dark";document.documentElement.setAttribute("data-theme",t);})();</script>
+</head>
+<body id="top">
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+<nav><a class="nav-item nav-current" href="index.html">🏠 總覽</a><div class="nav-group">目前事件</div><details class="nav-sub" open><summary><span class="caret" aria-hidden="true">▸</span><a class="nav-item" href="events/%E7%81%BD%E6%83%85/2026/09/0904_%E4%BD%8E%E5%A3%93%E5%B8%B6_%E5%8D%97%E5%8C%97%E5%8F%B0%E7%81%A3%E8%B1%AA%E9%9B%A8.html"><span class="dot dot-yellow"></span><span>0904 低壓帶南北台灣豪雨</span></a></summary><div class="nav-counties"><a class="nav-item nav-subitem" href="index.html#%E5%9F%BA%E9%9A%86%E5%B8%82">基隆市</a><a class="nav-item nav-subitem" href="index.html#%E5%8F%B0%E5%8C%97%E5%B8%82">台北市</a><a class="nav-item nav-subitem" href="index.html#%E6%96%B0%E5%8C%97%E5%B8%82">新北市</a><a class="nav-item nav-subitem" href="index.html#%E5%AE%9C%E8%98%AD%E7%B8%A3">宜蘭縣</a><a class="nav-item nav-subitem" href="index.html#%E6%A1%83%E5%9C%92%E5%B8%82">桃園市</a><a class="nav-item nav-subitem" href="index.html#%E9%AB%98%E9%9B%84%E5%B8%82">高雄市</a><a class="nav-item nav-subitem" href="index.html#%E5%B1%8F%E6%9D%B1%E7%B8%A3">屏東縣</a><a class="nav-item nav-subitem" href="index.html#%E5%8F%B0%E6%9D%B1%E7%B8%A3">台東縣</a></div></details><div class="nav-group">過去事件</div><a class="nav-item" href="events/%E9%A2%B1%E9%A2%A8/2026/08/0818_18_%E6%B2%99%E5%BE%B7%E7%88%BE_SAUDEL.html"><span class="dot dot-yellow"></span><span>颱風沙德爾（SAUDEL）— 2026 年第 20 號</span></a><a class="nav-item" href="events/%E7%81%BD%E6%83%85/2026/08/0828_%E8%A5%BF%E5%8D%97%E9%A2%A8_%E5%8D%97%E5%8F%B0%E7%81%A3%E5%BE%8C%E7%BA%8C%E6%B7%B9%E6%B0%B4.html"><span class="dot dot-yellow"></span><span>0828 西南風短延時豪雨後續災情</span></a><a class="nav-item" href="events/%E9%A2%B1%E9%A2%A8/2026/07/0702_09_%E5%B7%B4%E5%A8%81_BAVI.html"><span class="dot dot-red"></span><span>颱風巴威（BAVI）— 2026 年第 9 號</span></a><a class="nav-item" href="events/%E9%A2%B1%E9%A2%A8/2026/07/0722_12_%E7%B4%85%E9%9C%9E_Noul.html"><span class="dot dot-yellow"></span><span>颱風紅霞（NOUL）— 2026 年第 12 號</span></a><a class="nav-item" href="events/%E9%A2%B1%E9%A2%A8/2026/08/0807_13_%E7%99%BD%E6%B5%B7%E8%B1%9A_DOLPHIN.html"><span class="dot dot-yellow"></span><span>颱風白海豚（DOLPHIN）— 2026 年第 13 號</span></a><a class="nav-item" href="events/%E7%81%BD%E6%83%85/2026/08/0821_%E4%BD%8E%E5%A3%93%E5%B8%B6_%E5%8D%97%E5%8F%B0%E7%81%A3%E5%A4%A7%E9%9B%A8.html"><span class="dot dot-red"></span><span>0822 低壓帶及西南風豪雨事件</span></a></nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<div class="page">
+<header class="site">
+<div class="site-bar">
+<button id="nav-toggle" class="icon-btn" aria-label="開啟事件清單"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+<h1><a href="index.html" style="color:#fff;text-decoration:none">🌦 台灣天氣與災情總覽</a></h1>
+<span class="lang-switch"><span class="on">繁體中文</span><a href="ja/index.html">日本語</a></span>
+<a class="icon-btn" href="https://github.com/Lawlietr/Weather" target="_blank" rel="noopener" title="GitHub" aria-label="GitHub"><svg viewBox="0 0 16 16" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
+<button id="theme-toggle" class="icon-btn" aria-label="切換日夜主題">
+<svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M1 12h2m18 0h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+<svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+</button>
+</div>
+<div class="site-bar updated-bar"><span class="updated">產生時間：2026/9/4 12:32（手動生成，非即時）</span></div>
+</header>
+<main class="wrap">
+
+<section class="risk-bar risk-red">
+<div class="risk-label">🔴 目前危險中</div>
+<ul><li>熱帶氣旋 科羅旺（KROVANH） 生效中（強度：輕度颱風）</li><li>豪雨特報（有效至 2026/09/04 12:17 ~ 2026/09/05 00:00）</li><li>陸上強風特報（有效至 2026/09/04 11:00 ~ 2026/09/05 23:00）</li></ul>
+<p class="meta">依中央氣象署目前之警報與特報判斷（網頁產生於 2026/9/4 12:32）；此為目前風險信號，不等於事件歷史分級。</p>
+</section>
+<section class="cwa">
+<h2>氣象總覽（中央氣象署）</h2>
+
+
+<div class="card cwa-card">
+<h3>颱風動態　<span class="meta">CWA W-C0034-005</span></h3>
+
+<div class="typhoon-row">
+<div class="map"><svg viewBox="0 0 540 480" role="img" aria-label="科羅旺"><line x1="72" y1="0" x2="72" y2="480" stroke="var(--line)" stroke-width="0.5" opacity="0.5"/><line x1="144" y1="0" x2="144" y2="480" stroke="var(--line)" stroke-width="0.5" opacity="0.5"/><line x1="216" y1="0" x2="216" y2="480" stroke="var(--line)" stroke-width="0.5" opacity="0.5"/><line x1="288" y1="0" x2="288" y2="480" stroke="var(--line)" stroke-width="0.5" opacity="0.5"/><line x1="360" y1="0" x2="360" y2="480" stroke="var(--line)" stroke-width="0.5" opacity="0.5"/><line x1="432" y1="0" x2="432" y2="480" stroke="var(--line)" stroke-width="0.5" opacity="0.5"/><line x1="504" y1="0" x2="504" y2="480" stroke="var(--line)" stroke-width="0.5" opacity="0.5"/><line x1="0" y1="416" x2="540" y2="416" stroke="var(--line)" stroke-width="0.5" opacity="0.5"/><line x1="0" y1="352" x2="540" y2="352" stroke="var(--line)" stroke-width="0.5" opacity="0.5"/><line x1="0" y1="288" x2="540" y2="288" stroke="var(--line)" stroke-width="0.5" opacity="0.5"/><line x1="0" y1="224" x2="540" y2="224" stroke="var(--line)" stroke-width="0.5" opacity="0.5"/><line x1="0" y1="160" x2="540" y2="160" stroke="var(--line)" stroke-width="0.5" opacity="0.5"/><line x1="0" y1="96" x2="540" y2="96" stroke="var(--line)" stroke-width="0.5" opacity="0.5"/><line x1="0" y1="32" x2="540" y2="32" stroke="var(--line)" stroke-width="0.5" opacity="0.5"/><polygon points="249,194 246,197 245,199 245,203 248,205 246,205 246,209 244,210 244,214 240,218 238,222 239,224 230,251 227,257 223,261 222,263 217,267 214,271 212,277 212,286 210,288 210,291 208,289 205,290 205,284 202,279 198,274 194,273 190,269 192,270 189,267 189,265 185,257 186,255 184,256 184,254 182,255 184,253 182,252 183,252 182,251 184,246 185,246 184,245 186,244 185,242 186,240 184,240 184,239 187,232 205,205 208,203 210,203 213,196 218,190 230,187 232,188 230,186 233,184 235,183 238,183 241,187 249,189 249,191 252,192 249,193" fill="var(--chip-bg)" stroke="var(--muted)" stroke-width="1.5"/><polygon points="167,237 168,238 165,239 163,239 165,238 164,237 167,237" fill="var(--chip-bg)" stroke="var(--muted)" stroke-width="1.5"/><polygon points="161,237 163,236 161,237" fill="var(--chip-bg)" stroke="var(--muted)" stroke-width="1.5"/><polygon points="165,236 164,235 165,235 165,236" fill="var(--chip-bg)" stroke="var(--muted)" stroke-width="1.5"/><polygon points="122,207 124,208 125,210 118,211 118,209 122,209 122,208" fill="var(--chip-bg)" stroke="var(--muted)" stroke-width="1.5"/><polygon points="236,287 237,287 236,288 234,286 234,285 236,285 236,286" fill="var(--chip-bg)" stroke="var(--muted)" stroke-width="1.5"/><polygon points="233,267 234,266 234,268 233,267" fill="var(--chip-bg)" stroke="var(--muted)" stroke-width="1.5"/><polygon points="179,155 177,156 177,154 178,155 179,155" fill="var(--chip-bg)" stroke="var(--muted)" stroke-width="1.5"/><polygon points="179,154 180,152 181,153 179,154" fill="var(--chip-bg)" stroke="var(--muted)" stroke-width="1.5"/><polygon points="198,148 197,148 197,148 198,148" fill="var(--chip-bg)" stroke="var(--muted)" stroke-width="1.5"/><polygon points="179,161 179,162 179,161" fill="var(--chip-bg)" stroke="var(--muted)" stroke-width="1.5"/><circle cx="236" cy="191" r="2" fill="var(--muted)"/><text x="241" y="194" font-size="10" fill="var(--muted)">台北</text><circle cx="204" cy="219" r="2" fill="var(--muted)"/><text x="209" y="222" font-size="10" fill="var(--muted)">台中</text><circle cx="191" cy="268" r="2" fill="var(--muted)"/><text x="196" y="271" font-size="10" fill="var(--muted)">高雄</text><circle cx="238" cy="224" r="2" fill="var(--muted)"/><text x="243" y="227" font-size="10" fill="var(--muted)">花蓮</text><circle cx="221" cy="264" r="2" fill="var(--muted)"/><text x="226" y="267" font-size="10" fill="var(--muted)">台東</text><polyline points="612,317 594,301 583,288 634,298 605,278 601,275 619,272 623,259 630,256 605,253 587,230 569,202 544,157 504,128 508,96 479,61 468,48" fill="none" stroke="var(--accent)" stroke-width="2"/><circle cx="612" cy="317" r="3" fill="var(--accent)"/><circle cx="594" cy="301" r="3" fill="var(--accent)"/><circle cx="583" cy="288" r="3" fill="var(--accent)"/><circle cx="634" cy="298" r="3" fill="var(--accent)"/><circle cx="605" cy="278" r="3" fill="var(--accent)"/><circle cx="601" cy="275" r="3" fill="var(--accent)"/><circle cx="619" cy="272" r="3" fill="var(--accent)"/><circle cx="623" cy="259" r="3" fill="var(--accent)"/><circle cx="630" cy="256" r="3" fill="var(--accent)"/><circle cx="605" cy="253" r="3" fill="var(--accent)"/><circle cx="587" cy="230" r="3" fill="var(--accent)"/><circle cx="569" cy="202" r="3" fill="var(--accent)"/><circle cx="544" cy="157" r="3" fill="var(--accent)"/><circle cx="504" cy="128" r="3" fill="var(--accent)"/><circle cx="508" cy="96" r="3" fill="var(--accent)"/><circle cx="479" cy="61" r="3" fill="var(--accent)"/><circle cx="468" cy="48" r="3" fill="var(--accent)"/><circle cx="468" cy="48" r="36" fill="none" stroke="var(--red)" stroke-width="1" stroke-dasharray="4 3" opacity="0.7"/><circle cx="468" cy="48" r="5" fill="var(--red)"/><text x="476" y="40" font-size="12" font-weight="bold" fill="var(--red)">科羅旺（最新）</text><polyline points="468,48 461,48 457,58 454,70 454,90 454,144 493,179 630,134 652,26 680,-38" fill="none" stroke="var(--yellow)" stroke-width="1.5" stroke-dasharray="6 4"/><circle cx="461" cy="48" r="3" fill="none" stroke="var(--yellow)" stroke-width="1.5"/><circle cx="457" cy="58" r="3" fill="none" stroke="var(--yellow)" stroke-width="1.5"/><circle cx="454" cy="70" r="3" fill="none" stroke="var(--yellow)" stroke-width="1.5"/><circle cx="454" cy="90" r="3" fill="none" stroke="var(--yellow)" stroke-width="1.5"/><circle cx="454" cy="144" r="3" fill="none" stroke="var(--yellow)" stroke-width="1.5"/><circle cx="493" cy="179" r="3" fill="none" stroke="var(--yellow)" stroke-width="1.5"/><circle cx="630" cy="134" r="3" fill="none" stroke="var(--yellow)" stroke-width="1.5"/><circle cx="652" cy="26" r="3" fill="none" stroke="var(--yellow)" stroke-width="1.5"/><circle cx="680" cy="-38" r="3" fill="none" stroke="var(--yellow)" stroke-width="1.5"/><g font-size="10" fill="var(--muted)"><line x1="12" y1="450" x2="32" y2="450" stroke="var(--accent)" stroke-width="2"/><text x="36" y="453">分析軌跡</text><line x1="96" y1="450" x2="116" y2="450" stroke="var(--yellow)" stroke-width="1.5" stroke-dasharray="5 3"/><text x="120" y="453">預報路徑</text><circle cx="186" cy="450" r="4" fill="none" stroke="var(--red)" stroke-dasharray="3 2"/><text x="195" y="453">15 m/s 暴風半徑</text></g></svg></div>
+<div class="typhoon-info">
+<h4 style="margin:0 0 6px">科羅旺　<span class="muted">（2026 第27 號）</span>　<span class="muted">KROVANH</span></h4>
+<p style="margin:4px 0">最新觀測（2026/09/04 08:00）：29.5°N 128.0°E｜輕度颱風｜最大風速 20.0 m/s｜陣風 28.0 m/s｜氣壓 995 hPa｜NNW 方向移動，9 km/h</p>
+<h4 style="margin:10px 0 4px">未來預報</h4>
+<table><tr><th>時間</th><th>位置</th><th>最大風速</th><th>氣壓</th></tr><tr><td>09/04 14:00</td><td>29.5°N 127.8°E</td><td>20.0 m/s</td><td>995 hPa</td></tr><tr><td>09/04 20:00</td><td>29.2°N 127.7°E</td><td>20.0 m/s</td><td>995 hPa</td></tr><tr><td>09/05 02:00</td><td>28.8°N 127.6°E</td><td>20.0 m/s</td><td>995 hPa</td></tr><tr><td>09/05 08:00</td><td>28.2°N 127.6°E</td><td>18.0 m/s</td><td>998 hPa</td></tr><tr><td>09/05 20:00</td><td>26.5°N 127.6°E</td><td>18.0 m/s</td><td>998 hPa</td></tr><tr><td>09/06 08:00</td><td>25.4°N 128.7°E</td><td>18.0 m/s</td><td>998 hPa</td></tr><tr><td>09/07 08:00</td><td>26.8°N 132.5°E</td><td>18.0 m/s</td><td>998 hPa</td></tr><tr><td>09/08 08:00</td><td>30.2°N 133.1°E</td><td>15.0 m/s</td><td>1000 hPa</td></tr><tr><td>09/09 08:00</td><td>32.2°N 133.9°E</td><td>10.0 m/s</td><td>1004 hPa</td></tr></table>
+</div>
+</div>
+</div>
+<div class="card cwa-card">
+<h3>警報與特報　<span class="meta">CWA W-C0034-001 / W-C0033-002</span></h3>
+<div class="alert-item"><span class="badge sev-red">豪雨特報</span>　<b>豪雨、大雨</b>　<span class="meta">發布 2026/09/04 12:15｜有效 2026/09/04 12:17 ~ 2026/09/05 00:00</span><div>影響區域：基隆市、北海岸、臺北市、新北市、宜蘭縣、桃園市、新竹市、新竹縣、苗栗縣、臺中市、彰化縣、南投縣、雲林縣、嘉義市、嘉義縣、臺南市山區、高雄市山區、屏東縣山區、花蓮縣山區、臺東縣山區</div><details><summary class="muted">查看特報全文</summary><pre class="report-text">颱風外圍雲系及低壓帶影響，易有短延時強降雨，今(4)日基隆市、臺北市、新北市及宜蘭縣(頭城鎮)有局部大雨或豪雨，中部以北地區及其他山區有局部大雨發生的機率，請注意雷擊、強陣風及溪水暴漲，連日降雨，山區慎防坍方及落石，低窪地區請慎防積水。</pre></details></div><div class="alert-item"><span class="badge sev-yellow">陸上強風特報</span>　<b>陸上強風</b>　<span class="meta">發布 2026/09/04 10:26｜有效 2026/09/04 11:00 ~ 2026/09/05 23:00</span><div>影響區域：蘭嶼綠島、澎湖縣、連江縣</div><details><summary class="muted">查看特報全文</summary><pre class="report-text">一、概述：低壓帶影響，4日上午至5日晚上蘭嶼、澎湖縣、連江縣局部地區有平均風6級以上或陣風8級以上發生的機率(黃色燈號)，請注意。
+
+二、注意(警戒)事項
+黃色燈號：注意！在戶外請小心因強風造成路樹、不堅固建築或定置物(如鐵皮屋、貨櫃及電線桿等)脫落或掉落；戶外工作者請注意安全；加強牢固戶外物品；行車減速慢行，留意大眾運輸延誤訊息。</pre></details></div>
+</div>
+<div class="card cwa-card">
+<h3>雨量觀測站 TOP 10</h3>
+<table><tr><th>雨量站</th><th>縣市/鄉鎮</th><th>本日累計 (mm)</th><th>近 1 小時 (mm)</th><th>近 24 小時 (mm)</th></tr><tr><td>暖暖</td><td>基隆市暖暖區</td><td>240</td><td>32</td><td>276</td></tr><tr><td>七堵</td><td>基隆市七堵區</td><td>221</td><td>19</td><td>260</td></tr><tr><td>大坪</td><td>新北市萬里區</td><td>220</td><td>17</td><td>295</td></tr><tr><td>萬里國小</td><td>新北市萬里區</td><td>218</td><td>29</td><td>266</td></tr><tr><td>國一S001K</td><td>基隆市安樂區</td><td>217</td><td>22</td><td>258</td></tr><tr><td>三和</td><td>新北市金山區</td><td>210</td><td>12</td><td>280</td></tr><tr><td>國三S004K</td><td>基隆市七堵區</td><td>207</td><td>13</td><td>263</td></tr><tr><td>國三N002K</td><td>基隆市中山區</td><td>206</td><td>22</td><td>206</td></tr><tr><td>富貴角</td><td>新北市石門區</td><td>191</td><td>12</td><td>259</td></tr><tr><td>平溪旅遊</td><td>新北市平溪區</td><td>189</td><td>43</td><td>224</td></tr></table>
+<p class="meta">「本日累計」= 當日 0 時至觀測時間（2026/09/04 12:20）；短延時強降雨請看「近 1 小時」。CWA O-A0002-001，每 10 分鐘更新。</p>
+</div>
+</section>
+<section class="card hero">
+<h2 style="border:none"><span class="chip">目前事件</span>　<a href="events/%E7%81%BD%E6%83%85/2026/09/0904_%E4%BD%8E%E5%A3%93%E5%B8%B6_%E5%8D%97%E5%8C%97%E5%8F%B0%E7%81%A3%E8%B1%AA%E9%9B%A8.html">0904 低壓帶南北台灣豪雨</a></h2>
+<p class="meta">影響期間：2026/9/4–2026/9/6　資料來源：中央氣象署、聯合新聞網、自由時報、東森新聞、Newtalk新聞、三立新聞網、中時新聞網</p>
+<p>低壓帶＋科羅旺颱風外圍環流交會，南部連雨3週災情持續（擋土牆多次坍塌、道路損壞、山區撤離），北部今日突襲豪雨（基隆多處積淹水、士林／汐止山區暴雨國家級警報、北市災變中心強化三級開設、北宜公路坍方）</p>
+<div class="chips"><a class="chip chip-link" href="#%E5%9F%BA%E9%9A%86%E5%B8%82" title="跳到基隆市災情">基隆市</a><a class="chip chip-link" href="#%E5%8F%B0%E5%8C%97%E5%B8%82" title="跳到台北市災情">台北市</a><a class="chip chip-link" href="#%E6%96%B0%E5%8C%97%E5%B8%82" title="跳到新北市災情">新北市</a><a class="chip chip-link" href="#%E5%AE%9C%E8%98%AD%E7%B8%A3" title="跳到宜蘭縣災情">宜蘭縣</a><a class="chip chip-link" href="#%E6%A1%83%E5%9C%92%E5%B8%82" title="跳到桃園市災情">桃園市</a><a class="chip chip-link" href="#%E9%AB%98%E9%9B%84%E5%B8%82" title="跳到高雄市災情">高雄市</a><a class="chip chip-link" href="#%E5%B1%8F%E6%9D%B1%E7%B8%A3" title="跳到屏東縣災情">屏東縣</a><a class="chip chip-link" href="#%E5%8F%B0%E6%9D%B1%E7%B8%A3" title="跳到台東縣災情">台東縣</a></div>
+<h3 style="font-size:1rem;margin:14px 0 4px">最新進展</h3>
+<ul class="timeline"><li><span class="t-time">9/4</span>｜台東森林公園琵琶湖及木棧橋周邊｜<span class="t-type">🟡 積淹水</span>｜部分步道遭積水淹沒，縣府實施暫時封閉及動線改道</li><li><span class="t-time">8/31</span>｜萬丹麟洛大排｜<span class="t-type">🟡 堤防裂縫</span>｜興全段堤防出現長長裂縫</li><li><span class="t-time">8/31</span>｜台 26 線恆春鎮石牛溪路段｜<span class="t-type">🟡 路面龜裂</span>｜路面下陷、多處龜裂，北上車道封閉，採單線雙向管制</li><li><span class="t-time">8/31</span>｜台 24 線 43.7km｜<span class="t-type">🟡 邊坡坍方</span>｜大量土石滑落阻斷道路，雙向無法通行（公路局搶修中）</li><li><span class="t-time">9/1 前</span>｜春日鄉士文部落後山連絡道路｜<span class="t-type">🟡 道路封閉</span>｜嚴重掏空，道路封閉；撤離 138 人，收容 82 人</li><li><span class="t-time">9/1 前</span>｜滿州鄉長樂村｜<span class="t-type">🟡 撤離</span>｜共撤離 54 人，安置 48 人（山區降雨威脅生命安全）</li></ul>
+<a class="hero-cta" href="events/%E7%81%BD%E6%83%85/2026/09/0904_%E4%BD%8E%E5%A3%93%E5%B8%B6_%E5%8D%97%E5%8C%97%E5%8F%B0%E7%81%A3%E8%B1%AA%E9%9B%A8.html">查看完整事件紀錄 →</a>
+</section><section><h2>各縣市災情</h2>
+<div class="card county-card" id="%E5%9F%BA%E9%9A%86%E5%B8%82" style="padding:12px 16px">
+<h3 style="margin:4px 0;font-size:1rem">基隆市　<span class="muted">（最新 8 筆）</span>　<a href="#top" class="muted" style="float:right">↑ 回頂端</a></h3>
+<ul class="news-list"><li><a href="https://udn.com/news/story/7328/9733697" target="_blank" rel="noopener">影／上班上學北北基大雨狂炸 基隆市區、大武崙多處道路積淹水</a> <span class="muted">— 聯合新聞網 9/4</span></li><li><a href="https://news.ltn.com.tw/news/life/breakingnews/5562775" target="_blank" rel="noopener">大雷雨轟炸 基隆市區多處道路積淹水</a> <span class="muted">— 自由時報 9/4</span></li><li><a href="https://www.setn.com/news/1901146" target="_blank" rel="noopener">雨彈炸基隆多處淹水！水深及膝淹民宅、大武崙溪快溢堤</a> <span class="muted">— 三立新聞網 9/4</span></li></ul>
+<ul class="timeline"><li><span class="t-time">9/4 上午</span>｜<strong>武崙溪</strong>｜<span class="t-type">🟡 暴漲溢堤</span>｜溪水暴漲，逼近溢堤邊緣（三立新聞網）</li><li><span class="t-time">9/4 上午</span>｜<strong>基金路、義一路</strong>｜<span class="t-type">🟡 民宅淹水</span>｜多處民宅受淹水影響</li><li><span class="t-time">9/4 上午</span>｜<strong>中山區復興路</strong>｜<span class="t-type">🟡 積淹水</span>｜道路積水嚴重（議員施偉政提供照片）</li><li><span class="t-time">9/4 上午</span>｜<strong>中山區西定路</strong>｜<span class="t-type">🟡 積淹水</span>｜水深及膝，甚至灌入民宅（議員施偉政提供照片）</li><li><span class="t-time">9/4 上午</span>｜<strong>大武崙圓環</strong>｜<span class="t-type">🟡 泥水淹馬路</span>｜大量泥水淹沒路面</li><li><span class="t-time">9/4 06:00 起</span>｜<strong>東岸高架旁市區道路</strong>｜<span class="t-type"><strong>嚴重積淹水</strong></span>｜3 個路口交匯處，大面積積水，汽機車高速通過產生大量水花</li><li><span class="t-time">2026/8/9 上午</span>｜基隆港西岸陽明貨櫃場｜<span class="t-type">貨櫃倒塌</span>｜7 只重達數十噸的貨櫃遭強風吹落，連環倒塌碰撞門式起重機，貨櫃外層鋼板嚴重凹陷變形、裂開破損，天秤鐵梯及樓梯扶手遭重壓扭曲變形；<strong>無人傷亡</strong>，基隆港務分公司已啟動緊急應變措施，封鎖現場清查損失（自由時報、聯合新聞網、星島日報）</li><li><span class="t-time">2026/8/9 上午</span>｜基隆廟口夜市｜<span class="t-type">淹水</span>｜夜市淹成河，店家怨：沒下雨就泡水（ETtoday）</li></ul>
+</div>
+<div class="card county-card" id="%E5%AE%9C%E8%98%AD%E7%B8%A3" style="padding:12px 16px">
+<h3 style="margin:4px 0;font-size:1rem">宜蘭縣　<span class="muted">（最新 6 筆）</span>　<a href="#top" class="muted" style="float:right">↑ 回頂端</a></h3>
+
+<ul class="timeline"><li><span class="t-time">9/4 上午</span>｜—｜<span class="t-type">🟡 大雷雨即時訊息</span>｜列入大雷雨示警區域（至 08:49）</li><li><span class="t-time">9/4 上午</span>｜全縣 12 鄉鎮市｜<span class="t-type">🟡 豪雨特報</span>｜受低壓帶影響，全縣有局部大雨或豪雨</li><li><span class="t-time">2026/8/8 晚間</span>｜宜蘭縣｜<span class="t-type">災情</span>｜中山路郵局磁磚兩次掉落（中央社）</li><li><span class="t-time">2026/8/8</span>｜宜蘭縣、花蓮縣｜<span class="t-type">高溫／焚風</span>｜橙色燈號，有38度極端高溫出現機率（颱風外圍環流沉降影響）</li><li><span class="t-time">2026/8/7 起</span>｜宜蘭烏石港｜<span class="t-type">航線停航</span>｜賞鯨船8/7起停航</li><li><span class="t-time">2026/7/10</span>｜宜蘭蘇澳｜<span class="t-type">淹水風險</span>｜鎮公所7,000多個沙包已被領取完畢，加發1,000多個</li></ul>
+</div>
+<div class="card county-card" id="%E6%96%B0%E5%8C%97%E5%B8%82" style="padding:12px 16px">
+<h3 style="margin:4px 0;font-size:1rem">新北市　<span class="muted">（最新 8 筆）</span>　<a href="#top" class="muted" style="float:right">↑ 回頂端</a></h3>
+<ul class="news-list"><li><a href="https://udn.com/news/story/7266/9733668" target="_blank" rel="noopener">士林、汐止山區暴雨國家級警報響 北北基大雷雨狂轟</a> <span class="muted">— 聯合新聞網 9/4</span></li><li><a href="https://newtalk.tw/news/view/2026-09-01/1057211" target="_blank" rel="noopener">新北大雨北宜公路落石坍方 雙向車道受阻搶通中</a> <span class="muted">— Newtalk 新聞 9/1</span></li><li><a href="https://news.ltn.com.tw/news/life/breakingnews/5559797" target="_blank" rel="noopener">北宜公路坪林段落石坍方 雙向交通中斷</a> <span class="muted">— 自由時報 9/1</span></li></ul>
+<ul class="timeline"><li><span class="t-time">9/4 上午</span>｜三芝區、淡水區｜<span class="t-type">🟡 淹水警戒</span>｜列 2 級淹水警戒</li><li><span class="t-time">9/4 清晨</span>｜汐止區｜<span class="t-type">🔴 國家級警報</span>｜北港溪（汐止柯子林）山區暴雨災防告警響，留意溪水暴漲</li><li><span class="t-time">9/1 傍晚</span>｜坪林區北宜公路 46.3km｜<span class="t-type">🟡 落石坍方</span>｜落石樹木佔據雙向車道，警方緊急管制，景美工務段搶通中</li><li><span class="t-time">2026/8/9 10:31</span>｜臺東縣、彰化縣、臺北市、澎湖縣、基隆市、嘉義縣、新竹縣、新北市、新竹市、臺南市、連江縣、桃園市、臺中市、宜蘭縣、苗栗縣、屏東縣、雲林縣、南投縣｜<span class="t-type">陸上強風特報（黃色燈號）</span>｜颱風及其外圍環流影響，平均風6級以上或陣風8級以上，有效至 8/10 23:00</li><li><span class="t-time">2026/8/9 09:11</span>｜臺北市、基隆市、新北市、桃園市、新竹市、新竹縣、苗栗縣、臺中市、南投縣、宜蘭縣、雲林縣、嘉義縣、花蓮縣｜<span class="t-type">豪雨特報（藍色燈號）</span>｜颱風及其外圍環流影響，局部豪雨或大雨，有效至 8/9 23:00</li><li><span class="t-time">2026/8/8 晚間</span>｜新北淡水｜<span class="t-type">疑似龍捲風</span>｜房屋鐵皮掉落、路樹倒塌、電桿傾斜（中央社）</li><li><span class="t-time">2026/8/8 11:30</span>｜基隆市、臺北市、新北市、桃園市、新竹市、新竹縣、苗栗縣、臺中市、南投縣、宜蘭縣、屏東縣、臺東縣、澎湖縣、連江縣｜<span class="t-type">陸上強風特報（黃色燈號）</span>｜颱風及其外圍環流影響，8/8～8/9平均風6級以上或陣風8級以上，有效至 8/9 20:00</li><li><span class="t-time">2026/8/7</span>｜新北市、南投縣、高雄市、屏東縣、宜蘭縣、臺東縣（蘭嶼）｜<span class="t-type">陸上強風特報</span>｜受颱風外圍環流影響，8/7平均風6級以上或陣風8級以上</li></ul>
+</div>
+<div class="card county-card" id="%E5%8F%B0%E5%8C%97%E5%B8%82" style="padding:12px 16px">
+<h3 style="margin:4px 0;font-size:1rem">台北市　<span class="muted">（最新 8 筆）</span>　<a href="#top" class="muted" style="float:right">↑ 回頂端</a></h3>
+<ul class="news-list"><li><a href="https://tw.news.yahoo.com/%E4%B8%8B%E4%B8%8D%E5%81%9C-%E5%8C%97%E5%8C%97%E5%9F%BA%E8%B1%AA%E9%9B%A8%E7%8B%82%E7%82%B8-%E5%8C%97%E5%B8%82%E7%81%BD%E5%AE%B3%E6%87%89%E8%AE%8A%E4%B8%AD%E5%BF%83%E4%B8%89%E7%B4%9A%E9%96%8B%E8%A8%AD-013300467.html" target="_blank" rel="noopener">下不停！北北基豪雨狂炸 北市災害應變中心三級開設</a> <span class="muted">— 東森新聞 9/4</span></li><li><a href="https://tw.news.yahoo.com/%E5%8C%97%E5%8C%97%E5%9F%BA-%E6%97%A9%E8%BD%9F%E5%A4%A7%E9%9B%B7%E9%9B%A8-%E5%9C%8B%E5%AE%B6%E8%AD%A6%E5%A0%B1%E9%9F%BF-%E5%B0%88%E5%AE%B6%E6%9B%B4%E9%9B%A8%E5%81%9C%E6%99%82%E9%96%93-231544471.html" target="_blank" rel="noopener">北北基一早轟大雷雨！國家警報響 專家曝雨停時間</a> <span class="muted">— 中時新聞網 9/4</span></li></ul>
+<ul class="timeline"><li><span class="t-time">9/4 清晨</span>｜士林區、北投區｜<span class="t-type">🟡 溪水暴漲風險</span>｜災防告警響，留意溪水暴漲並儘速遠離溪流</li><li><span class="t-time">9/4 清晨</span>｜士林區溪山里｜<span class="t-type">🟡 山區暴雨</span>｜24 小時累積雨量達 176 mm，恐有豪雨等級以上雨勢</li><li><span class="t-time">9/3 下午起</span>｜—｜<span class="t-type">🟡 災害應變中心</span>｜台北市災害應變中心提升為<strong>強化三級開設</strong>，各區公所成立緊急應變小組</li><li><span class="t-time">2026/8/9 凌晨</span>｜台北市大同區｜<span class="t-type">路樹倒塌</span>｜興城街再傳路樹倒塌，已圍設警戒線（ETtoday）</li><li><span class="t-time">2026/8/9 凌晨</span>｜台北市大安區｜<span class="t-type">路樹倒塌</span>｜仁愛路三段與建國南路一段路口，路樹倒塌，已以鏈鋸切割清除（ETtoday）</li><li><span class="t-time">2026/8/9 凌晨</span>｜台北市中山區｜<span class="t-type">路樹倒塌</span>｜民生東路二段142號，長約15公尺、直徑約40公分大型路樹倒塌，占據道路（ETtoday）</li><li><span class="t-time">2026/8/9</span>｜新北、基隆、台北、桃園、新竹縣市、苗栗｜<span class="t-type">淹水警戒</span>｜共7縣市、18個行政區列淹水警戒；坡地應注意坍方、落石及溪水暴漲</li><li><span class="t-time">2026/8/8 17:30</span>｜台北市｜<span class="t-type">災情紀錄</span>｜北市災防辦接獲75件災情通報，已處理54件，21件持續處理中，主要為路樹倒塌27件、建物輕微受損12件（圍籬倒塌、鐵皮掀開等）（中央社）</li></ul>
+</div>
+<div class="card county-card" id="%E5%8F%B0%E6%9D%B1%E7%B8%A3" style="padding:12px 16px">
+<h3 style="margin:4px 0;font-size:1rem">台東縣　<span class="muted">（最新 4 筆）</span>　<a href="#top" class="muted" style="float:right">↑ 回頂端</a></h3>
+
+<ul class="timeline"><li><span class="t-time">9/4</span>｜台東森林公園琵琶湖及木棧橋周邊｜<span class="t-type">🟡 積淹水</span>｜部分步道遭積水淹沒，縣府實施暫時封閉及動線改道</li><li><span class="t-time">2026/8/7 中午起</span>｜台東綠島｜<span class="t-type">航線停航</span>｜富岡綠島航線中午過後停航至8/9</li><li><span class="t-time">2026/8/7</span>｜台東成功外海｜<span class="t-type">巨浪</span>｜已觀測到6公尺以上巨浪</li><li><span class="t-time">2026/8/6 下午起</span>｜蘭嶼｜<span class="t-type">航線停航</span>｜後壁湖蘭嶼航線6日下午起停航至8/9</li></ul>
+</div>
+<div class="card county-card" id="%E9%AB%98%E9%9B%84%E5%B8%82" style="padding:12px 16px">
+<h3 style="margin:4px 0;font-size:1rem">高雄市　<span class="muted">（最新 8 筆）</span>　<a href="#top" class="muted" style="float:right">↑ 回頂端</a></h3>
+<ul class="news-list"><li><a href="https://tw.news.yahoo.com/%E9%80%A3%E6%97%A5%E8%B1%AA%E9%9B%A8%E9%AB%98%E5%B1%8F%E7%81%BD%E6%83%85%E4%B8%8D%E6%96%B7-%E6%B0%A3%E8%B1%A1%E7%BD%B2-9-6%E9%99%8D%E9%9B%A8%E8%B6%A8%E7%B7%A9-113953556.html" target="_blank" rel="noopener">連日豪雨高屏災情不斷 氣象署：9/6 降雨趨緩</a> <span class="muted">— 公視新聞網 9/1</span></li><li><a href="https://tw.news.yahoo.com/%E9%9B%A8%E7%A5%9E%E4%B8%8D%E8%B5%B0-%E5%8D%97%E9%83%A8%E5%9C%B0%E5%8D%80%E9%9B%A8%E4%B8%8B%E4%B8%8D%E5%81%9C-%E6%93%8B%E5%9C%9F%E7%89%86-%E4%B8%89%E5%BA%A6%E5%9D%8D-120500862.html" target="_blank" rel="noopener">雨神不走！南部地區雨下不停 擋土牆「三度坍」</a> <span class="muted">— 東森新聞 9/1</span></li><li><a href="https://news.ebc.net.tw/news/living/568430" target="_blank" rel="noopener">暴雨炸高雄！大寮黃泥淹路 國小返校日喊卡</a> <span class="muted">— EBC 東森新聞 8/28</span></li><li><a href="https://tw.news.yahoo.com/%E9%AB%98%E9%9B%84%E7%A0%B8%E9%8C%A2%E6%B2%BB%E6%B0%B4%E4%BB%8D%E6%85%98%E6%B7%B9-%E5%A4%A9%E5%9D%91%E5%86%8D%E7%8F%BE-%E8%BB%8A%E9%9A%AA%E6%BB%85%E9%A0%82-%E5%B8%82%E6%B0%91%E7%81%8C%E7%88%86%E9%99%B3%E5%85%B6%E9%82%81%E8%87%89%E6%9B%B8-%E6%B0%B4%E6%A8%82%E5%9C%92%E9%96%8B%E5%B9%95-033756777.html" target="_blank" rel="noopener">高雄慘淹、車陷天坑！「砸錢治水難抗暴雨」陳其邁臉書灌爆 市府回應了</a> <span class="muted">— Yahoo 新聞</span></li><li><a href="https://www.epochtimes.com/b5/26/8/24/n14835579.htm" target="_blank" rel="noopener">高雄 24 小時雨量超越凱米颱風 逢大潮海水倒灌多處積淹水</a> <span class="muted">— 大紀元</span></li><li><a href="https://www.ettoday.net/news/20260823/3224345.htm" target="_blank" rel="noopener">致災暴雨轟炸!高雄 34 條「紅色土石流警戒」 10 區急撤 2203 人</a> <span class="muted">— ETtoday 新聞雲</span></li><li><a href="https://www.ctee.com.tw/news/20260823700502-431401" target="_blank" rel="noopener">豪雨狂炸山區!高雄土石流警戒達 74 條 急撤 2231 人</a> <span class="muted">— 商周頭條</span></li><li><a href="https://tw.news.yahoo.com/%E8%B1%AA%E9%9B%A8%E7%82%B8%E5%8D%97%E5%8F%B0%E7%81%A3-3%E%B8%A8%E5%B8%82%E7%B4%AF%E8%A8%88199%E4%BB%B6%E6%B7%B9%E6%B0%B4-%E9%AB%98%E9%9B%84130%E4%BB%B6%E6%9C%80%E6%85%98-37%E8%99%95%E6%9C%AA%E9%80%80-035700935.html" target="_blank" rel="noopener">豪雨狂炸南台灣!3 縣市累計 199 件淹水 高雄 130 件最慘、37 處未退</a> <span class="muted">— Yahoo 新聞</span></li><li><a href="https://newtalk.tw/news/view/2026-08-25/1055436" target="_blank" rel="noopener">陳其邁成功爭取農產全品項災害現金救助 高雄 8/25 日起受理申請</a> <span class="muted">— Newtalk 新聞</span></li></ul>
+<ul class="timeline"><li><span class="t-time">9/2</span>｜中山大學附近海岸｜<span class="t-type">🟢 海浪拍打</span>｜男大生騎車遭大浪打上岸（社群影片）</li><li><span class="t-time">9/1 清晨</span>｜小港區沿海三路｜<span class="t-type">🟡 積淹水</span>｜大面積積水，騎士涉水通過</li><li><span class="t-time">9/1</span>｜柴山一帶｜<span class="t-type">🟡 邊坡泥水滑落</span>｜草地大面積積水，邊坡泥水持續滑落</li><li><span class="t-time">9/1</span>｜鼓山區｜<span class="t-type">🟡 步道沖刷</span>｜大量水流從步道旁沖刷而下</li><li><span class="t-time">9/1</span>｜楠梓區德民路｜<span class="t-type">🟡 地下道冒水</span>｜人孔蓋冒出水柱與水氣</li><li><span class="t-time">8/28 起</span>｜小港區松富街（青春嶺）｜<span class="t-type">🔴 擋土牆三次坍塌</span>｜8/28 第 1 次倒塌 → 9/1 第 3 次坍塌，土壤含水量過高，部分居民撤離安置</li><li><span class="t-time">8/28</span>｜<strong>大寮區</strong>｜<span class="t-type">淹水</span>｜暴雨導致黃泥淹路，國小返校日活動喊卡</li><li><span class="t-time">8/24</span>｜田寮月世界｜<span class="t-type">視察</span>｜市長陳其邁會同經濟部次長賴建信前往視察二仁溪沿線水情與防洪設施（大紀元）</li></ul>
+</div>
+<div class="card county-card" id="%E5%B1%8F%E6%9D%B1%E7%B8%A3" style="padding:12px 16px">
+<h3 style="margin:4px 0;font-size:1rem">屏東縣　<span class="muted">（最新 8 筆）</span>　<a href="#top" class="muted" style="float:right">↑ 回頂端</a></h3>
+<ul class="news-list"><li><a href="https://www.chinatimes.com/realtimenews/20260901003203-260402" target="_blank" rel="noopener">屏東暴雨道路傳災情！台 24 線邊坡坍方、台 26 線路面龜裂</a> <span class="muted">— 中時新聞網 9/1</span></li><li><a href="https://tw.news.yahoo.com/%E9%80%A3%E6%97%A5%E8%B1%AA%E9%9B%A8%E9%AB%98%E5%B1%8F%E7%81%BD%E6%83%85%E4%B8%8D%E6%96%B7-%E6%B0%A3%E8%B1%A1%E7%BD%B2-9-6%E9%99%8D%E9%9B%A8%E8%B6%A8%E7%B7%A9-113953556.html" target="_blank" rel="noopener">連日豪雨高屏災情不斷 氣象署：9/6 降雨趨緩</a> <span class="muted">— 公視新聞網 9/1</span></li><li><a href="https://www.setn.com/news/2026-08-28/1056429" target="_blank" rel="noopener">屏東雨彈狂襲！排水不及「水淹及膝」週淹 2 次 居民哀嚎：真的快崩潰</a> <span class="muted">— 三立新聞網 8/28</span></li><li><a href="https://www.pts.org.tw/news/article.aspx?id=824123" target="_blank" rel="noopener">屏東連下好幾天大雨，導致多個鄉鎮水淹了又退、退了又淹；南州有蓮霧園整個泡在水裡</a> <span class="muted">— 公視新聞網 8/29</span></li><li><a href="https://www.pts.org.tw/news/article.aspx?id=824125" target="_blank" rel="noopener">屏東東琉線海況不佳 旅客改至鹽琉線船運中心上下船</a> <span class="muted">— 公視新聞網 8/29</span></li></ul>
+<ul class="timeline"><li><span class="t-time">9/1 前</span>｜春日鄉士文部落後山連絡道路｜<span class="t-type">🟡 道路封閉</span>｜嚴重掏空，道路封閉；撤離 138 人，收容 82 人</li><li><span class="t-time">9/1 前</span>｜滿州鄉長樂村｜<span class="t-type">🟡 撤離</span>｜共撤離 54 人，安置 48 人（山區降雨威脅生命安全）</li><li><span class="t-time">8/31</span>｜萬丹麟洛大排｜<span class="t-type">🟡 堤防裂縫</span>｜興全段堤防出現長長裂縫</li><li><span class="t-time">8/31</span>｜台 26 線恆春鎮石牛溪路段｜<span class="t-type">🟡 路面龜裂</span>｜路面下陷、多處龜裂，北上車道封閉，採單線雙向管制</li><li><span class="t-time">8/31</span>｜台 24 線 43.7km｜<span class="t-type">🟡 邊坡坍方</span>｜大量土石滑落阻斷道路，雙向無法通行（公路局搶修中）</li><li><span class="t-time">8/31 起</span>｜枋寮鄉新龍村｜<span class="t-type">🔴 再度淹水</span>｜地勢低窪路段反覆積淹水，村民無奈</li><li><span class="t-time">8/29 下午</span>｜<strong>東港鎮</strong>｜<span class="t-type">交通改航</span>｜海況不佳，縣府緊急把東琉線上下船地點改至鹽琉線船運中心</li><li><span class="t-time">8/29</span>｜<strong>南州鄉</strong>｜<span class="t-type">農損</span>｜蓮霧園整個泡在水裡，潮州鎮、新園鄉道路變河道</li></ul>
+</div>
+<div class="card county-card" id="%E5%8F%B0%E5%8D%97%E5%B8%82" style="padding:12px 16px">
+<h3 style="margin:4px 0;font-size:1rem">台南市　<span class="muted">（最新 5 筆）</span>　<a href="#top" class="muted" style="float:right">↑ 回頂端</a></h3>
+<ul class="news-list"><li><a href="https://udn.com/news/story/7326/9709784" target="_blank" rel="noopener">影／大雨狂炸！台南國定古蹟大東門工程倒塌土石傾瀉 火車站成河</a> <span class="muted">— 聯合新聞網</span></li><li><a href="https://www.cna.com.tw/news/aloc/202608240152.aspx" target="_blank" rel="noopener">雨炸南高屏花東 1 人失聯 古蹟牆崩、多處路陷橋封</a> <span class="muted">— 中央社 CNA</span></li><li><a href="https://newtalk.tw/news/view/2026-08-24/1055235" target="_blank" rel="noopener">台南大雨狂炸釀古蹟倒塌！網：台南雨神哭倒東門城</a> <span class="muted">— Newtalk 新聞</span></li><li><a href="https://news.ltn.com.tw/news/life/breakingnews/5550744" target="_blank" rel="noopener">豪雨衝擊古蹟！台南東門城崩塌 大南門樹木傾倒、桂子山泥土沖刷</a> <span class="muted">— 自由時報</span></li></ul>
+<ul class="timeline"><li><span class="t-time">8/28～8/29</span>｜中西區、安平區、永康區｜<span class="t-type">積淹水</span>｜連日降雨，低窪地區仍有積水；永康區單日雨量曾達 503 mm</li><li><span class="t-time">8/24 清晨</span>｜東區東門路圓環｜<span class="t-type"><strong>古蹟倒塌</strong></span>｜國定古蹟「台灣府城大東門」修復工程側牆崩落，城樓北側城牆與維護鷹架倒塌，所幸無人員傷亡。市府初步研判為底部磚土結構因雨水滲入後塌陷（Newtalk 新聞、中央社）</li><li><span class="t-time">8/23～8/24</span>｜全市各區｜<span class="t-type">停電</span>｜部分區域曾停電，已陸續恢復</li><li><span class="t-time">8/23～8/24</span>｜國道 1 號仁德交流道周邊｜<span class="t-type">積淹水</span>｜积水嚴重，影響交通</li><li><span class="t-time">8/23～8/24</span>｜中西區、安平區｜<span class="t-type">積淹水</span>｜多處道路嚴重積水，台南車站軌道遭水淹，被網友形容為「水上列車」（聯合新聞網）</li></ul>
+</div>
+<div class="card county-card" id="%E5%8F%B0%E4%B8%AD%E5%B8%82" style="padding:12px 16px">
+<h3 style="margin:4px 0;font-size:1rem">台中市　<span class="muted">（最新 1 筆）</span>　<a href="#top" class="muted" style="float:right">↑ 回頂端</a></h3>
+
+<ul class="timeline"><li><span class="t-time">2026/8/9</span>｜台中｜<span class="t-type">大雷雨</span>｜半夜被白海豚叫醒，閃電點亮天空（ETtoday）</li></ul>
+</div>
+<div class="card county-card" id="%E6%A1%83%E5%9C%92%E5%B8%82" style="padding:12px 16px">
+<h3 style="margin:4px 0;font-size:1rem">桃園市　<span class="muted">（最新 2 筆）</span>　<a href="#top" class="muted" style="float:right">↑ 回頂端</a></h3>
+
+<ul class="timeline"><li><span class="t-time">2026/8/9</span>｜桃園｜<span class="t-type">救援</span>｜警冒雨救援倒地老婦、清除倒塌路樹（ETtoday）</li><li><span class="t-time">2026/8/9</span>｜桃園復興｜<span class="t-type">道路封閉</span>｜台7線巴陵至西村路段持續預警性封閉（ETtoday）</li></ul>
+</div>
+<div class="card county-card" id="%E5%BD%B0%E5%8C%96%E7%B8%A3" style="padding:12px 16px">
+<h3 style="margin:4px 0;font-size:1rem">彰化縣　<span class="muted">（最新 1 筆）</span>　<a href="#top" class="muted" style="float:right">↑ 回頂端</a></h3>
+
+<ul class="timeline"><li><span class="t-time">2026/8/8</span>｜彰化縣、嘉義縣、臺南市、臺東縣、金門縣、連江縣｜<span class="t-type">高溫</span>｜黃色燈號，注意極端高溫</li></ul>
+</div>
+<div class="card county-card" id="%E8%8A%B1%E8%93%AE%E7%B8%A3" style="padding:12px 16px">
+<h3 style="margin:4px 0;font-size:1rem">花蓮縣　<span class="muted">（最新 1 筆）</span>　<a href="#top" class="muted" style="float:right">↑ 回頂端</a></h3>
+
+<ul class="timeline"><li><span class="t-time">2026/7/10</span>｜花蓮萬里溪｜<span class="t-type">堰塞湖紅色警戒</span>｜水位達1,076.86m，距壩頂僅剩約9公尺，蓄水量369.05萬立方公尺（占總庫容72.36%）。若溢流預估30分鐘～1小時內潰決，下游萬榮鄉、鳳林鎮強制撤離6,017人</li></ul>
+</div>
+<div class="card county-card" id="%E4%B8%AD%E5%9C%8B%E5%A4%A7%E9%99%B8" style="padding:12px 16px">
+<h3 style="margin:4px 0;font-size:1rem">中國大陸　<span class="muted">（最新 6 筆）</span>　<a href="#top" class="muted" style="float:right">↑ 回頂端</a></h3>
+
+<ul class="timeline"><li><span class="t-time">2026/8/9 傍晚</span>｜中國浙江｜<span class="t-type"><strong>颱風登陸</strong></span>｜白海豚颱風登陸中國浙江，已減弱為熱帶風暴級（23 m/s，988 hPa，8/10 10時位於浙江麗水龍泉市境內）（中央氣象台）</li><li><span class="t-time">2026/8/8</span>｜中國鐵路｜<span class="t-type">列車停运</span>｜中國鐵路上海局集團停运部分鐵路列車</li><li><span class="t-time">2026/8/8</span>｜中國浙江｜<span class="t-type">活動延期</span>｜溫州奧體中心「逐光」演唱會延期</li><li><span class="t-time">2026/8/8</span>｜中國江蘇｜<span class="t-type">活動取消</span>｜郁可唯「我怪」巡迴演唱會無錫站取消</li><li><span class="t-time">2026/8/8</span>｜中國上海｜<span class="t-type">景點關閉</span>｜上海迪士尼樂園、迪士尼小镇自8/9晚起關閉</li><li><span class="t-time">2026/8/7</span>｜中國浙江、福建｜<span class="t-type">海上防颱風應急響應</span>｜浙江、福建啟動四級應急響應；沿海漁船回港避風</li></ul>
+</div>
+<div class="card county-card" id="%E5%85%B6%E4%BB%96" style="padding:12px 16px">
+<h3 style="margin:4px 0;font-size:1rem">其他　<span class="muted">（最新 8 筆）</span>　<a href="#top" class="muted" style="float:right">↑ 回頂端</a></h3>
+
+<ul class="timeline"><li><span class="t-time">2026/8/9 23:30</span>｜台灣北部海面、東北部海面｜<span class="t-type"><strong>海上颱風警報解除</strong></span>｜氣象署發布第20報（最後一次報告），白海豚中心位於馬祖北方約190公里，已減弱為輕度颱風（25 m/s，985 hPa），7級風暴風半徑100公里，對臺灣北部海面威脅已解除（中央社）</li><li><span class="t-time">2026/8/9 14:00</span>｜全台｜<span class="t-type">災情紀錄</span>｜<strong>最新統計</strong>：全台累計 <strong>632 件</strong>一般災情、<strong>6 人受傷</strong>（無人員死亡或失蹤）；已處理 468 件，164 件處理中；主要災情為路樹倒塌、建築物受損、停電、交通設施受損等（星島日報、中央社）</li><li><span class="t-time">2026/8/9 11:30</span>｜台灣北部海面、台灣東北部海面｜<span class="t-type">海上颱風警報（橙色燈號）</span>｜氣象署發布海上颱風警報第14報，警戒範圍：台灣北部海面、台灣東北部海面</li><li><span class="t-time">2026/8/9 08:00</span>｜全台｜<span class="t-type">災情紀錄</span>｜截至8時已釀222件一般災情、5人受傷；路樹倒塌78件最多；26處積淹水均已退水（中時）</li><li><span class="t-time">2026/8/9 02:00</span>｜台灣北部海面、台灣東北部海面｜<span class="t-type">海上颱風警報（橙色燈號）</span>｜氣象署發布海上颱風警報第13報，警戒範圍：台灣北部海面、台灣東北部海面</li><li><span class="t-time">2026/8/8 23:30</span>｜台灣北部海面、台灣東北部海面｜<span class="t-type">海上颱風警報（橙色燈號）</span>｜氣象署發布海上颱風警報第12報，警戒範圍：台灣北部海面、台灣東北部海面</li><li><span class="t-time">2026/8/8 17:51</span>｜日本沖繩｜<span class="t-type">颱風災情更新</span>｜白海豚挾豪風強風虐沖繩，釀6傷、逾1.8萬戶大停電、空中與陸上交通癱瘓，宮古島恐進入暴風圈</li><li><span class="t-time">2026/8/8 11:30</span>｜台灣北部海面、台灣東北部海面｜<span class="t-type">海上颱風警報（橙色燈號）</span>｜氣象署發布海上颱風警報第5報，警戒範圍：台灣北部海面、台灣東北部海面</li></ul>
+</div></section><section><h2>過去事件封存</h2><ul class="archive-list"><li><span class="badge sev-yellow">🟡 警戒</span>　<a href="events/%E9%A2%B1%E9%A2%A8/2026/08/0818_18_%E6%B2%99%E5%BE%B7%E7%88%BE_SAUDEL.html">颱風沙德爾（SAUDEL）— 2026 年第 20 號</a>
+<span class="meta">（2026/8/18–2026/9/3）</span><br><span class="meta">8/18 生成、8/24 達 51 m/s / 925 hPa 巔峰；8/28 最接近台灣後登陸浙江轉熱帶性低氣壓、解除海警；8/31 殘餘環流入南海與低壓帶合併發展，9/1 復活升格為輕度颱風，朝東北移動；9/3 於南海北部海面減弱為熱帶性低氣壓，對台無直接影響，事件結束</span></li><li><span class="badge sev-yellow">🟡 警戒</span>　<a href="events/%E7%81%BD%E6%83%85/2026/08/0828_%E8%A5%BF%E5%8D%97%E9%A2%A8_%E5%8D%97%E5%8F%B0%E7%81%A3%E5%BE%8C%E7%BA%8C%E6%B7%B9%E6%B0%B4.html">0828 西南風短延時豪雨後續災情</a>
+<span class="meta">（2026/8/28–2026/8/30）</span><br><span class="meta">低壓帶持續影響，屏東潮州、新園鄉二度淹水；高雄大寮黃泥淹路；南州蓮霧園泡水；氣象署 8/29 發布豪雨特報，15 縣市受影響</span></li><li><span class="badge sev-red">🔴 重大</span>　<a href="events/%E9%A2%B1%E9%A2%A8/2026/07/0702_09_%E5%B7%B4%E5%A8%81_BAVI.html">颱風巴威（BAVI）— 2026 年第 9 號</a>
+<span class="meta">（2026/7/2–7/12）</span><br><span class="meta">中度颱風（45 m/s），7 級風暴風半徑 380 km（近 30 年最大）；7/11 近台灣北面 150 km 通過，台北盆地 10–12 級強陣風、烏來土石流、花蓮萬里溪堰塞湖紅色警戒、恆春半島 13 級風</span></li><li><span class="badge sev-yellow">🟡 警戒</span>　<a href="events/%E9%A2%B1%E9%A2%A8/2026/07/0722_12_%E7%B4%85%E9%9C%9E_Noul.html">颱風紅霞（NOUL）— 2026 年第 12 號</a>
+<span class="meta">（2026/7/22–7/26）</span><br><span class="meta">強烈熱帶風暴（33 m/s）；7/25 台灣解除海警，7/26 登陸惠州至揭陽一帶，台灣無直接登陸，花東與恆春半島迎風面有強降雨</span></li><li><span class="badge sev-yellow">🟡 警戒</span>　<a href="events/%E9%A2%B1%E9%A2%A8/2026/08/0807_13_%E7%99%BD%E6%B5%B7%E8%B1%9A_DOLPHIN.html">颱風白海豚（DOLPHIN）— 2026 年第 13 號</a>
+<span class="meta">（2026/7/27–8/10）</span><br><span class="meta">7/30 達超強颱風 60 m/s（895 hPa，今年風王候選）；8/10 登陸浙江減弱，8/9 23:30 解除台灣海警，無直接登陸台灣</span></li><li><span class="badge sev-red">🔴 重大</span>　<a href="events/%E7%81%BD%E6%83%85/2026/08/0821_%E4%BD%8E%E5%A3%93%E5%B8%B6_%E5%8D%97%E5%8F%B0%E7%81%A3%E5%A4%A7%E9%9B%A8.html">0822 低壓帶及西南風豪雨事件</a>
+<span class="meta">（2026/8/21–8/25）</span><br><span class="meta">嘉義以南豪雨，2 死 3 失蹤 202 傷；累計積淹水 722 處（均已退水）、疏散撤離 6,129 人，農損逾 1.4 億，高雄災情最重（130 件淹水）</span></li></ul></section>
+</main>
+<footer><div class="wrap">
+<p>本頁內容彙整自中央氣象署公開資料與新聞媒體公開報導，每筆災情請點入來源連結查證原文；官方資訊以中央氣象署與各縣市政府公告為準。本頁採手動更新，資訊可能落後。</p>
+</div></footer>
+</div>
+</div>
+<script>
+(function(){
+  var root = document.documentElement;
+  var themeBtn = document.getElementById('theme-toggle');
+  if (themeBtn) themeBtn.addEventListener('click', function(){
+    var t = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', t);
+    try { localStorage.setItem('wtf-theme', t); } catch (e) {}
+  });
+  var sb = document.getElementById('sidebar'),
+      sc = document.getElementById('scrim'),
+      hb = document.getElementById('nav-toggle');
+  function close(){ if(sb) sb.classList.remove('open'); if(sc) sc.classList.remove('show'); }
+  if (hb) hb.addEventListener('click', function(){
+    sb.classList.toggle('open'); sc.classList.toggle('show');
+  });
+  if (sc) sc.addEventListener('click', close);
+  if (sb) sb.querySelectorAll('a').forEach(function(a){ a.addEventListener('click', close); });
+})();
+</script>
+</body>
+</html>

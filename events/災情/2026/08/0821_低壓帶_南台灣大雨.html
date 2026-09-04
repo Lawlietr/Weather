@@ -1,0 +1,1989 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>0822 低壓帶及西南風豪雨事件</title>
+<style>
+:root{--red:#ef5350;--yellow:#ffb300;--green:#66bb6a;
+--bg:#14181c;--card:#1d242c;--line:#2f3944;--ink:#e4e8ec;--muted:#98a3af;
+--accent:#64b5f6;--chip-bg:#2a333e;--side-bg:#0f1317;--side-ink:#c9d1d9;
+--head-bg:#0c0f12;--table-head:#252e38;--ph-bg:#241f12;--ph-line:#6e5a1e;--ph-ink:#d3bd7d;
+color-scheme:dark;}
+:root[data-theme="light"]{--red:#c62828;--yellow:#ef8f00;--green:#2e7d32;
+--bg:#fff6dd;--card:#fffdf4;--line:#e6d7ae;--ink:#33280f;--muted:#7d6c48;
+--accent:#a05e00;--chip-bg:#f5e8c3;--side-bg:#fbf1d4;--side-ink:#4d3f22;
+--head-bg:#263238;--table-head:#f7edd0;--ph-bg:#fff8e1;--ph-line:#c9a227;--ph-ink:#6d5410;
+color-scheme:light;}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei","Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic","Meiryo",sans-serif;color:var(--ink);background:var(--bg);line-height:1.7;font-size:16px}
+/* 版面：左側欄 + 右側內容（內容置中） */
+.layout{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
+.sidebar{background:var(--side-bg);border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow-y:auto;padding:16px 10px}
+.nav-group{font-size:.72rem;letter-spacing:.1em;color:var(--muted);margin:18px 10px 6px}
+.nav-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:8px;color:var(--side-ink);font-size:.88rem;line-height:1.45}
+.nav-item:hover{background:var(--chip-bg);text-decoration:none}
+.nav-item.nav-current{background:var(--chip-bg);color:var(--ink);font-weight:700}
+/* 側欄二層收合清單（純 CSS details/summary） */
+.nav-sub{margin:0}
+.nav-sub summary{display:flex;align-items:center;gap:2px;list-style:none;cursor:pointer}
+.nav-sub summary::-webkit-details-marker{display:none}
+.nav-sub summary:hover .nav-item{background:var(--chip-bg)}
+.nav-sub .caret{flex:none;font-size:.7rem;color:var(--muted);transition:transform .15s;margin:0 0 0 4px}
+.nav-sub[open] .caret{transform:rotate(90deg)}
+.nav-counties{margin:2px 0 6px 16px;border-left:1px solid var(--line);padding-left:4px}
+.nav-counties .nav-subitem{font-size:.8rem;padding:5px 8px}
+.dot{width:9px;height:9px;border-radius:50%;flex:none;margin-top:6px}
+.dot-red{background:var(--red)}.dot-yellow{background:var(--yellow)}.dot-green{background:var(--green)}
+.page{display:flex;flex-direction:column;min-width:0}
+header.site{background:var(--head-bg);color:#fff;padding:10px 0;position:sticky;top:0;z-index:40}
+.site-bar{max-width:900px;margin:0 auto;padding:2px 16px;display:flex;align-items:center;gap:8px}
+.site-bar.updated-bar{justify-content:flex-end}
+header.site h1{font-size:1.1rem;margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.updated{color:#b0bec5;font-size:.8rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon-btn{background:none;border:none;border-radius:8px;color:inherit;padding:6px;display:inline-flex;cursor:pointer;line-height:0;flex:none}
+.icon-btn:hover{background:rgba(255,255,255,.15)}
+.lang-switch{display:inline-flex;gap:2px;flex:none}
+.lang-switch a,.lang-switch .on{padding:2px 9px;border-radius:6px;font-size:.78rem;line-height:1.6}
+.lang-switch a{color:#b0bec5}
+.lang-switch a:hover{text-decoration:none;background:rgba(255,255,255,.15)}
+.lang-switch .on{background:rgba(255,255,255,.18);color:#fff;font-weight:700}
+#nav-toggle{display:none}
+[data-theme="dark"] .icon-moon{display:none}
+[data-theme="light"] .icon-sun{display:none}
+main.wrap{flex:1;width:100%;max-width:900px;margin:0 auto;padding:16px}
+section{margin:28px 0}
+h2{font-size:1.15rem;border-bottom:2px solid var(--line);padding-bottom:6px}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px;margin:12px 0}
+/* hero：正常卡片底色 + 實色邊框（不填色），依嚴重度著色 */
+.hero{border:2px solid var(--line)}
+.hero.sev-red{border-color:var(--red)}
+.hero.sev-yellow{border-color:var(--yellow)}
+.hero.sev-green{border-color:var(--green)}
+.hero h2{font-size:1.45rem;font-weight:800;line-height:1.45;margin-top:0}
+.hero h2 a{color:var(--ink)}
+.hero h2 a:hover{color:var(--accent)}
+.hero .meta{color:var(--muted);font-size:.9rem}
+.hero-cta{display:inline-block;margin-top:16px;padding:8px 20px;border-radius:8px;background:var(--accent);color:var(--head-bg);font-size:.95rem;font-weight:700;text-decoration:none}
+.hero-cta:hover{filter:brightness(1.15);text-decoration:underline}
+/* 徽章：實心色塊小標籤（severity 背景色只限徽章，不污染卡片） */
+.badge{display:inline-block;padding:3px 12px;border-radius:12px;font-size:.85rem;font-weight:700;vertical-align:middle}
+.badge.sev-red{background:var(--red);color:#fff}
+.badge.sev-yellow{background:var(--yellow);color:#3e2723}
+.badge.sev-green{background:var(--green);color:#fff}
+.badge.sev-grey{background:#9e9e9e;color:#fff}
+.chips{margin:10px 0}
+.chip{display:inline-block;background:var(--chip-bg);border-radius:14px;padding:2px 12px;margin:2px 4px 2px 0;font-size:.85rem}
+.chip-link{color:var(--accent);text-decoration:none}
+.chip-link:hover{text-decoration:underline}
+.county-card{scroll-margin-top:88px}
+.meta{color:var(--muted);font-size:.85rem}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:.9rem;background:var(--card)}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--table-head)}
+ul.timeline{list-style:none;padding:0;margin:8px 0}
+ul.timeline li{padding:8px 0;border-bottom:1px dashed var(--line)}
+ul.timeline li:last-child{border-bottom:none}
+ul.news-list{list-style:none;margin:6px 0 0;padding-left:4px}
+ul.news-list li{padding:2px 0;font-size:.85rem}
+ul.news-list li a{word-break:break-all}
+.t-time{font-weight:700}
+.t-type{color:var(--accent);font-weight:600}
+.muted{color:var(--muted)}
+.placeholder{background:var(--ph-bg);border:1px dashed var(--ph-line);border-radius:10px;padding:14px;color:var(--ph-ink)}
+/* CWA 氣象總覽 */
+.cwa-warn{background:var(--chip-bg);border:1px solid var(--yellow);border-radius:8px;padding:10px 14px;margin:8px 0}
+.cwa-fail{border-color:var(--yellow)}
+/* 目前風險狀態列：由 CWA 目前之警報/特報推導（與事件歷史 severity 無關） */
+.risk-bar{border:2px solid var(--line);border-radius:10px;padding:12px 18px;margin:14px 0;background:var(--card)}
+.risk-bar.risk-red{border-color:var(--red);background:var(--red-bg)}
+.risk-bar.risk-yellow{border-color:var(--yellow);background:var(--yellow-bg)}
+.risk-bar.risk-green{border-color:var(--green)}
+.risk-bar.risk-neutral{border-color:var(--line);background:var(--bg)}
+.risk-bar.risk-unknown{border-style:dashed}
+.risk-bar .risk-label{font-weight:800;font-size:1rem}
+.risk-bar ul{list-style:none;margin:6px 0 0;padding:0}
+.risk-bar li{padding:2px 0;font-size:.95rem}
+.typhoon-row{display:flex;gap:18px;align-items:flex-start;margin:10px 0}
+.typhoon-row .map{flex:0 0 340px;max-width:46%}
+.typhoon-row .map svg{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.typhoon-row .typhoon-info{flex:1;min-width:0}
+.typhoon-row .typhoon-info table{font-size:.85rem}
+.alert-item{padding:10px 0;border-bottom:1px dashed var(--line)}
+.alert-item:last-child{border-bottom:none}
+.report-text{white-space:pre-wrap;font-size:.85rem;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;margin:8px 0 0}
+@media(max-width:767px){.typhoon-row{flex-direction:column}.typhoon-row .map{max-width:100%;flex-basis:auto}}
+.event-content{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;overflow-x:auto}
+.event-content h1{font-size:1.3rem}
+.event-content h2{border-bottom:1px solid var(--line)}
+.event-content blockquote{border-left:4px solid var(--accent);margin:12px 0;padding:4px 14px;background:var(--chip-bg)}
+.event-content img{max-width:100%}
+.archive-list{list-style:none;padding:0}
+.archive-list li{padding:10px 0;border-bottom:1px solid var(--line)}
+footer{background:var(--head-bg);color:#cfd8dc;padding:20px 0;font-size:.85rem;margin-top:40px}
+footer .wrap{max-width:900px;margin:0 auto;padding:0 16px}
+.backlink{display:inline-block;margin-bottom:10px}
+.scrim{display:none}
+/* 平板與手機（<1024px）：側欄改為抽屜式 */
+@media (max-width:1023px){
+.layout{display:block}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:280px;transform:translateX(-100%);transition:transform .25s ease;z-index:60;box-shadow:0 0 30px rgba(0,0,0,.45)}
+.sidebar.open{transform:translateX(0)}
+#nav-toggle{display:inline-flex}
+.scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .25s;z-index:55}
+.scrim.show{opacity:1;pointer-events:auto}
+main.wrap{padding:12px}
+section{margin:20px 0}
+.card{padding:14px}
+.t-time{white-space:normal}
+}
+@media print{
+.sidebar,#scrim,.icon-btn{display:none}
+.layout{display:block}
+header.site,footer{background:none;color:#000}
+.card,.event-content{border-color:#999;break-inside:avoid}
+a::after{content:" (" attr(href) ")";font-size:.75em;color:#555}
+}
+</style>
+<script>/* 避免閃爍：先還原主題偏好再渲染 */(function(){var t=null;try{t=localStorage.getItem("wtf-theme")}catch(e){}if(t!=="light"&&t!=="dark")t="dark";document.documentElement.setAttribute("data-theme",t);})();</script>
+</head>
+<body id="top">
+<div class="layout">
+<aside class="sidebar" id="sidebar">
+<nav><a class="nav-item" href="../../../../index.html">🏠 總覽</a><div class="nav-group">目前事件</div><details class="nav-sub" open><summary><span class="caret" aria-hidden="true">▸</span><a class="nav-item" href="../../../../events/%E7%81%BD%E6%83%85/2026/09/0904_%E4%BD%8E%E5%A3%93%E5%B8%B6_%E5%8D%97%E5%8C%97%E5%8F%B0%E7%81%A3%E8%B1%AA%E9%9B%A8.html"><span class="dot dot-yellow"></span><span>0904 低壓帶南北台灣豪雨</span></a></summary><div class="nav-counties"><a class="nav-item nav-subitem" href="../../../../index.html#%E5%9F%BA%E9%9A%86%E5%B8%82">基隆市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E5%8F%B0%E5%8C%97%E5%B8%82">台北市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E6%96%B0%E5%8C%97%E5%B8%82">新北市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E5%AE%9C%E8%98%AD%E7%B8%A3">宜蘭縣</a><a class="nav-item nav-subitem" href="../../../../index.html#%E6%A1%83%E5%9C%92%E5%B8%82">桃園市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E9%AB%98%E9%9B%84%E5%B8%82">高雄市</a><a class="nav-item nav-subitem" href="../../../../index.html#%E5%B1%8F%E6%9D%B1%E7%B8%A3">屏東縣</a><a class="nav-item nav-subitem" href="../../../../index.html#%E5%8F%B0%E6%9D%B1%E7%B8%A3">台東縣</a></div></details><div class="nav-group">過去事件</div><a class="nav-item" href="../../../../events/%E9%A2%B1%E9%A2%A8/2026/08/0818_18_%E6%B2%99%E5%BE%B7%E7%88%BE_SAUDEL.html"><span class="dot dot-yellow"></span><span>颱風沙德爾（SAUDEL）— 2026 年第 20 號</span></a><a class="nav-item" href="../../../../events/%E7%81%BD%E6%83%85/2026/08/0828_%E8%A5%BF%E5%8D%97%E9%A2%A8_%E5%8D%97%E5%8F%B0%E7%81%A3%E5%BE%8C%E7%BA%8C%E6%B7%B9%E6%B0%B4.html"><span class="dot dot-yellow"></span><span>0828 西南風短延時豪雨後續災情</span></a><a class="nav-item" href="../../../../events/%E9%A2%B1%E9%A2%A8/2026/07/0702_09_%E5%B7%B4%E5%A8%81_BAVI.html"><span class="dot dot-red"></span><span>颱風巴威（BAVI）— 2026 年第 9 號</span></a><a class="nav-item" href="../../../../events/%E9%A2%B1%E9%A2%A8/2026/07/0722_12_%E7%B4%85%E9%9C%9E_Noul.html"><span class="dot dot-yellow"></span><span>颱風紅霞（NOUL）— 2026 年第 12 號</span></a><a class="nav-item" href="../../../../events/%E9%A2%B1%E9%A2%A8/2026/08/0807_13_%E7%99%BD%E6%B5%B7%E8%B1%9A_DOLPHIN.html"><span class="dot dot-yellow"></span><span>颱風白海豚（DOLPHIN）— 2026 年第 13 號</span></a><a class="nav-item nav-current" href="../../../../events/%E7%81%BD%E6%83%85/2026/08/0821_%E4%BD%8E%E5%A3%93%E5%B8%B6_%E5%8D%97%E5%8F%B0%E7%81%A3%E5%A4%A7%E9%9B%A8.html"><span class="dot dot-red"></span><span>0822 低壓帶及西南風豪雨事件</span></a></nav>
+</aside>
+<div class="scrim" id="scrim"></div>
+<div class="page">
+<header class="site">
+<div class="site-bar">
+<button id="nav-toggle" class="icon-btn" aria-label="開啟事件清單"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+<h1><a href="../../../../index.html" style="color:#fff;text-decoration:none">0822 低壓帶及西南風豪雨事件</a></h1>
+<span class="lang-switch"><span class="on">繁體中文</span><a href="../../../../ja/index.html">日本語</a></span>
+<a class="icon-btn" href="https://github.com/Lawlietr/Weather" target="_blank" rel="noopener" title="GitHub" aria-label="GitHub"><svg viewBox="0 0 16 16" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg></a>
+<button id="theme-toggle" class="icon-btn" aria-label="切換日夜主題">
+<svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 1v2m0 18v2M4.2 4.2l1.4 1.4m12.8 12.8 1.4 1.4M1 12h2m18 0h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+<svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+</button>
+</div>
+<div class="site-bar updated-bar"><span class="updated">產生時間：2026/9/4 12:32（手動生成，非即時）</span></div>
+</header>
+<main class="wrap">
+
+<a class="backlink" href="../../../../index.html">← 返回總覽</a>
+<section class="card hero sev-red" style="padding:12px 18px">
+<span class="badge sev-red">🔴 重大</span>　<span class="meta">已封存事件</span>
+
+<div class='chips'><span class="chip">台南市</span><span class="chip">高雄市</span><span class="chip">屏東縣</span><span class="chip">嘉義縣</span><span class="chip">花蓮縣</span><span class="chip">台東縣</span></div>
+</section>
+<div class="event-content">
+<h1>🌧️ 0822 低壓帶及西南風豪雨事件 — 南台灣災情報告</h1>
+<p>最後修改：2026/8/28 15:50（追加 8/28 後續進展：西南風短延時豪雨、潮州淹水、修格蘭尋獲、沙德爾海警 14:30 解除）</p>
+<blockquote>
+<p><strong>事件名稱</strong>：0822 低壓帶及西南風豪雨事件
+<strong>中央氣象署發布</strong>：2026/8/22 17:00 啟動劇烈豪雨作業
+<strong>影響期間</strong>：2026/8/21（週五）起至 8/25（週二）
+<strong>影響範圍</strong>：嘉義以南及東半部地區（台南、高雄、屏東為重災區）
+<strong>災害類型</strong>：低壓帶 + 西南風 → 連續強降雨 → 積淹水、土石流、路樹倒塌</p>
+</blockquote>
+<hr />
+<h2>災害概述</h2>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>統計</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>死亡</strong></td>
+<td>2 人（台南 1 人、花蓮 1 人）</td>
+</tr>
+<tr>
+<td><strong>失蹤</strong></td>
+<td>3 人（花蓮 1 人、台南 1 人、屏東 1 人）</td>
+</tr>
+<tr>
+<td><strong>受傷</strong></td>
+<td>202 人</td>
+</tr>
+<tr>
+<td><strong>積淹水通報</strong></td>
+<td>累計 722 件（截至 8/26 14:00，均已退水）</td>
+</tr>
+<tr>
+<td><strong>一般災情</strong></td>
+<td>累計 1,222 件（已處理 1,060 件、處理中 162 件）</td>
+</tr>
+<tr>
+<td><strong>停電</strong></td>
+<td>曾達 21,885 戶，已修復 21,125 戶（新竹縣 760 戶未修復）</td>
+</tr>
+<tr>
+<td><strong>疏散撤離</strong></td>
+<td>累計 6,129 人</td>
+</tr>
+<tr>
+<td><strong>收容</strong></td>
+<td>台南市 2 處收容中心，共收容 22 人</td>
+</tr>
+<tr>
+<td><strong>農損</strong></td>
+<td>逾 1.4 億元（截至 8/27）</td>
+</tr>
+<tr>
+<td><strong>土石流紅色警戒</strong></td>
+<td>高雄 74 條潛勢溪流、屏東多條溪流</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>各縣市災情統計</h2>
+<table>
+<thead>
+<tr>
+<th>縣市</th>
+<th>淹水件數</th>
+<th>撤離人數</th>
+<th>傷亡</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>高雄市</strong></td>
+<td>130 件（最多）</td>
+<td>2,651 人</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>屏東縣</strong></td>
+<td>—</td>
+<td>906 人</td>
+<td>1 死</td>
+</tr>
+<tr>
+<td><strong>台南市</strong></td>
+<td>—</td>
+<td>574 人</td>
+<td>1 死</td>
+</tr>
+<tr>
+<td><strong>嘉義縣</strong></td>
+<td>—</td>
+<td>25 人</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>花蓮縣</strong></td>
+<td>—</td>
+<td>1,826 人</td>
+<td>1 死 2 失蹤</td>
+</tr>
+<tr>
+<td><strong>台東縣</strong></td>
+<td>—</td>
+<td>147 人</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>資料來源：中央災害應變中心第七次工作會報（8/26 14:00）、聯合報（2026/8/26）、自由時報（2026/8/26）</p>
+</blockquote>
+<hr />
+<h2>台南市災情</h2>
+<h3>基本資料</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>數據</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>累積雨量</strong></td>
+<td>北區測站 104.5 mm（8/25 13:00）</td>
+</tr>
+<tr>
+<td><strong>淹水通報</strong></td>
+<td>29 件（截至 8/24）</td>
+</tr>
+<tr>
+<td><strong>撤離人數</strong></td>
+<td>567 人</td>
+</tr>
+<tr>
+<td><strong>停班停課</strong></td>
+<td>8/23、8/24 全面停班停課；8/25 正常上班上課</td>
+</tr>
+</tbody>
+</table>
+<h3>重大災情</h3>
+<table>
+<thead>
+<tr>
+<th>時間</th>
+<th>地點</th>
+<th>類型</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8/24 清晨</td>
+<td>東區東門路圓環</td>
+<td><strong>古蹟倒塌</strong></td>
+<td>國定古蹟「台灣府城大東門」修復工程側牆崩落，城樓北側城牆與維護鷹架倒塌，所幸無人員傷亡。市府初步研判為底部磚土結構因雨水滲入後塌陷（Newtalk 新聞、中央社）</td>
+</tr>
+<tr>
+<td>8/23～8/24</td>
+<td>中西區、安平區</td>
+<td>積淹水</td>
+<td>多處道路嚴重積水，台南車站軌道遭水淹，被網友形容為「水上列車」（聯合新聞網）</td>
+</tr>
+<tr>
+<td>8/23～8/24</td>
+<td>國道 1 號仁德交流道周邊</td>
+<td>積淹水</td>
+<td>积水嚴重，影響交通</td>
+</tr>
+<tr>
+<td>8/23～8/24</td>
+<td>全市各區</td>
+<td>停電</td>
+<td>部分區域曾停電，已陸續恢復</td>
+</tr>
+</tbody>
+</table>
+<h3>水庫狀況</h3>
+<table>
+<thead>
+<tr>
+<th>水庫</th>
+<th>災前蓄水量</th>
+<th>災後蓄水量</th>
+<th>備註</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>曾文水庫</strong></td>
+<td>約 8 成</td>
+<td><strong>滿水位</strong></td>
+<td>兩天內進帳約 1 億噸（臺南人新聞網）</td>
+</tr>
+<tr>
+<td><strong>烏山頭水庫</strong></td>
+<td>約 76%</td>
+<td><strong>滿水位</strong></td>
+<td>增加超過 1,000 萬噸（臺南人新聞網）</td>
+</tr>
+</tbody>
+</table>
+<h3>台南市災情新聞來源</h3>
+<ul>
+<li><a href="https://udn.com/news/story/7326/9709784">影／大雨狂炸！台南國定古蹟大東門工程倒塌土石傾瀉 火車站成河</a> — 聯合新聞網</li>
+<li><a href="https://www.cna.com.tw/news/aloc/202608240152.aspx">雨炸南高屏花東 1 人失聯 古蹟牆崩、多處路陷橋封</a> — 中央社 CNA</li>
+<li><a href="https://newtalk.tw/news/view/2026-08-24/1055235">台南大雨狂炸釀古蹟倒塌！網：台南雨神哭倒東門城</a> — Newtalk 新聞</li>
+<li><a href="https://news.ltn.com.tw/news/life/breakingnews/5550744">豪雨衝擊古蹟！台南東門城崩塌 大南門樹木傾倒、桂子山泥土沖刷</a> — 自由時報</li>
+</ul>
+<hr />
+<h2>高雄市災情</h2>
+<h3>基本資料</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>數據</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>累積雨量</strong></td>
+<td>楠梓區測站 167.0 mm（8/25 13:00）</td>
+</tr>
+<tr>
+<td><strong>24 小時最大雨量</strong></td>
+<td>567 mm（超越 2024 年凱米颱風 559 mm）</td>
+</tr>
+<tr>
+<td><strong>超大豪雨區域</strong></td>
+<td>梓官、彌陀等 6 區 24 小時累積雨量突破 500 mm</td>
+</tr>
+<tr>
+<td><strong>淹水通報</strong></td>
+<td>130 件（全市最多）</td>
+</tr>
+<tr>
+<td><strong>撤離人數</strong></td>
+<td>2,649 人（全市最多）</td>
+</tr>
+<tr>
+<td><strong>土石流紅色警戒</strong></td>
+<td>74 條潛勢溪流（含 34 條紅色警戒）</td>
+</tr>
+<tr>
+<td><strong>停班停課</strong></td>
+<td>8/23、8/24 全面停班停課；8/25 部分地區停班停課（山區 8 原鄉 + 沿海 5 村里）</td>
+</tr>
+</tbody>
+</table>
+<h3>重大災情</h3>
+<table>
+<thead>
+<tr>
+<th>時間</th>
+<th>地點</th>
+<th>類型</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8/23～8/24</td>
+<td><strong>梓官區蚵仔寮</strong></td>
+<td><strong>嚴重淹水</strong></td>
+<td>積水達 1 米，汽機車泡水，大冰箱漂整條路，居民涉水逃命「徹夜未眠」，邊掃水邊罵每年淹水（中視新聞、Yahoo 新聞）</td>
+</tr>
+<tr>
+<td>8/23～8/24</td>
+<td><strong>大寮區興隆路</strong></td>
+<td>淹水</td>
+<td>水從田裡倒灌到馬路上，宛如一片汪洋，民眾分不清哪裡是田、哪裡是道路（Yahoo 新聞）</td>
+</tr>
+<tr>
+<td>8/23～8/24</td>
+<td><strong>岡山區華崗路</strong></td>
+<td><strong>道路塌陷</strong></td>
+<td>路面塌陷形成天坑，自小客車陷入災情曝光後陳其邁臉書被灌爆（Yahoo 新聞）</td>
+</tr>
+<tr>
+<td>8/24</td>
+<td><strong>前鎮區</strong></td>
+<td><strong>天坑</strong></td>
+<td>接連驚見天坑（Yahoo 新聞）</td>
+</tr>
+<tr>
+<td>8/23</td>
+<td>全市多處</td>
+<td>輕軌停駛</td>
+<td>路樹傾倒壓到輕軌列車，一度停駛（世界新聞網）</td>
+</tr>
+<tr>
+<td>8/23</td>
+<td>鹽埕區五福四路、新興街</td>
+<td>積淹水</td>
+<td>淹水達約 50 公分（華視新聞網）</td>
+</tr>
+<tr>
+<td>8/23</td>
+<td>鳥松區</td>
+<td>車輛滅頂</td>
+<td>車輛幾乎滅頂（Yahoo 新聞）</td>
+</tr>
+<tr>
+<td>8/23</td>
+<td>愛河</td>
+<td>水位暴漲</td>
+<td>愛河水位暴漲，居民擔憂水快滿出來（Yahoo 新聞）</td>
+</tr>
+<tr>
+<td>8/24</td>
+<td>田寮月世界</td>
+<td>視察</td>
+<td>市長陳其邁會同經濟部次長賴建信前往視察二仁溪沿線水情與防洪設施（大紀元）</td>
+</tr>
+</tbody>
+</table>
+<h3>高雄市民反應</h3>
+<ul>
+<li>陳其邁臉書被灌爆，網友酸「淹水就是淹水，講那麼多」、「水樂園開幕」</li>
+<li>市議員陳美雅質疑砸錢治水仍淹</li>
+<li>市議員張博洋認為極端氣候難保不淹</li>
+<li>水利局回應：瞬間雨量超過排水負荷</li>
+</ul>
+<h3>高雄市災情新聞來源</h3>
+<ul>
+<li><a href="https://tw.news.yahoo.com/%E9%AB%98%E9%9B%84%E7%A0%B8%E9%8C%A2%E6%B2%BB%E6%B0%B4%E4%BB%8D%E6%85%98%E6%B7%B9-%E5%A4%A9%E5%9D%91%E5%86%8D%E7%8F%BE-%E8%BB%8A%E9%9A%AA%E6%BB%85%E9%A0%82-%E5%B8%82%E6%B0%91%E7%81%8C%E7%88%86%E9%99%B3%E5%85%B6%E9%82%81%E8%87%89%E6%9B%B8-%E6%B0%B4%E6%A8%82%E5%9C%92%E9%96%8B%E5%B9%95-033756777.html">高雄慘淹、車陷天坑！「砸錢治水難抗暴雨」陳其邁臉書灌爆 市府回應了</a> — Yahoo 新聞</li>
+<li><a href="https://www.epochtimes.com/b5/26/8/24/n14835579.htm">高雄 24 小時雨量超越凱米颱風 逢大潮海水倒灌多處積淹水</a> — 大紀元</li>
+<li><a href="https://www.ettoday.net/news/20260823/3224345.htm">致災暴雨轟炸!高雄 34 條「紅色土石流警戒」 10 區急撤 2203 人</a> — ETtoday 新聞雲</li>
+<li><a href="https://www.ctee.com.tw/news/20260823700502-431401">豪雨狂炸山區!高雄土石流警戒達 74 條 急撤 2231 人</a> — 商周頭條</li>
+<li><a href="https://tw.news.yahoo.com/%E8%B1%AA%E9%9B%A8%E7%82%B8%E5%8D%97%E5%8F%B0%E7%81%A3-3%E%B8%A8%E5%B8%82%E7%B4%AF%E8%A8%88199%E4%BB%B6%E6%B7%B9%E6%B0%B4-%E9%AB%98%E9%9B%84130%E4%BB%B6%E6%9C%80%E6%85%98-37%E8%99%95%E6%9C%AA%E9%80%80-035700935.html">豪雨狂炸南台灣!3 縣市累計 199 件淹水 高雄 130 件最慘、37 處未退</a> — Yahoo 新聞</li>
+<li><a href="https://newtalk.tw/news/view/2026-08-25/1055436">陳其邁成功爭取農產全品項災害現金救助 高雄 8/25 日起受理申請</a> — Newtalk 新聞</li>
+</ul>
+<hr />
+<h2>屏東縣災情</h2>
+<h3>基本資料</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>數據</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>累積雨量</strong></td>
+<td>屏東市測站 116.5 mm（8/25 13:00）</td>
+</tr>
+<tr>
+<td><strong>24 小時最大雨量</strong></td>
+<td>540 mm（8/24）</td>
+</tr>
+<tr>
+<td><strong>淹水通報</strong></td>
+<td>36 件（未退水最多）</td>
+</tr>
+<tr>
+<td><strong>撤離人數</strong></td>
+<td>765 人（山區 713 人 + 萬里溪堰塞湖 209 人）</td>
+</tr>
+<tr>
+<td><strong>停班停課</strong></td>
+<td>8/23、8/24 全面停班停課；8/25 山區 8 原鄉 + 沿海 5 村里停班停課</td>
+</tr>
+</tbody>
+</table>
+<h3>重大災情</h3>
+<table>
+<thead>
+<tr>
+<th>時間</th>
+<th>地點</th>
+<th>類型</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8/23～8/24</td>
+<td><strong>佳冬鄉塭豐村</strong></td>
+<td><strong>嚴重淹水</strong></td>
+<td>淹水深及胸坎，八八風災重災區，居民表示「八八後沒這麼嚴重過」。公所只能用樹幹船發放物資（聯合新聞網、公視 PNN）</td>
+</tr>
+<tr>
+<td>8/23～8/24</td>
+<td><strong>枋寮鄉北勢寮</strong></td>
+<td>淹水</td>
+<td>住戶裝防水閘門仍淹水，出入要行窗仔門（公視 PNN）</td>
+</tr>
+<tr>
+<td>8/23～8/24</td>
+<td><strong>東港、新園誠濟</strong></td>
+<td>淹水</td>
+<td>多處積淹水（公視 PNN）</td>
+</tr>
+<tr>
+<td>8/24</td>
+<td><strong>萬丹興化廍駁岸</strong></td>
+<td>崩塌</td>
+<td>6 月才因大雨崩去，8/24 又因大水再次崩塌（公視 PNN）</td>
+</tr>
+<tr>
+<td>8/24</td>
+<td><strong>舊泰武往爬山口</strong></td>
+<td>道路中斷</td>
+<td>山崩無法通行，公所趕緊派人搶通（公視 PNN）</td>
+</tr>
+<tr>
+<td>8/23～8/24</td>
+<td>沿海多處</td>
+<td>淹水</td>
+<td>水深幾達腰部，居民質疑抽水機故障，水利處已調派 2 部移動式抽水機支援（聯合新聞網）</td>
+</tr>
+</tbody>
+</table>
+<h3>屏東縣災情新聞來源</h3>
+<ul>
+<li><a href="https://udn.com/news/story/7266/9710934">八八風災重災區屏東佳冬塭豐村淹水 居民：八八後沒這麼嚴重過</a> — 聯合新聞網</li>
+<li><a href="https://tw.news.yahoo.com/%E5%B1%8F%E6%9D%B1%E8%B1%AA%E9%9B%A824%E5%B0%8F%E6%99%82%E7%A0%B4540%E6%AF%AB%E7%B1%B3-15%E9%84%89%E9%8E%AE%E5%B8%82%E7%A9%8D%E6%B7%B9%E6%B0%B4-713%E4%BA%BA%E6%92%A4%E9%9B%A2-040228172.html">屏東豪雨 24 小時破 540 毫米！15 鄉鎮市積淹水、713 人撤離</a> — Yahoo 新聞</li>
+<li><a href="https://news.pts.org.tw/article/823876">屏東大雨落三日 佳冬、枋寮、東港等濟搭淹水</a> — 公視新聞網 PNN</li>
+<li><a href="https://newtalk.tw/news/view/2026-08-24/1055292">屏東 24 小時內狂炸 540 毫米雨量多處積淹水 縣長周春米發聲了！</a> — Newtalk 新聞</li>
+</ul>
+<hr />
+<h2>停班停課時程</h2>
+<table>
+<thead>
+<tr>
+<th>日期</th>
+<th>台南市</th>
+<th>高雄市</th>
+<th>屏東縣</th>
+<th>其他縣市</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>8/23（週日）</strong></td>
+<td>✅ 全面停班停課</td>
+<td>✅ 全面停班停課</td>
+<td>✅ 全面停班停課</td>
+<td>嘉義縣、花蓮縣、台東縣</td>
+</tr>
+<tr>
+<td><strong>8/24（週一）</strong></td>
+<td>✅ 全面停班停課</td>
+<td>✅ 全面停班停課</td>
+<td>✅ 全面停班停課</td>
+<td>嘉義縣、花蓮縣、台東縣</td>
+</tr>
+<tr>
+<td><strong>8/25（週二）</strong></td>
+<td>✅ 正常上班上課</td>
+<td>⚠️ 5 個山區行政區停班停課（六龜、甲仙、茂林、桃源、那瑪夏）</td>
+<td>⚠️ 8 原鄉 + 沿海 5 村里停班停課；12 時起再加枋山鄉、林邊鄉鎮安村</td>
+<td>花蓮縣部分地區</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>資料來源：行政院人事行政總處、各縣市政府公告</p>
+</blockquote>
+<hr />
+<h2>氣象署警報與特報時程</h2>
+<h3>大雨特報</h3>
+<table>
+<thead>
+<tr>
+<th>時間</th>
+<th>特報類型</th>
+<th>影響區域</th>
+<th>有效時間</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8/22 17:00</td>
+<td>大雨特報</td>
+<td>嘉義以南及東半部</td>
+<td>持續發布</td>
+</tr>
+<tr>
+<td>8/23</td>
+<td>豪雨特報</td>
+<td>台南、高雄、屏東山區</td>
+<td>至 8/24</td>
+</tr>
+<tr>
+<td>8/24</td>
+<td><strong>超大豪雨特報</strong></td>
+<td>高雄（梓官、彌陀等 6 區）、屏東</td>
+<td>至 8/24</td>
+</tr>
+<tr>
+<td>8/25</td>
+<td><strong>豪雨特報</strong>（Severe）</td>
+<td>台南、高雄、屏東山區</td>
+<td>08:11 ~ 23:00</td>
+</tr>
+<tr>
+<td>8/25</td>
+<td><strong>豪雨特報</strong>（Moderate）</td>
+<td>台南、高雄、屏東</td>
+<td>08:11 ~ 23:00</td>
+</tr>
+</tbody>
+</table>
+<h3>土石流警戒</h3>
+<table>
+<thead>
+<tr>
+<th>縣市</th>
+<th>紅色警戒</th>
+<th>黃色警戒</th>
+<th>總計</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>高雄市</strong></td>
+<td>34 條</td>
+<td>—</td>
+<td>74 條（含黃色）</td>
+</tr>
+<tr>
+<td><strong>屏東縣</strong></td>
+<td>多條</td>
+<td>多條</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>農業部農村發展及水土保持署發布</p>
+</blockquote>
+<h3>陸上強風特報</h3>
+<table>
+<thead>
+<tr>
+<th>縣市</th>
+<th>特報</th>
+<th>有效時間</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>屏東縣</strong></td>
+<td>🟡 陸上強風特報</td>
+<td>10:19 ~ 22:00（8/25）</td>
+</tr>
+<tr>
+<td><strong>高雄市</strong></td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>台南市</strong></td>
+<td>—</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>中央災害應變中心</h2>
+<table>
+<thead>
+<tr>
+<th>時間</th>
+<th>事件</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8/23</td>
+<td>中央災害應變中心持續展開應變工作</td>
+</tr>
+<tr>
+<td>8/24</td>
+<td>中央災害應變中心二級開設並召開首次工作會報，行政院長卓榮泰到場坐鎮</td>
+</tr>
+<tr>
+<td>8/24</td>
+<td>經濟部將應變小組提升為一級，與地方政府合作防汛與疏散</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>專家分析</h2>
+<h3>與 823 水災的巧合</h3>
+<blockquote>
+<p>「恐怖的巧合」——專家指出，本次災情與 8 年前的 823 水災有相似之處。受低壓帶與西南風影響，嘉義以南及東半部地區迎來劇烈降雨，部分地區達豪雨等級。</p>
+</blockquote>
+<p>來源：<a href="https://tw.news.yahoo.com/%E5%8D%97%E5%8F%B0%E7%81%A3%E6%9A%B4%E9%9B%A848%E5%B0%8F%E6%99%82-%E5%B0%88%E5%AE%B6-%E6%81%90%E9%87%8D%E7%8F%BE8%E5%B9%B4%E5%89%8D%E7%9A%84823%E6%B0%B4%E7%81%BD-%E6%81%90%E6%80%96%E7%9A%84%E5%8B%A7%E5%90%88-044600749.html">南台灣暴雨 48 小時！專家：恐重現 8 年前的 823 水災「恐怖的巧合」</a> — Yahoo 新聞</p>
+<h3>災情特色</h3>
+<ol>
+<li><strong>低壓帶滯留</strong>：多個低壓系統在海面亂竄，導致雨帶長時間滯留南部</li>
+<li><strong>西南風偏強</strong>：強西南風帶來充沛水氣</li>
+<li><strong>瞬間雨量超大</strong>：高雄 24 小時 567 mm，超越凱米颱風</li>
+<li><strong>海水倒灌</strong>：逢大潮期間，沿海地區海水倒灌加劇淹水</li>
+<li><strong>連日降雨</strong>：5 天連續降雨，土壤已飽和，後續降雨更易致災</li>
+</ol>
+<hr />
+<h2>災情分級</h2>
+<h3>🔴 重大災害</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>人員傷亡</td>
+<td>2 死、3 失蹤、202 傷</td>
+</tr>
+<tr>
+<td>古蹟倒塌</td>
+<td>國定古蹟「台灣府城大東門」側牆崩塌</td>
+</tr>
+<tr>
+<td>嚴重淹水</td>
+<td>高雄梓官積水達 1 米、屏東佳冬深及胸坎</td>
+</tr>
+<tr>
+<td>道路塌陷</td>
+<td>高雄岡山路面塌陷形成天坑</td>
+</tr>
+<tr>
+<td>停電</td>
+<td>曾達 21,885 戶停電</td>
+</tr>
+<tr>
+<td>客船擱淺</td>
+<td>藍白 1 號客船 146 人被困東港航道（已脫困）</td>
+</tr>
+</tbody>
+</table>
+<h3>🟡 警戒災害</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>淹水通報</td>
+<td>累計 722 件（均已退水）</td>
+</tr>
+<tr>
+<td>土石流警戒</td>
+<td>高雄 74 條潛勢溪流、屏東多條溪流</td>
+</tr>
+<tr>
+<td>撤離</td>
+<td>累計 6,129 人</td>
+</tr>
+<tr>
+<td>輕軌停駛</td>
+<td>高雄輕軌因路樹倒塌一度停駛</td>
+</tr>
+<tr>
+<td>道路中斷</td>
+<td>屏東舊泰武往爬山口山崩中斷</td>
+</tr>
+<tr>
+<td>一般災情</td>
+<td>累計 1,222 件（處理中 162 件）</td>
+</tr>
+</tbody>
+</table>
+<h3>🟢 一般災害</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>積淹水</td>
+<td>多處道路積水、車輛泡水</td>
+</tr>
+<tr>
+<td>路樹倒塌</td>
+<td>多處路樹傾倒壓到輕軌及車輛</td>
+</tr>
+<tr>
+<td>停班停課</td>
+<td>6 縣市累計停課 2 天</td>
+</tr>
+<tr>
+<td>橋樑受損</td>
+<td>萬丹興化廍駁岸再次崩塌</td>
+</tr>
+<tr>
+<td>藍白客船擱淺</td>
+<td>東港航道，146 人被困（已脫困）</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>未來天氣預報</h2>
+<table>
+<thead>
+<tr>
+<th>時段</th>
+<th>南部地區</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>8/25 下午</strong></td>
+<td>陰短暫陣雨或雷雨（PoP 80%）</td>
+</tr>
+<tr>
+<td><strong>8/25 晚間～8/26 清晨</strong></td>
+<td>陰時多雲（PoP 20%～50%）</td>
+</tr>
+<tr>
+<td><strong>8/26</strong></td>
+<td>多雲時晴轉陰時多雲短暫陣雨（PoP 20%～60%）</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>資料來源：中央氣象署今明 36 小時天氣預報</p>
+</blockquote>
+<hr />
+<h2>備註</h2>
+<ul>
+<li>本次事件主因為<strong>低壓帶及西南風</strong>，非颱風造成</li>
+<li>中央氣象署於 8/22 17:00 正式發布「0822 低壓帶及西南風豪雨事件」</li>
+<li>曾文水庫、烏山頭水庫因豐水滿載，對台南供水有正面幫助</li>
+<li>高雄 24 小時累積雨量 567 mm，超越 2024 年凱米颱風的 559 mm</li>
+<li>屏東佳冬塭豐村為 88 風災重災區，此次災情被居民形容為「八八後沒這麼嚴重過」</li>
+<li>8/26 大雨特報已解除，主要災段結束</li>
+<li>後續關注重點轉為<strong>颱風沙德爾</strong>對北部、東北部及馬祖的影響（8/27～8/28）</li>
+<li>南台灣治水爭議升溫，藍綠對決「治水雙標」</li>
+</ul>
+<hr />
+<h2>資料來源</h2>
+<h3>氣象署 API</h3>
+<table>
+<thead>
+<tr>
+<th>API</th>
+<th>資料集 ID</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>熱帶氣旋完整資料</td>
+<td>W-C0034-005</td>
+<td>西北太平洋活動中熱帶氣旋</td>
+</tr>
+<tr>
+<td>海上颱風警報</td>
+<td>W-C0034-001</td>
+<td>颱風警報狀態</td>
+</tr>
+<tr>
+<td>災害性天氣特報</td>
+<td>W-C0033-003</td>
+<td>豪雨特報、大雨特報</td>
+</tr>
+<tr>
+<td>陸上強風特報</td>
+<td>W-C0033-001</td>
+<td>陸上強風特報</td>
+</tr>
+<tr>
+<td>今明 36 小時天氣預報</td>
+<td>F-C0032-001</td>
+<td>鄉鎮級天氣預報</td>
+</tr>
+<tr>
+<td>自動氣象站逐時資料</td>
+<td>O-A0001-001</td>
+<td>即時氣象觀測</td>
+</tr>
+</tbody>
+</table>
+<h3>新聞媒體</h3>
+<table>
+<thead>
+<tr>
+<th>媒體</th>
+<th>相關報導</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>中央社 CNA</td>
+<td><a href="https://www.cna.com.tw/news/aloc/202608240152.aspx">雨炸南高屏花東 1 人失聯</a>、<a href="https://www.cna.com.tw/news/ahel/202608230045.aspx">豪雨襲台 高屏 34 條土石流紅色警戒</a>、<a href="https://www.cna.com.tw/topic/newstopic/5069.aspx">0822 低壓帶及西南風豪雨事件專題</a></td>
+</tr>
+<tr>
+<td>Newtalk 新聞</td>
+<td><a href="https://newtalk.tw/news/view/2026-08-24/1055235">台南大雨釀古蹟倒塌</a>、<a href="https://newtalk.tw/news/view/2026-08-25/1055436">高雄農產災害救助</a>、<a href="https://newtalk.tw/news/view/2026-08-24/1055292">屏東 540 毫米雨量</a></td>
+</tr>
+<tr>
+<td>聯合新聞網</td>
+<td><a href="https://udn.com/news/story/7326/9709784">大東門倒塌</a>、<a href="https://udn.com/news/story/7266/9710934">佳冬塭豐村淹水</a></td>
+</tr>
+<tr>
+<td>自由時報</td>
+<td><a href="https://news.ltn.com.tw/news/life/breakingnews/5550729">0822 南部豪雨 1 死 4 失蹤 155 傷</a>、<a href="https://news.ltn.com.tw/news/life/breakingnews/5550744">東門城崩塌</a></td>
+</tr>
+<tr>
+<td>Yahoo 新聞</td>
+<td><a href="https://tw.news.yahoo.com/%E8%B1%AA%E9%9B%A8%E7%8B%82%E8%A5%B2%E9%87%80%E6%85%98%E9%87%8D%E7%81%BD%E6%83%85-%E5%85%A8%E5%8F%B0-1%E6%AD%BB4%E5%A4%B1%E8%B9%A4-%E9%80%BE4200%E4%BA%BA%E7%B7%8A%E6%80%A5%E6%92%A4%E9%9B%A2-111609917.html">全台 1 死 4 失蹤逾 4200 人撤離</a>、<a href="https://tw.news.yahoo.com/%E9%AB%98%E9%9B%84%E7%A0%B8%E9%8C%A2%E6%B2%BB%E6%B0%B4%E4%BB%8D%E6%85%98%E6%B7%B9-%E5%A4%A9%E5%9D%91%E5%86%8D%E7%8F%BE-%E8%BB%8A%E9%9A%AA%E6%BB%85%E9%A0%82-%E5%B8%82%E6%B0%91%E7%81%8C%E7%88%86%E9%99%B3%E5%85%B6%E9%82%81%E8%87%89%E6%9B%B8-%E6%B0%B4%E6%A8%82%E5%9C%92%E9%96%8B%E5%B9%95-033756777.html">高雄慘淹車陷天坑</a></td>
+</tr>
+<tr>
+<td>ETtoday 新聞雲</td>
+<td><a href="https://www.ettoday.net/news/20260823/3224345.htm">高雄 34 條紅色土石流警戒</a></td>
+</tr>
+<tr>
+<td>公視 PNN</td>
+<td><a href="https://news.pts.org.tw/article/823876">屏東大雨落三日</a></td>
+</tr>
+<tr>
+<td>商周頭條</td>
+<td><a href="https://www.ctee.com.tw/news/20260823700502-431401">高雄土石流警戒達 74 條</a></td>
+</tr>
+<tr>
+<td>大紀元</td>
+<td><a href="https://www.epochtimes.com/b5/26/8/24/n14835579.htm">高雄 24 小時雨量超越凱米颱風</a></td>
+</tr>
+<tr>
+<td>華視新聞網</td>
+<td><a href="https://news.cts.com.tw/cna/local/202608/202608233070394.html">高雄豪雨不斷多處積淹水</a></td>
+</tr>
+<tr>
+<td>世界新聞網</td>
+<td><a href="https://www.worldjournal.com/wj/story/121221/9709852">南台灣暴雨車滅頂</a></td>
+</tr>
+<tr>
+<td>臺南人新聞網</td>
+<td><a href="https://twainews.com/tainan/news/MbjRYrCmLFuXtBcfC1lD">曾文水庫灌滿進帳 1 億噸</a></td>
+</tr>
+<tr>
+<td>NOWnews</td>
+<td><a href="https://www.nownews.com/news/6868667">台南高雄淹水路段查詢</a>、<a href="https://www.nownews.com/news/6850027">屏東馬路變河流</a></td>
+</tr>
+<tr>
+<td>中視新聞</td>
+<td><a href="https://www.ctv.com.tw/Article/%E7%A0%B4%E7%B4%80%E9%8C%84-%E9%AB%98%E9%9B%843%E5%A4%A9-%E7%8B%82%E7%81%8C%E5%8D%8A%E5%B9%B4%E9%9B%A8-%E5%B1%85%E6%B0%91%E8%AD%99%E7%88%86-%E6%AF%8F%E5%B9%B4%E9%83%BD%E8%A6%81%E6%8E%83%E6%B0%B4-%E4%B8%AD%E8%A6%96%E6%96%B0%E8%81%9E-20260824">高雄 3 天狂灌半年雨</a></td>
+</tr>
+<tr>
+<td>時代熱搜</td>
+<td><a href="https://www.sdareso.com/life/5095/%E9%82%A3%E4%BA%9B%E6%97%A5%E5%AD%90,%E5%8D%97%E5%8F%B0%E7%81%A3%E8%AE%8A%E6%88%90%E4%B8%80%E5%BA%A7%E5%B3%B6%E2%80%94%E2%80%942026%E5%B9%B4%E5%85%AB%E6%9C%88%E6%9A%B4%E9%9B%A8%E8%A8%98%E4%BA%8B">南台灣變成一座島</a></td>
+</tr>
+<tr>
+<td>RFI 法國國際廣播電台</td>
+<td><a href="https://www.rfi.fr/tw/%E7%A4%BE%E6%9C%83/20260824-%E5%8F%B0%E7%81%A3%E5%8D%97%E9%83%A8%E5%92%8C%E6%9D%B1%E9%83%A8%E9%81%AD%E9%81%87%E6%9A%B4%E9%9B%A8%EF%BC%8C%E6%B4%AA%E6%B0%B4%E4%B8%AD%E5%B7%B2%E6%9C%894%E4%BA%BA%E5%A4%B1%E8%B9%A4%EF%BC%8C%E9%A0%90%E8%A8%88%E5%91%A8%E4%BA%94%E9%82%84%E6%9C%89%E9%A2%A8%E9%A2%A8%E9%81%8E%E5%A2%83%E5%8C%97%E9%83%A8">台灣南部和東部遭遇暴雨</a></td>
+</tr>
+<tr>
+<td>EBC 東森新聞</td>
+<td><a href="https://news.ebc.net.tw/news/living/567950">全台 1 死 4 失蹤 155 傷 1 萬 9768 戶曾停電</a></td>
+</tr>
+<tr>
+<td>台灣電報 ENN</td>
+<td><a href="https://enn.tw/769321/">屏東縣政府公布豪雨災情</a></td>
+</tr>
+</tbody>
+</table>
+<h3>政府資料</h3>
+<table>
+<thead>
+<tr>
+<th>來源</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>經濟部水利署</td>
+<td>積淹水通報統計</td>
+</tr>
+<tr>
+<td>消防署災情案件資料</td>
+<td>傷亡、撤離統計</td>
+</tr>
+<tr>
+<td>農業部農村發展及水土保持署</td>
+<td>土石流警戒</td>
+</tr>
+<tr>
+<td>行政院人事行政總處</td>
+<td>停班停課公告</td>
+</tr>
+<tr>
+<td>高雄市政府災情查詢專區</td>
+<td><a href="https://ktc.kcg.gov.tw/disaster/index">ktc.kcg.gov.tw/disaster</a></td>
+</tr>
+<tr>
+<td>中華民國統計資訊網</td>
+<td><a href="https://www.stat.gov.tw/Statistics.aspx?n=2957&amp;CaN=349">天然災害統計</a></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>📡 最新進展：8/25 晚間更新（21:45）</h2>
+<h3>警報現況（CWA API，8/25 晚間查詢）</h3>
+<ul>
+<li><strong>豪雨已降級為大雨特報</strong>：中央氣象署 8/25 19:05 發布大雨特報（黃色），有效至 8/26 06:00；說明指出「高雄市地區、屏東縣地區及臺東縣山區已有豪雨發生，今晚至明晨南部地區仍有局部大雨發生的機率」，並提醒山區坍方、落石及溪水暴漲、低窪地區積水</li>
+<li><strong>陸上強風特報</strong>（8/25 19:06 ~ 8/26 06:00）：臺南市、高雄市、屏東縣；另有臺東縣（17:00 ~ 22:00）</li>
+<li><strong>累計雨量</strong>（CWA 雨量觀測站 O-A0002-001，8/25 22:30 觀測）：</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>測站</th>
+<th>24 小時累計</th>
+<th>3 日累計</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>左營（高雄）</td>
+<td>321.5 mm</td>
+<td>970.0 mm</td>
+</tr>
+<tr>
+<td>高雄</td>
+<td>221.0 mm</td>
+<td>944.0 mm</td>
+</tr>
+<tr>
+<td>梓官（高雄）</td>
+<td>209.5 mm</td>
+<td>874.0 mm</td>
+</tr>
+<tr>
+<td>岡山（高雄）</td>
+<td>173.5 mm</td>
+<td>790.5 mm</td>
+</tr>
+<tr>
+<td>彌陀（高雄）</td>
+<td>160.5 mm</td>
+<td>759.5 mm</td>
+</tr>
+<tr>
+<td>枋寮（屏東）</td>
+<td>172.5 mm</td>
+<td>700.0 mm</td>
+</tr>
+<tr>
+<td>屏東</td>
+<td>154.0 mm</td>
+<td>668.0 mm</td>
+</tr>
+<tr>
+<td>佳冬（屏東）</td>
+<td>165.5 mm</td>
+<td>677.5 mm</td>
+</tr>
+<tr>
+<td>南州（屏東）</td>
+<td>136.5 mm</td>
+<td>572.0 mm</td>
+</tr>
+<tr>
+<td>東港（屏東）</td>
+<td>133.0 mm</td>
+<td>487.0 mm</td>
+</tr>
+<tr>
+<td>恆春（屏東）</td>
+<td>50.5 mm</td>
+<td>317.5 mm</td>
+</tr>
+</tbody>
+</table>
+<p>（同時次 1 小時雨量全數在 2 mm 以下，<strong>雨勢已明顯趨緩</strong>）</p>
+<blockquote>
+<p>註：先前更新曾將 O-A0001-001 的 <code>Now.Precipitation</code>（21:00 時次：左營 283.5mm 等）誤標為「1 小時雨量」；經核對 CWA 官方說明，該欄位為<strong>本日 0 時至目前的累積雨量</strong>，現予以修正。資料來源：中央氣象署 Open Data（W-C0033-002/003、W-C0033-001、O-A0002-001），8/25 22:30 時次</p>
+</blockquote>
+<h3>傷亡與災情統計（截至 8/25 18:00）</h3>
+<ul>
+<li>全台 <strong>1 死、4 失蹤、155 傷</strong>（聯合新聞網，與 8/24 統計一致，目前無新增傷亡）</li>
+<li><strong>屏東縣</strong>：8/25 上午出現時雨量 100 mm 以上強降雨，枋山鄉及林邊鄉鎮安村路面積水、交通受阻，<strong>12 時起該 2 地區停班停課</strong>（中央社）</li>
+<li><strong>屏東獅子鄉</strong>：大規模停電（約 1,019 戶），道路泥濘車輛進不去，台電人員扛器材徒步入山搶修（中央社、台視新聞，8/24）</li>
+<li><strong>台南市</strong>（8/24 市長黃偉哲）：積水剩 9 處、停電 127 戶（當日下午 5 時前修復）；全市總抽水量達 5,455 萬噸，已超過湖山水庫最大蓄水量 5,000 萬噸；收容 46 人待積水解除返家（中央社）</li>
+<li><strong>高雄市</strong>：3 天累積雨量達 913 mm，市長陳其邁表示「打破歷史紀錄、超越莫拉克風災」（中央社，8/24）</li>
+</ul>
+<h3>⚠️ 颱風沙德爾（SAUDEL）第 18 號 逼近</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>數據（CWA 分析，8/25 20:00）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>位置</td>
+<td>27.2°N, 129.1°E（台灣東南方海上）</td>
+</tr>
+<tr>
+<td>強度</td>
+<td>最大風速 38 m/s（強颱）、氣壓 960 hPa、陣風 48 m/s</td>
+</tr>
+<tr>
+<td>移動</td>
+<td>西西北 20 kt</td>
+</tr>
+<tr>
+<td>趨勢</td>
+<td>8/24 14:00 達 51 m/s / 925 hPa（強颱級巔峰），之後持續減弱</td>
+</tr>
+<tr>
+<td>預報 8/27 08:00</td>
+<td>28.2°N, 124.7°E，風速 30 m/s（颱風級）</td>
+</tr>
+<tr>
+<td>預報 8/27 20:00</td>
+<td>27.8°N, 123.2°E，風速 30 m/s，轉西南西</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>8/27、8/28 距台灣最近</strong>，中心進入台灣北部海面，暴風圈涵蓋<strong>北部與馬祖</strong>，登陸台灣機率偏低（可能由馬祖附近轉向福建）（氣象署記者會、Yahoo 新聞）</li>
+<li>最快 <strong>8/26 下半天發布海上颱風警報</strong>；8/27 上半天針對馬祖發布陸上颱風警報（今周刊）</li>
+<li>北部及中部山區嚴防大雨或豪雨；北部沿海及馬祖注意 8~9 級強陣風（TVBS 新聞）</li>
+<li><strong>適逢大潮</strong>：沿海低窪地區需防海水倒灌與積淹水（今周刊）</li>
+<li>中央災害應變中心提醒：搶災復災期間又逢颱風，南部、東部須同步加強防颱準備（卓榮泰，中央社 8/24）</li>
+</ul>
+<blockquote>
+<p>資料來源：中央氣象署 Open Data（W-C0034-005）、<a href="https://tw.news.yahoo.com/%E9%A2%B1%E9%A2%A8%E6%B2%99%E5%BE%B7%E7%88%BE%E8%BD%89%E5%BC%B7%E9%A2%B1-%E6%9C%80%E5%BF%AB%E5%91%A8%E4%B8%89%E7%99%BC%E5%B8%83%E6%B5%B7%E8%AD%A6-27%E3%80%8128%E6%97%A5%E6%9C%80%E6%8E%A5%E8%BF%91%E5%8F%B0%E7%81%A3-%E6%B0%A3%E8%B1%A1%E7%BD%B2%E8%AA%AA%E6%98%8E%E6%9C%80%E6%96%B0%E8%B7%AF%E5%BE%91-013853436.html">颱風沙德爾轉強颱 最快周三發布海警 27、28日最接近台灣</a>、<a href="https://www.businesstoday.com.tw/article/category/183030/post/202608240013/">今周刊</a>、<a href="https://news.tvbs.com.tw/life/4011700">TVBS</a></p>
+</blockquote>
+<h3>中央災害應變中心（8/24 更新）</h3>
+<ul>
+<li>8/24 中午<strong>二級開設</strong>，下午 2:30 召開第一次工作會報，卓榮泰視導並與南部、東部 6 縣市首長視訊</li>
+<li>指示行政院政務委員<strong>季連成擔任指揮官</strong>，統合經濟部、農業部、交通部、衛福部、內政部、國防部等跨部會資源（公義時報）</li>
+<li>截至 8/24 中午：全台累計 594 件積淹水、79 件未退水（集中在高雄、台南、屏東），35 件受困救援、救出 64 人（聯合新聞網）</li>
+<li>財政部提醒：受災納稅義務人可依災損申請各項<strong>稅捐減免</strong>，稽徵機關從寬、從速、從簡辦理（ETtoday）</li>
+</ul>
+<h3>8/25 停班停課（最終狀態）</h3>
+<ul>
+<li><strong>台南市、嘉義縣</strong>：正常上班上課</li>
+<li><strong>高雄市</strong>：六龜區、甲仙區、茂林區、桃源區、那瑪夏區停班停課</li>
+<li><strong>屏東縣</strong>：霧台、三地門、瑪家、來義、泰武、春日、獅子、牡丹 8 原鄉，及東港鎮東新里、內關帝里、枋寮鄉新龍村、佳冬鄉塭豐村、燄溫村停班停課；<strong>12 時起再加枋山鄉、林邊鄉鎮安村</strong></li>
+<li><strong>花蓮縣</strong>：部分地區停班停課</li>
+</ul>
+<blockquote>
+<p>資料來源：<a href="https://www.cna.com.tw/news/ahel/202608245003.aspx">中央社</a>、<a href="https://www.nownews.com/news/6868743">NOWnews</a>、<a href="https://news.tvbs.com.tw/life/4011194">TVBS</a>、Yahoo 新聞</p>
+</blockquote>
+<h3>8/27~8/28 後續警戒（因颱風沙德爾）</h3>
+<table>
+<thead>
+<tr>
+<th>時段</th>
+<th>重點</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8/26（週三）</td>
+<td>南部雨勢趨緩（大雨特報至 8/26 06:00）；沙德爾通過琉球附近、轉偏西，最快下半天發布海警</td>
+</tr>
+<tr>
+<td>8/27（週四）</td>
+<td>沙德爾進入台灣北部海面，距台最近；馬祖最快上半天發布陸警；北部、中部山區防大雨或豪雨；<strong>適逢大潮，沿海防海水倒灌</strong></td>
+</tr>
+<tr>
+<td>8/28（週五）</td>
+<td>持續最近距離影響，北部沿海 8~9 級強陣風；中心可能由馬祖附近轉向福建</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>資料來源：中央氣象署 Open Data（W-C0034-005）、氣象署 8/24 晚間記者會（Yahoo 新聞）、今周刊、TVBS 新聞</p>
+</blockquote>
+<hr />
+<h2>📡 最新進展：8/27 更新（19:15）</h2>
+<h3>傷亡與災情統計更新（中央災害應變中心第七次工作會報，8/26 14:00）</h3>
+<p>中央災害應變中心下午舉行第七次工作會報，由政務委員季連成主持，統計數據更新如下：</p>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>8/24 統計</th>
+<th>8/26 統計</th>
+<th>變化</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>死亡</strong></td>
+<td>1 人</td>
+<td><strong>2 人</strong></td>
+<td>⚠️ +1 死</td>
+</tr>
+<tr>
+<td><strong>失蹤</strong></td>
+<td>4 人</td>
+<td><strong>3 人</strong></td>
+<td>⚠️ 1 人尋獲遺體</td>
+</tr>
+<tr>
+<td><strong>受傷</strong></td>
+<td>155 人</td>
+<td><strong>202 人</strong></td>
+<td>⚠️ +47 傷</td>
+</tr>
+<tr>
+<td><strong>疏散撤離</strong></td>
+<td>4,263 人</td>
+<td><strong>6,129 人</strong></td>
+<td>⚠️ +1,866 人</td>
+</tr>
+<tr>
+<td><strong>積淹水</strong></td>
+<td>累計 625 件</td>
+<td><strong>累計 722 件</strong>（均已退水）</td>
+<td>統計口徑更新</td>
+</tr>
+<tr>
+<td><strong>停電</strong></td>
+<td>曾達 18,503 戶</td>
+<td><strong>曾達 21,885 戶</strong>（已修復 21,125 戶）</td>
+<td>新竹縣 760 戶未修復</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>資料來源：<a href="https://udn.com/news/story/7266/9716169">聯合報（2026/8/26 20:07）</a>、<a href="https://news.ltn.com.tw/news/life/breakingnews/5553244">自由時報（2026/8/26 17:41）</a></p>
+</blockquote>
+<h3>新增死亡案件</h3>
+<table>
+<thead>
+<tr>
+<th>時間</th>
+<th>地點</th>
+<th>類型</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>8/24 凌晨</td>
+<td>花蓮登山客</td>
+<td>登山事故</td>
+<td>4 名登山客渡溪遭沖走，消防局集結搜救，3 人於 24 日晚間 10:30 救出，1 人於隔天上午 10:21 尋獲遺體（聯合報）</td>
+</tr>
+<tr>
+<td>8/25 上午 7:32</td>
+<td>屏東縣</td>
+<td>OHCA</td>
+<td>1 名女性現場 OHCA，家屬拒絕送醫，交由員警處理（聯合報，8/26）</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>資料來源：<a href="https://udn.com/news/story/7266/9716169">聯合報（2026/8/26 20:07）</a></p>
+</blockquote>
+<h3>失蹤人員現況（3 人持續搜尋中）</h3>
+<table>
+<thead>
+<tr>
+<th>地點</th>
+<th>失蹤原因</th>
+<th>搜救狀態</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>花蓮縣玉里鎮長良便橋</td>
+<td>疑似騎機車落水</td>
+<td>消防人員及義消持續擴大搜索（自由時報）</td>
+</tr>
+<tr>
+<td>台南市東區裕德二街大排</td>
+<td>疑似被大水沖走</td>
+<td>持續搜尋中（自由時報）</td>
+</tr>
+<tr>
+<td>屏東縣萬丹鄉萬新大橋</td>
+<td>疑似落水</td>
+<td>持續搜索中（自由時報）</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>資料來源：<a href="https://news.ltn.com.tw/news/life/breakingnews/5553244">自由時報（2026/8/26 17:41）</a>、<a href="https://udn.com/news/story/7266/9716169">聯合報（2026/8/26 20:07）</a></p>
+</blockquote>
+<h3>一般災情統計</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>數據</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>積淹水</strong></td>
+<td>44 件（已救出 78 人，待救 2 人）</td>
+</tr>
+<tr>
+<td><strong>一般災情</strong></td>
+<td>累計 1,222 件（已處理 1,060 件、處理中 162 件）</td>
+</tr>
+<tr>
+<td><strong>疏散撤離</strong></td>
+<td>6,129 人（嘉義縣 25 人、台南市 574 人、高雄市 2,651 人、屏東縣 906 人、花蓮縣 1,826 人、台東縣 147 人）</td>
+</tr>
+<tr>
+<td><strong>收容</strong></td>
+<td>台南市 2 處收容中心，共收容 22 人</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>資料來源：<a href="https://udn.com/news/story/7266/9716169">聯合報（2026/8/26 20:07）</a></p>
+</blockquote>
+<h3>藍白客船擱淺事件</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>時間</strong></td>
+<td>8/26 中午 12:19</td>
+</tr>
+<tr>
+<td><strong>地點</strong></td>
+<td>東港航道</td>
+</tr>
+<tr>
+<td><strong>船上人員</strong></td>
+<td>141 名乘客 + 5 名船員（共 146 人）</td>
+</tr>
+<tr>
+<td><strong>狀況</strong></td>
+<td>藍白 1 號客船擱淺，人員均安</td>
+</tr>
+<tr>
+<td><strong>處理</strong></td>
+<td>藍白公司安排拖船前往協助脫困，屏東縣政府及交通部航港局派員指揮，兩艘藍白交通船已對接，開始拖引</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>資料來源：<a href="https://udn.com/news/story/7266/9716169">聯合報（2026/8/26 20:07）</a></p>
+</blockquote>
+<h3>農業損失更新（截至 8/27）</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>數據</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>農損總計</strong></td>
+<td>逾 1.4 億元（農糧署 8/27 統計）</td>
+</tr>
+<tr>
+<td><strong>各縣市損失</strong></td>
+<td>嘉義縣 4,410 萬、雲林縣 2,942 萬、屏東縣 2,677 萬、台南市 1,882 萬、高雄市 1,411 萬</td>
+</tr>
+<tr>
+<td><strong>受損作物</strong></td>
+<td>木瓜（最嚴重）、番石榴、落花生</td>
+</tr>
+<tr>
+<td><strong>畜牧業損失</strong></td>
+<td>488 萬元（主要為雞）</td>
+</tr>
+<tr>
+<td><strong>漁業損失</strong></td>
+<td>1,231 萬元（主要為虱目魚、筍殼魚）</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>資料來源：<a href="https://udn.com/news/story/7266/9716169#related">聯合報（2026/8/27 00:13）</a>、<a href="https://news.ltn.com.tw/news/life/breakingnews/5554203">自由時報（2026/8/27 14:20）</a></p>
+</blockquote>
+<h3>農業救助措施</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>現金救助</strong></td>
+<td>嘉義縣市、台南、高雄、屏東農產品與畜牧全品項納天災現金救助（8/25 起公告）</td>
+</tr>
+<tr>
+<td><strong>申請期間</strong></td>
+<td>即日起至 9/9 止（台南畜牧類全品項）</td>
+</tr>
+<tr>
+<td><strong>低利貸款</strong></td>
+<td>免息 1 年（8/26～次年 8/25），舊貸免申請</td>
+</tr>
+<tr>
+<td><strong>農機重購補助</strong></td>
+<td>受淹水毀損農漁業機械設備，最高補助實際購置金額 8 成（8/27 宣布）</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>資料來源：<a href="https://news.ltn.com.tw/news/life/breakingnews/5554203">自由時報（2026/8/27 14:20）</a>、<a href="https://udn.com/news/story/7266/9716169#related">聯合報（2026/8/25 13:24）</a></p>
+</blockquote>
+<h3>治水爭議</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>府院說法</strong></td>
+<td>行政院長卓榮泰：「預算被刪，只能電話勘災」；賴清德：批評南部拿較多治水經費不公平</td>
+</tr>
+<tr>
+<td><strong>藍營批評</strong></td>
+<td>鄭麗文抨擊賴政府推諉甩鍋，國民黨執政時淹水是中央責任，如今民進黨執政淹水是極端氣候的錯（「治水雙標」）</td>
+</tr>
+<tr>
+<td><strong>李鴻源實地勘查</strong></td>
+<td>內政部前部長李鴻源訪高雄梓官典寶社區：「南部治水資源已不輸台北，卻無法提高防洪標準，問題出在沒有找對人做精準設計」</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>資料來源：<a href="https://udn.com/news/story/7266/9716169#related">聯合報（2026/8/27 05:51）</a>、<a href="https://udn.com/news/story/7266/9716169#related">聯合報（2026/8/27 00:11）</a></p>
+</blockquote>
+<h3>南台灣豪雨事件狀態</h3>
+<blockquote>
+<p><strong>大雨特報已解除</strong>：中央氣象署 8/26 08:23 發布「解除大雨特報」，說明：「由於降雨趨於緩和，發生大雨的機率降低，故解除大雨特報；今(26)日南部地區仍有局部較大雨勢發生的機率。」</p>
+</blockquote>
+<ul>
+<li><strong>雨勢已明顯停止</strong>：CWA 雨量觀測站（O-A0002-001，8/26 12:10 觀測）南部各站 <strong>1 小時雨量全數為 0 mm</strong>（僅東港 0.5 mm），顯示 8/22～8/25 的連續強降雨已告段落。</li>
+<li>惟 8/27～8/28 受<strong>颱風沙德爾</strong>外圍影響，<strong>南部山區需再防大雨</strong>。</li>
+</ul>
+<h3>🌀 颱風沙德爾（SAUDEL，第 18 號）最新動態</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>數據（CWA 分析，8/27 查詢）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>位置</strong></td>
+<td>28.4°N, 123.8°E（台灣北方海上）</td>
+</tr>
+<tr>
+<td><strong>強度</strong></td>
+<td>最大風速 35 m/s（颱風級）、氣壓 965 hPa、陣風 45 m/s</td>
+</tr>
+<tr>
+<td><strong>移動</strong></td>
+<td>西 13 kt，持續減弱且暴風半徑縮小</td>
+</tr>
+<tr>
+<td><strong>8/27 下半天</strong></td>
+<td>最接近台灣北方海域至馬祖近海</td>
+</tr>
+<tr>
+<td><strong>8/28</strong></td>
+<td>登陸中國（福建附近）</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>沙德爾今日下半天因太平洋高壓減弱，移速放慢；27 日起北方高壓將再度增強且受季風低壓牽引，將轉向西南西方向前進。</li>
+<li>最快 <strong>8/27 清晨發布海上颱風警報</strong>；北部及中部山區防大雨或豪雨；北部沿海空曠地區、恆春半島、蘭嶼、綠島、馬祖、澎湖易有 8～9 級強陣風。</li>
+<li><strong>適逢大潮</strong>：8/26 西南部及 8/27～8/28 全臺滿潮前後沿海低窪地區須注意強降雨導致易積淹水。</li>
+</ul>
+<blockquote>
+<p>資料來源：<a href="https://udn.com/news/story/7266/9716169">聯合報（2026/8/26 20:07）</a>、<a href="https://news.ltn.com.tw/news/life/breakingnews/5553244">自由時報（2026/8/26 17:41）</a></p>
+</blockquote>
+<h2>後續更新機制</h2>
+<ul>
+<li>本檔案將持續更新，新進展附加在檔尾</li>
+<li>每次修改在檔首新增 <code>最後修改：YYYY/M/D HH:mm</code></li>
+<li>災情統計以經濟部水利署及消防署最新資料為準</li>
+<li>若後續有颱風影響南部，災情將併入本檔案或另立颱風檔案</li>
+</ul>
+<hr />
+<h2>📡 最新進展：8/26 中午更新（12:18）</h2>
+<h3>⏸️ 南台灣豪雨事件基本結束</h3>
+<blockquote>
+<p><strong>大雨特報已解除</strong>：中央氣象署 8/26 08:23 發布「解除大雨特報」（W-C0033-003、W-C0033-002），說明：「由於降雨趨於緩和，發生大雨的機率降低，故解除大雨特報；今(26)日南部地區仍有局部較大雨勢發生的機率。」</p>
+</blockquote>
+<ul>
+<li><strong>雨勢已明顯停止</strong>：CWA 雨量觀測站（O-A0002-001，8/26 12:10 觀測）南部各站 <strong>1 小時雨量全數為 0 mm</strong>（僅東港 0.5 mm），今日累積雨量多在 0～22 mm，顯示 8/22～8/25 的連續強降雨已告段落。</li>
+<li>惟 8/26 南部地區仍有<strong>局部較大雨勢</strong>，且 8/27～8/28 受颱風沙德爾外圍影響，<strong>南部山區需再防大雨</strong>。</li>
+</ul>
+<h3>雨量觀測（CWA O-A0002-001，8/26 12:10 時次）</h3>
+<table>
+<thead>
+<tr>
+<th>測站</th>
+<th>縣市</th>
+<th style="text-align: right;">今日累積(Now)</th>
+<th style="text-align: right;">3 小時</th>
+<th style="text-align: right;">24 小時</th>
+<th style="text-align: right;">3 日累計</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>左營</td>
+<td>高雄</td>
+<td style="text-align: right;">6.0</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">71.5</td>
+<td style="text-align: right;"><strong>503.5</strong></td>
+</tr>
+<tr>
+<td>高雄</td>
+<td>高雄</td>
+<td style="text-align: right;">7.5</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">53.0</td>
+<td style="text-align: right;">420.0</td>
+</tr>
+<tr>
+<td>梓官</td>
+<td>高雄</td>
+<td style="text-align: right;">22.0</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">73.0</td>
+<td style="text-align: right;">367.5</td>
+</tr>
+<tr>
+<td>彌陀</td>
+<td>高雄</td>
+<td style="text-align: right;">18.5</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">33.5</td>
+<td style="text-align: right;">286.0</td>
+</tr>
+<tr>
+<td>岡山</td>
+<td>高雄</td>
+<td style="text-align: right;">14.0</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">34.5</td>
+<td style="text-align: right;">329.0</td>
+</tr>
+<tr>
+<td>六龜</td>
+<td>高雄（山）</td>
+<td style="text-align: right;">7.0</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">13.0</td>
+<td style="text-align: right;">333.5</td>
+</tr>
+<tr>
+<td>甲仙</td>
+<td>高雄（山）</td>
+<td style="text-align: right;">5.5</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">12.5</td>
+<td style="text-align: right;">327.0</td>
+</tr>
+<tr>
+<td>嘉義</td>
+<td>嘉義</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">13.0</td>
+<td style="text-align: right;">173.0</td>
+</tr>
+<tr>
+<td>屏東</td>
+<td>屏東</td>
+<td style="text-align: right;">3.0</td>
+<td style="text-align: right;">0.5</td>
+<td style="text-align: right;">34.5</td>
+<td style="text-align: right;">344.0</td>
+</tr>
+<tr>
+<td>佳冬</td>
+<td>屏東</td>
+<td style="text-align: right;">1.5</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">43.0</td>
+<td style="text-align: right;">353.5</td>
+</tr>
+<tr>
+<td>枋寮</td>
+<td>屏東</td>
+<td style="text-align: right;">15.0</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">42.5</td>
+<td style="text-align: right;">409.0</td>
+</tr>
+<tr>
+<td>東港</td>
+<td>屏東</td>
+<td style="text-align: right;">6.0</td>
+<td style="text-align: right;">0.5</td>
+<td style="text-align: right;">37.5</td>
+<td style="text-align: right;">296.5</td>
+</tr>
+<tr>
+<td>枋山</td>
+<td>屏東</td>
+<td style="text-align: right;">9.0</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">31.0</td>
+<td style="text-align: right;">361.0</td>
+</tr>
+<tr>
+<td>獅子</td>
+<td>屏東（山）</td>
+<td style="text-align: right;">8.0</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">53.5</td>
+<td style="text-align: right;">391.0</td>
+</tr>
+<tr>
+<td>泰武</td>
+<td>屏東（山）</td>
+<td style="text-align: right;">8.5</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">26.0</td>
+<td style="text-align: right;"><strong>461.0</strong></td>
+</tr>
+<tr>
+<td>春日</td>
+<td>屏東（山）</td>
+<td style="text-align: right;">14.5</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">38.0</td>
+<td style="text-align: right;"><strong>430.0</strong></td>
+</tr>
+<tr>
+<td>南州</td>
+<td>屏東</td>
+<td style="text-align: right;">3.0</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;">33.5</td>
+<td style="text-align: right;">305.5</td>
+</tr>
+<tr>
+<td>車城</td>
+<td>屏東</td>
+<td style="text-align: right;">18.0</td>
+<td style="text-align: right;">0.0</td>
+<td style="text-align: right;"><strong>103.0</strong></td>
+<td style="text-align: right;">242.5</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>說明：<code>Now</code> 為 <strong>8/26 0 時至目前累積</strong>（非 1 小時雨量）；<code>3 日累計</code> 為本次 8/22～8/25 事件的總累積，左營、泰武、春日已破 400～500 mm，土壤已飽和，後續若有降雨仍易致災。</p>
+</blockquote>
+<h3>🌀 颱風沙德爾（SAUDEL，第 18 號）最新軌跡與預報</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>數據（CWA 分析／預報，8/26 08:00）</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>現測位置</strong></td>
+<td>27.9°N, 127.3°E（台灣东北方海上）</td>
+</tr>
+<tr>
+<td><strong>強度</strong></td>
+<td>最大風速 35 m/s（颱風級）、氣壓 965 hPa、陣風 45 m/s</td>
+</tr>
+<tr>
+<td><strong>移動</strong></td>
+<td>西西北 14 kt，持續減弱中（8/25 曾達 48 m/s 強颱級巔峰）</td>
+</tr>
+<tr>
+<td><strong>8/26 20:00</strong>（12h）</td>
+<td>28.5°N, 125.8°E，風速 33 m/s</td>
+</tr>
+<tr>
+<td><strong>8/27 08:00</strong>（24h）</td>
+<td>28.5°N, 124.5°E，風速 33 m/s</td>
+</tr>
+<tr>
+<td><strong>8/27 20:00</strong>（36h）</td>
+<td>28.3°N, 123.2°E，風速 30 m/s（颱風級）</td>
+</tr>
+<tr>
+<td><strong>8/28 08:00</strong>（48h）</td>
+<td>27.9°N, 121.2°E，風速 25 m/s（中度颱風）</td>
+</tr>
+<tr>
+<td><strong>8/29 08:00</strong>（72h）</td>
+<td>26.9°N, 116.0°E，風速 15 m/s（逼近福建）</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>8/27～8/28 距台灣最近</strong>，中心進入台灣北部海面；登陸台灣機率偏低，可能由馬祖附近轉向福建。</li>
+<li>最快 <strong>8/26 下半天發布海上颱風警報</strong>；8/27 針對馬祖可能發布陸上颱風警報。</li>
+<li>北部及中部山區需防大雨或豪雨；北部沿海及馬祖注意強陣風。</li>
+<li><strong>適逢大潮</strong>，沿海低窪地區仍防海水倒灌。</li>
+</ul>
+<h3>🌬️ 陸上強風特報（CWA，8/26 10:20 發布）</h3>
+<table>
+<thead>
+<tr>
+<th>縣市</th>
+<th>特報</th>
+<th>有效時間</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>屏東縣</strong></td>
+<td>🟡 陸上強風特報</td>
+<td>8/27 02:00 ~ 23:00</td>
+</tr>
+<tr>
+<td>新北市、桃園市、新竹市、新竹縣</td>
+<td>陸上強風特報</td>
+<td>8/27</td>
+</tr>
+<tr>
+<td>蘭嶼、連江縣</td>
+<td>陸上強風特報</td>
+<td>8/27</td>
+</tr>
+</tbody>
+</table>
+<h3>未來天氣預報（CWA F-D0047 鄉鎮預報，8/26 發布）</h3>
+<table>
+<thead>
+<tr>
+<th>地區</th>
+<th>8/26 白天</th>
+<th>8/26 晚間～8/27</th>
+<th>備註</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>台南市</strong></td>
+<td>多雲時晴，PoP 10～30%，31～32℃ 悶熱</td>
+<td>陰轉短暫陣雨或雷雨，PoP 50%</td>
+<td>市區降雨有限</td>
+</tr>
+<tr>
+<td><strong>高雄市區</strong></td>
+<td>多雲時晴轉陣雨，PoP 20～40%，28～31℃ 悶熱</td>
+<td>短暫陣雨或雷雨，PoP 30%</td>
+<td>沿海風 1～2 級</td>
+</tr>
+<tr>
+<td><strong>高雄山區</strong>（六龜、甲仙）</td>
+<td>短暫陣雨，<strong>PoP 60～80%</strong></td>
+<td>陣雨或雷雨，PoP 40～70%</td>
+<td>山區仍須防短时强降雨</td>
+</tr>
+<tr>
+<td><strong>屏東市</strong></td>
+<td>短暫陣雨，PoP 40～60%，28～32℃ 悶熱</td>
+<td>陰轉陣雨或雷雨，PoP 50%</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>恆春半島</strong></td>
+<td>陣雨，PoP 30～40%，風 4～5 級</td>
+<td>陣雨或雷雨，PoP 30～40%</td>
+<td>恆春、枋寮沿海強風</td>
+</tr>
+<tr>
+<td><strong>屏東山區</strong>（獅子、枋山）</td>
+<td>陣雨或雷雨，PoP 50～60%</td>
+<td>大雨潛勢，風可達 6 級</td>
+<td>8/27 西北風增強</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>整體判斷：8/26 南部<strong>平地降雨已趨緩</strong>，以局部短暫陣雨為主、悶熱；<strong>山區 PoP 偏高（50～80%）</strong>；8/27～8/28 颱風外圍使南部東南海風轉西北風增強，山區與恆春半島需再防降雨與強風。</p>
+</blockquote>
+<h3>災情分級調整建議（供後續維護參考）</h3>
+<ul>
+<li>本次 <strong>0822 低壓帶及西南風豪雨事件</strong>已於 8/26 上午解除大雨特報，主要災段（8/23～8/25）傷亡、積淹水、撤離統計維持前次更新（1 死、4 失蹤、155 傷、積淹水累計 625 件）。</li>
+<li>後續關注重點轉為 <strong>颱風沙德爾對北部、東北部及馬祖的影響</strong>；若沙德爾帶來顯著災情，依規範另立颱風檔案或併入本檔案備註。</li>
+</ul>
+<blockquote>
+<p>資料來源：中央氣象署 Open Data（W-C0033-002/003、W-C0033-001、W-C0034-005、O-A0002-001、F-D0047-065/077/033），8/26 12:18 查詢</p>
+</blockquote>
+<hr />
+<h2>📡 最新進展：8/28 更新（15:50，後續西南風短延時豪雨）</h2>
+<blockquote>
+<p>事件本身 status 維持 <code>ended</code>（8/25 危險階段結束），以下為事件後西南風雨帶持續帶來之後續災情，依慣例<strong>附加</strong>記錄。</p>
+</blockquote>
+<h3>西南風短延時豪雨（8/28 午前）</h3>
+<table>
+<thead>
+<tr>
+<th>項目</th>
+<th>數據</th>
+<th>說明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>豪（大）雨特報</td>
+<td>8/28 11:00</td>
+<td>彰化以南 7 縣市局部大雨，<strong>高雄市升為豪雨</strong>；連日降雨，山區慎防坍方、落石、溪水暴漲</td>
+</tr>
+<tr>
+<td><strong>高雄茂林</strong></td>
+<td><strong>96 mm/小時</strong></td>
+<td>8/28 10～11 時，全國當時最大時雨量</td>
+</tr>
+<tr>
+<td><strong>屏東枋山（枋山）</strong></td>
+<td>93 mm/小時</td>
+<td>8/28 07～08 時</td>
+</tr>
+<tr>
+<td>屏東枋山、新枋</td>
+<td>當日累計 200 mm 以上</td>
+<td>8/28 11 時前</td>
+</tr>
+<tr>
+<td>屏東 7 鄉鎮</td>
+<td>100 mm 以上</td>
+<td>8/28 午前</td>
+</tr>
+<tr>
+<td><strong>屏東大漢山</strong></td>
+<td>330.0 mm</td>
+<td>CWA 官方累積（8/27 0 時～8/28 14 時）</td>
+</tr>
+<tr>
+<td><strong>高雄多納林道</strong></td>
+<td>295.0 mm</td>
+<td>同上</td>
+</tr>
+</tbody>
+</table>
+<h3>🟡 屏東東港潮州河川溢流淹水</h3>
+<ul>
+<li>8/28 上午，屏東東港潮州地區河川溢流、低窪道路積水淹車（🟡 警戒級，無人員傷亡通報）；土壤已飽和、排水負荷重，屬本事件後續西南風雨帶影響</li>
+<li>來源：中央社記者 8/28 屏東報導</li>
+</ul>
+<h3>花蓮修格蘭溪尋獲</h3>
+<ul>
+<li>8/27，花蓮玉里修格蘭溪尋獲前（8/22 後期）落河失蹤之保全人員遺體；花蓮失蹤 3 人中 1 人已確認（🔴 傷亡統計維持前次，未新增）</li>
+</ul>
+<h3>與颱風沙德爾（SAUDEL）之關聯</h3>
+<ul>
+<li>上方「颱風沙德爾（SAUDEL）接近預報（8/26）」為<strong>預報</strong>資料；實際發展已另行建檔：<strong><a href="../../颱風/2026/08/0818_18_沙德爾_SAUDEL.md">颱風/2026/08/0818_18_沙德爾_SAUDEL.md</a></strong></li>
+<li>摘要：8/24 14:00 達 51 m/s / 925 hPa 巔峰；<strong>8/28 08:00 最接近</strong>（浙江外海 28.1°N、121.2°E，30 m/s）；未登陸台灣；<strong>海上颱風警報 8/28 14:30 解除</strong>（第 11 報）；馬祖無災損；嘉義以南之短延時豪雨即上方所列，屬颱風外圍＋西南風疊加</li>
+<li>後續威脅：氣象專家鄭明典（新頭條 8/28）指出季風槽加深，熱帶低壓生成位置離台更近，下週熱帶擾動仍可能持續干擾；第 21 號颱風 Aito 已於西太平洋遠海生成，無直接影響</li>
+</ul>
+<blockquote>
+<p>資料來源：中央氣象署 Open Data（W-C0034-001 海上颱風警報第 11 報、W-C0034-005 分析軌跡 8/28 14:00、O-A0002-001 雨量站），中央社、新頭條、自由時報 8/28 報導</p>
+</blockquote>
+</div>
+</main>
+<footer><div class="wrap">
+<p>本頁內容彙整自中央氣象署公開資料與新聞媒體公開報導，每筆災情請點入來源連結查證原文；官方資訊以中央氣象署與各縣市政府公告為準。本頁採手動更新，資訊可能落後。</p>
+</div></footer>
+</div>
+</div>
+<script>
+(function(){
+  var root = document.documentElement;
+  var themeBtn = document.getElementById('theme-toggle');
+  if (themeBtn) themeBtn.addEventListener('click', function(){
+    var t = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', t);
+    try { localStorage.setItem('wtf-theme', t); } catch (e) {}
+  });
+  var sb = document.getElementById('sidebar'),
+      sc = document.getElementById('scrim'),
+      hb = document.getElementById('nav-toggle');
+  function close(){ if(sb) sb.classList.remove('open'); if(sc) sc.classList.remove('show'); }
+  if (hb) hb.addEventListener('click', function(){
+    sb.classList.toggle('open'); sc.classList.toggle('show');
+  });
+  if (sc) sc.addEventListener('click', close);
+  if (sb) sb.querySelectorAll('a').forEach(function(a){ a.addEventListener('click', close); });
+})();
+</script>
+</body>
+</html>

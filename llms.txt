@@ -1,0 +1,38 @@
+# 台灣天氣與災情總覽
+
+> 記錄台灣目前與歷史上發生的颱風、低壓帶、豪雨等天氣事件與各縣市災情的純靜態網站。氣象資料來源為中央氣象署（CWA）Open Data API，災情來源為各縣市政府公告與新聞媒體。產生時間：2026/9/4 12:32。繁中為預設語言；`/ja/` 為日文介面（事件正文仍為繁中原文）。
+
+> 目前風險狀態（依 CWA 目前之警報與特報判斷，產生於 2026/9/4 12:32）：🔴 目前危險中——熱帶氣旋 科羅旺（KROVANH） 生效中（強度：輕度颱風）；豪雨特報（有效至 2026/09/04 12:17 ~ 2026/09/05 00:00）；陸上強風特報（有效至 2026/09/04 11:00 ~ 2026/09/05 23:00）。
+
+## 網站結構
+
+- [首頁（氣象彙整＋各縣市災情總覽）](https://weather.avpclub.eu.org/index.html)
+- [日文介面（UI 為日文，事件正文為繁中原文）](https://weather.avpclub.eu.org/ja/index.html)
+
+- 所有事件列表（含已結束）見首頁側邊欄，本檔下方亦分列進行中／已結束。
+
+## 進行中的事件
+
+- [0904 低壓帶南北台灣豪雨](https://weather.avpclub.eu.org/events/%E7%81%BD%E6%83%85/2026/09/0904_%E4%BD%8E%E5%A3%93%E5%B8%B6_%E5%8D%97%E5%8C%97%E5%8F%B0%E7%81%A3%E8%B1%AA%E9%9B%A8.html)（🟡 警戒）
+
+## 已結束的事件
+
+- [颱風沙德爾（SAUDEL）— 2026 年第 20 號](https://weather.avpclub.eu.org/events/%E9%A2%B1%E9%A2%A8/2026/08/0818_18_%E6%B2%99%E5%BE%B7%E7%88%BE_SAUDEL.html)（🟡 警戒）
+- [0828 西南風短延時豪雨後續災情](https://weather.avpclub.eu.org/events/%E7%81%BD%E6%83%85/2026/08/0828_%E8%A5%BF%E5%8D%97%E9%A2%A8_%E5%8D%97%E5%8F%B0%E7%81%A3%E5%BE%8C%E7%BA%8C%E6%B7%B9%E6%B0%B4.html)（🟡 警戒）
+- [颱風巴威（BAVI）— 2026 年第 9 號](https://weather.avpclub.eu.org/events/%E9%A2%B1%E9%A2%A8/2026/07/0702_09_%E5%B7%B4%E5%A8%81_BAVI.html)（🔴 重大）
+- [颱風紅霞（NOUL）— 2026 年第 12 號](https://weather.avpclub.eu.org/events/%E9%A2%B1%E9%A2%A8/2026/07/0722_12_%E7%B4%85%E9%9C%9E_Noul.html)（🟡 警戒）
+- [颱風白海豚（DOLPHIN）— 2026 年第 13 號](https://weather.avpclub.eu.org/events/%E9%A2%B1%E9%A2%A8/2026/08/0807_13_%E7%99%BD%E6%B5%B7%E8%B1%9A_DOLPHIN.html)（🟡 警戒）
+- [0822 低壓帶及西南風豪雨事件](https://weather.avpclub.eu.org/events/%E7%81%BD%E6%83%85/2026/08/0821_%E4%BD%8E%E5%A3%93%E5%B8%B6_%E5%8D%97%E5%8F%B0%E7%81%A3%E5%A4%A7%E9%9B%A8.html)（🔴 重大）
+
+## 資料說明
+
+- 每筆災情均附新聞來源與連結，並標注時間戳（格式：`YYYY/M/D HH:MM`）。
+- 災害分級：🔴 重大／🟡 警戒／🟢 一般。
+- 首頁的颱風軌跡、警報特報、雨量 TOP-10 等氣象資料由 build 時自 CWA API 抓取，非即時。
+- 完整事件全文另見 `llms-full.txt`（同一網址下）。
+
+## 授權
+
+- 本內容（災情紀錄與彙整，含本檔）：CC BY-NC-SA 4.0（創用 CC 姓名標示-非商業性-相同方式分享 4.0 國際）——可自由分享與調修，但須註明出處、不得商用、衍生作品須以相同授權釋出。
+- 程式碼：GNU AGPLv3。
+- 源自中央氣象署（CWA）Open Data API 的氣象資料以 CWA 官方條款為準。
