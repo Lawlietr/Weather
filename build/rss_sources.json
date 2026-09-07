@@ -1,7 +1,7 @@
 {
   "$schema": "https://weather.avpclub.eu.org/rss_sources.schema.json",
   "description": "台灣新聞 RSS 來源清單。供 build 流程（RSS 第二優先災情來源）與協助的 agent 讀取，減少重覆調查。",
-  "updated": "2026-08-27",
+  "updated": "2026-09-07",
   "usage_notes": [
     "優先級（priority）依『災情相關度』排序：high = 天氣/災情新聞最常見；medium = 補充；low = 一般。",
     "status 說明：verified = 已實測可用；failed = 實測失效（勿呼叫）；pending = 待復查。",
@@ -102,6 +102,20 @@
       "notes": "Feedburner。適合政策背景與深度分析。"
     },
     {
+      "name": "風傳媒 storm.mg",
+      "domain": "storm.mg",
+      "language": "zh-Hant",
+      "format": "rss20",
+      "status": "verified",
+      "priority": "high",
+      "disaster_relevance": "高（颱風/災情最重要新媒體之一，社會即時報導強）",
+      "urls": [
+        { "category": "國內", "url": "https://www.storm.mg/api/getRss/channel_id/9?path=https%3A%2F%2Fwww.storm.mg%2Farticle" },
+        { "category": "新聞", "url": "https://www.storm.mg/api/getRss/channel_id/2?path=https%3A%2F%2Fwww.storm.mg%2Farticle" }
+      ],
+      "notes": "RSS 於 2026-09-07 復查恢復可用：端點是 /api/getRss/channel_id/{N}（頻道表見 /feed 頁；9=國內、2=新聞總匯、7=政治、11=兩岸、100/109=新新聞、123=空勿用）。舊 /feed、/rss 端點回 HTML/404 非 XML。災情優先『國內』。"
+    },
+    {
       "name": "民報 People News",
       "domain": "peoplenews.tw",
       "language": "zh-Hant",
@@ -130,7 +144,6 @@
   ],
   "failed_sources": [
     { "name": "中天新聞 CTi", "domain": "ettv.com.tw", "status": "failed", "reason": "全站封鎖本環境（首頁/新聞頁均 000 連線失敗，DNS 正常）。RSS 端點亦取不到。Obscura 抓取大概率也失敗。", "checked": "2026-08-27" },
-    { "name": "風傳媒 storm.mg", "domain": "storm.mg", "status": "pending", "reason": "/feed 回 HTML（非 XML）、/rss 與 /rss.xml 均 404，RSS 疑似已移除（2026-08-30 再測仍如此）。但風傳媒是颱風/災情最重要新媒體之一，建議日後重測；取不到時退而用 Obscura 抓其新聞頁。", "checked": "2026-08-30" },
     { "name": "聯合報 udn", "domain": "feed.udn.com", "status": "failed", "reason": "DNS 無法解析，Feed 端點已停用。", "checked": "2026-08-27" },
     { "name": "中國時報 CTS", "domain": "cts.com.tw", "status": "failed", "reason": "RSS 端點回 HTTP 410（永久移除）。", "checked": "2026-08-27" },
     { "name": "華視 CTS", "domain": "cts.com.tw", "status": "failed", "reason": "RSS 端點回 HTTP 410。", "checked": "2026-08-27" },

@@ -89,7 +89,7 @@
 
 - **一律先讀 `build/rss_sources.json`** 取得來源清單（`sources` 8 家已實測可用；`failed_sources` 失效**勿呼叫**；`usage_notes` 為完整抓取守則），不要自行重新查或寫死 URL。
 - 重點：解析器需相容 `rss20`（`<item>`）與 `atom`（`<entry>`，公視是 Atom）；LTN feed 檔頭有 BOM；**民報域名是 `peoplenews.tw`（非 `minmax.tw`）**；單一來源 404/超時**不中斷 build**（跳過＋記 warning）。
-- **風傳媒（storm.mg）待復查**：RSS 疑似移除（2026/8/30 再測仍回 HTML/404），但它是颱風/災情最重要新媒體之一；取不到時退而用 Obscura 抓其新聞頁。
+- **風傳媒（storm.mg）**：RSS 端點為 `/api/getRss/channel_id/{N}?path=...`（**非** `/feed`、`/rss`——那兩個回 HTML/404）；災情優先抓 `channel_id/9`（國內）＋`channel_id/2`（新聞總匯）；2026/9/7 實測恢復可用，已列入 `rss_sources.json` verified 來源。
 
 ## Git
 
