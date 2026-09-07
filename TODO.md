@@ -1,9 +1,9 @@
 # TODO：待辦事項
 
 > 專案背景、設計原則、技術架構與部署流程分別見 `README.md`、`AGENTS.md`、`WORKFLOW.md`，本文件只放**未完成的待辦**；已完成項目的設計史不留在此（看 git history 或各文件）。
-> 最後更新：2026/9/7（§1：風傳媒 RSS 復查恢復、關鍵詞第一輪修剪）
+> 最後更新：2026/9/7（全檔精簡：已完成項目細節收為一線，細節看 git history／模組註解；§1 風傳媒 RSS 恢復、KEYWORDS 第一輪修剪）
 
-> 優先級：§2 地圖紅警（高，實作中：執行順序 1 gazetteer＋2 cbph→map.geo.json＋3 `/map/` 骨架 ✅（2026/9/2）、下一步 4 觀測層；四大決策定案：cbph 採用、每 2 小時、自動層先上、獨立 `/map/` 頁；首批 = 執行順序 1–4＋6）、§6 停班停課板塊（中高，待實作）、§4 平常天氣報導（中，構想待討論）、§1 RSS 殘細項（低，2026/9/7 風傳媒復查恢復＋KEYWORDS 第一輪修剪後，剩隨事件微調）、§3 ja 移除／§5 分享按鈕（低）。
+> 優先級：§2 地圖紅警（高，實作中：執行順序 1–3 ✅、下一步 4 觀測層）＞ §6 停班停課板塊（中高，待實作）＞ §4 平常天氣報導（中，構想待討論）＞ §1 RSS 殘細項（低，剩隨事件微調）＞ §3 ja 移除／§5 分享按鈕（低）。
 
 ---
 
@@ -11,11 +11,7 @@
 
 ### 問題意識
 
-停班停課資訊是颱風/豪雨事件中**使用者最高頻查詢的資訊之一**，但目前網站完全沒有呈現。
-
-- 目前停班停課資訊只存在於災情/颱風 Markdown 原文中（如 `0904_低壓帶_南北台灣豪雨.md` 的新北金山萬里 8 校停課撤離、`0818_18_沙德爾_SAUDEL.md` 的完整停班停課章節）
-- build 時這些資訊**被丟棄了**——沒有被提取並渲染到 HTML 網頁上
-- 首頁零處出現「停班」或「停課」，`build/cwa.py`、`build/site.py`、`build/i18n.py` 完全沒有相關邏輯
+停班停課資訊是颱風/豪雨事件中**使用者最高頻查詢的資訊之一**，但目前網站完全沒有呈現——資訊只存在於災情/颱風 Markdown 原文（如 `0904_低壓帶_南北台灣豪雨.md` 新北金山萬里 8 校撤離、`0818_18_沙德爾_SAUDEL.md` 完整章節），build 時被丟棄，首頁零處出現。
 
 ### 資料來源痛點
 
@@ -27,7 +23,7 @@
 | 各縣市政府 | 鄉鎮市自主宣布停課（如屏東春日鄉、滿州鄉） | ❌ 無標準格式 |
 | 新聞媒體轉傳 | 中央社、風傳媒等轉發 | ❌ 非官方來源 |
 
-這跟氣象署警報不同（CWA API 可標準化抓取），停班停課**沒有標準化 API**。資料的**更新頻率低**（通常只在重大事件中才會有）、且多數是「無停班停課」的宣告。
+與 CWA 警報不同，停班停課**沒有標準化 API**；更新頻率低（通常只在重大事件中才有），且多數是「無停班停課」的宣告。
 
 ### 實作方向（已定案）
 
@@ -79,10 +75,8 @@
 
 ### 與現有架構的兼容性
 
-- 不影響現有 `颱風/`、`災情/` 的事件驅動流程
-- 沿用現有 build 流水線（每 2 小時 cron），不需新排程、新金鑰
-- 資料來源是 repo 內已有的 Markdown，零外部依賴
-- 跟 §2 地圖紅警、§4 平常天氣報導 獨立，不互相依賴
+- 沿用現有 build 流水線（每 2 小時 cron），不需新排程、新金鑰；資料來源是 repo 內已有的 Markdown，零外部依賴
+- 與 §2、§4 獨立，不互相依賴
 
 ---
 
@@ -91,13 +85,14 @@
 > 已實作：`build/rss.py` build 時自動抓 verified feeds 產出候選清單 `build/rss_candidates.json`（**從不進 `public/`**）；人 / LLM 審查後挑中者寫入事件檔「XX災情新聞來源」章節才上線（流程見 `WORKFLOW.md` §1）。
 
 **剩餘待辦**：
-- ~~風傳媒（storm.mg）待復查~~ ✅ **2026/9/7 復查：RSS 已恢復**——端點是 `/api/getRss/channel_id/{N}?path=...`（9=國內、2=新聞；舊 `/feed`、`/rss` 仍回 HTML/404 非 XML），已加入 `rss_sources.json` verified 來源並實測入列，Obscura 回退方案不再需要。
-- 關鍵詞清單（`rss.py` 的 `KEYWORDS`）需隨事件類型實測微調。2026/9/7 已做第一輪保守修剪（移除過泛：陣風、電線、封閉、應變；補漏：大雷雨、暴漲、崩塌、潰堤、巨浪、水位）；真正的微調需事件期間 `rss_candidates.json` 的 flag 假陽性/假陰性實戰資料。
-- 候選審查目前全靠人工/LLM；若事件期間量太大，可考慮把 flag 條目渲染到首頁供快速瀏覽（非必需）。
+- 關鍵詞清單（`rss.py` 的 `KEYWORDS`）隨事件期間 `rss_candidates.json` 的 flag 假陽性/假陰性實戰資料微調（2026/9/7 已完成第一輪修剪，細節見 git history）。
+- （可選）事件期間候選量太大時，考慮把 flag 條目渲染到首頁供快速瀏覽（非必需）。
+
+已完成：風傳媒（storm.mg）RSS 復查恢復（2026/9/7，端點與入列見 `AGENTS.md`「新聞 RSS 來源」）。
 
 ---
 
-## 2. 地圖紅警功能（實作中；2026/8/28 定案、2026/9/1 補 cbph API 實測與設計修正、2026/9/2 執行順序 1–2 完成）
+## 2. 地圖紅警功能（實作中；2026/8/28 定案、2026/9/1 cbph API 實測、2026/9/2 執行順序 1–3 完成）
 
 在互動地圖上以紅色危險告警標註「目前或預計會有淹水/大雨的地區」，讓使用者一眼看到「現在最危險的地區在哪」。**分兩層、可獨立上線**。
 
@@ -114,7 +109,7 @@
   | 颱風軌跡/風圈 | W-C0034-005 | 預測路徑＋風圈圓環 |
   | 海區警報多邊形 | W-C0034-001 CAP `area` | **唯一官方座標化多邊形，且是海區** |
   | 陸地紅區（豪大雨特報影響區域） | W-C0033-002/003 | ⚠️ 影響區域是**文字/縣市清單，非座標多邊形**，必須經 gazetteer 轉換；標籤註明生效時段（「今夜起」等） |
-- ~~**gazetteer（鄉鎮級靜態座標表）是必建項目，非可選**~~ **✅ 已建（2026/9/1）**：`build/gazetteer.json`（產生器 `build/make_gazetteer.py`，見執行順序 1）。JSON 存 repo，測站/界線資料變動時才需重跑。特報文字與災情新聞的鄉鎮名稱都對照它；查不到回退縣級，再查不到不上圖。（2026/9/1 修正：cbph PWS 告警層改用**官方 polygon**，gazetteer 僅服務特報文字層＋新聞點對照——已按縮小後角色建好，無缺口。）
+- **gazetteer ✅ 已建（2026/9/1）**：`build/gazetteer.json`（產生器 `build/make_gazetteer.py`；測站/界線資料變動時才需重跑）。僅服務特報文字層＋新聞點對照（cbph 告警層用官方 polygon）；鄉鎮查不到回退縣級、再查不到不上圖。
 - **不做**：像素級降雨預報雲圖（CWA 開放資料無 48h 雨量預報座標，F-C0033-001 已下架）；河川水位/土石流（O-C0010-001 已下架）——淹水類警報只能靠 2b 新聞層，粒度到鄉鎮。
 
 #### cbph 災防告警 API（2026/9/1 實測，新增資料源）
@@ -128,27 +123,16 @@
 - 維持人工把關（核心原則：災情新聞不自動推）；缺了不影響 2a CWA 層運作。
 - gazetteer 本就要建，2b 建好後可直接沿用。
 
-### 選型（已定：Leaflet + OpenStreetMap，非 Google Maps）
+### 選型與離線自駕（已定案並實作）
 
-- 不用 Google Maps：JS API 計費需綁 billing account（意外帳單風險）、**必須連 Google 伺服器無法離線自駕**、API key 暴露前端。若日後嫌 OSM 瓦片太素，改換預渲染瓦片供應商（CARTO/OpenFreeMap），架構不變。
-- Leaflet + 自託瓦片：開源免費、無 API key、靜態部署無縫。
-- **保持輕量**：Leaflet 只在「地圖頁」載入（自託 `leaflet.js` ~40 KB + 1 個 CSS）；**首頁維持零 JS**（現有靜態 SVG 軌跡圖不換）。
+- **Leaflet + OSM（非 Google Maps）**：Google 計費綁 billing、必須外連無法離線、key 暴露前端；若日後嫌 OSM 瓦片太素，改預渲染瓦片供應商（CARTO/OpenFreeMap）即可，架構不變。
+- **離線自駕（硬需求）**：JS/CSS 全自託、不引 CDN；build 時只抓台灣範圍瓦片（z8–z11，`build/_tile_cache/` 持久化、缺什麼補什麼），完全離線、零外部請求；不跑 OSM tile server，出範圍顯示空白底。
+- **保持輕量**：Leaflet 只在地圖頁載入；**首頁維持零 JS**（現有靜態 SVG 軌跡圖不換）。
 
-### 離線自駕（硬需求）
+### 地圖頁 UI（骨架已上線 2026/9/2，剩項歸執行順序 6）
 
-- 所有 JS/CSS 自託在 `public/assets/`，不引 CDN。
-- 瓦片策略：build 時只抓台灣範圍所需瓦片存本地（約 z9–z11，幾十張 PNG、數 MB）——瓦片幾乎不變，可 build 時缺什麼補什麼，甚至直接 commit 進 repo 使 build 零外部依賴；Leaflet 指向本地瓦片 → 完全離線、零外部請求（災發時網路最不稳定，離線靠得住）；不要跑 OSM tile server。出範圍的瓦片顯示空白底（或 fallback 到現有靜態 SVG）。
-
-### 地圖頁 UI 設計（2026/9/1 討論，待實作）
-
-- **獨立 `/map/` 頁（呈現方式 2026/9/1 定案＝選項 A，先做完整獨立頁）**：Leaflet 只在此頁載入；首頁維持零 JS＋現有靜態 SVG 軌跡圖，只加一個「查看地圖」入口。「A＋首頁靜態 SVG 告警區快照」**不在首批**——獨立頁完成後有時間再另外實驗驗證。
-- 佈局：全幅地圖（預設全台視角 z8–9）＋右側欄（行動版 bottom sheet）：點擊詳情卡＋圖例＋「產生時間：YYYY/M/D HH:mm（每 2 小時更新，非即時）」——**快照標示必顯示**。
-- **點擊詳情卡欄位**：告警類型＋`official_id`、生效時段（`effective→expires`，UTC+8）、影響縣市/鄉鎮、`description` 原句、`cmam_text`＋`cb_enabled`（細胞廣播狀態）、**本 repo 該區域相關災情紀錄連結**、回連 cbph 官方頁。
-- 圖層配色沿用 cbph：大雷雨 `#f59e0b`、颱風強風 `#ef4444`；山區暴雨/巨浪配色自定。hover tooltip（類型＋時段＋縣市）；圖層可勾選開關（預設全開）。
-- **Deep link**：`/map/?layer=&zoom=&center=`、`/map/event/{identifier}`（分享單一告警）。
-- **LLM 友善**：`/map/data.json`（即 build 產出之 `map.geo.json`）公開＋寫進 `llms.txt`。
-- OSM 瓦片署名義務：頁尾必顯示 `© OpenStreetMap contributors`。
-- 無 JS fallback：顯示既有靜態 SVG 總覽。
+- 已上線：獨立 `/map/` 頁、全幅地圖＋右側欄（行動版 bottom sheet）、點擊詳情卡（類型＋`official_id`、生效時段、影響鄉鎮、`description`、`cmam_text`＋`cb_enabled`、本 repo 災情連結、cbph 官方 deep link）、圖層配色（大雷雨 `#f59e0b`、颱風強風 `#ef4444`）＋開關、hover tooltip、「產生時間（每 2 小時更新、非即時）」、OSM 署名、`<noscript>` fallback。
+- **剩（＝執行順序 6 v2）**：deep link（`/map/?layer=&zoom=&center=`、`/map/event/{identifier}`）、`/map/data.json` 公開＋寫進 `llms.txt`、時間線快照。
 
 ### 決策（2026/9/1 全部定案）
 
@@ -159,11 +143,9 @@
 
 ### 執行順序（2026/9/1 決策定案；首批＝1–4＋6，在 DEV 分支開發、經確認後合併 main）
 
-1. ~~gazetteer（鄉鎮/縣級 JSON，一次性建）~~ **✅ 完成（2026/9/1）**：`build/make_gazetteer.py` 產生 `build/gazetteer.json`（towns 368＝CWA 現存測站解析 331＋twTown1982 界線補位 37，counties 22；16 個解析不了的站降級縣級）。逐縣比對官方行政區劃確認**界線檔＋測站已覆蓋全部現行鄉鎮市，無需手動補位**（`MANUAL_TOWNS` 留空、保留機制）；桃園縣 13 鄉已換算為桃園市 X 區。陷阱：新竹市「北區」是現行正式區（海天一線測站所在，非垃圾 key）、嘉義市只有東/西 2 區、太麻里鄉在臺東縣（非花蓮）、南字無簡繁問題（同 U+5357，純字型渲染假象）。
-2. `build/cbph.py`：抓 4 類→驗證→合併進 `map.geo.json` — **✅ 完成（2026/9/2）**：`build/cbph.py`（4 類告警抓取、polygon→GeoJSON、UTC→UTC+8、503/404 容錯、生效判定；屏東縣單縣市採集測試通過：歷史池 40 筆、40/40 含官方 polygon）。掛 build 流水線：`site.py main()` 呼叫 `cbph.build_map_geojson()` → 寫 `build/map.geo.json`（build 中間檔、gitignore；含 `generated_at`/`warnings` 欄），build log 印生效告警數。公開 `/map/data.json` 與 `llms.txt` 註記屬步驟 6（v2）。注意：採集是全縣一次抓（`/api/global/` 不區縣），無逐縣市工作項——「單縣市採集」只是實作期的驗證方式。
-3. `/map/` 骨架：自託 Leaflet＋瓦片＋cbph polygon 層＋點擊詳情卡＋圖例＋產生時間 — **✅ 完成（2026/9/2）**：`build/map_page.py`（獨立 `/map/` 頁＋`ja/map/`，繁中/日文 UI）、`build/tiles.py`（離線瓦片）、`build/static/leaflet/`（Leaflet 1.9.4 自託 dist，md5 `35b48eb991f383702f153452506e07b2`）。功能：官方 polygon 渲染（4 類分色）、hover tooltip、click→詳情卡（含影響鄉鎮/生效時段/細胞廣播狀態/官方 deep link/本 repo 相關事件連結）、圖層 checkbox 開關＋計數、產生時間、「每 2 小時更新、非即時」註記、`<noscript>` 靜態清單 fallback、行動版 bottom-sheet。入口：首頁 nav「災防告警地圖」＋ llms.txt 條目。
-   **瓦片來源陷阱（2026/9/2 實測）**：OSM 官方 server（含 a./c. 副域）對本機 IP 回**假 200＋封鎖頁 PNG**（967 張全中、換 UA 無效）；CARTO 全端點需 API key（瓦片帶浮水印）；**改用 OSM 德國社群 server `tile.openstreetmap.de`**（免 key、20 張抽樣全數乾淨）。`tiles.py` 已加 HTTP 狀態碼＋PNG magic 雙重驗證防再發。z8–z11 共 967 張（~15MB），`build/_tile_cache/` 持久化命中、缺的才補抓。
-   **驗證**：Obscura headless 端到端（合成 3 筆告警）：polygon 渲染✓、圖層計數 2/1/0/0✓、圖層開關✓、bottom-sheet 開關✓、`node --check` 兩頁 JS✓。已知引擎限制（不影響生產）：obscura 引擎缺 `SVGSVGElement.createSVGRect` 與 `HTMLElement.clientLeft/clientTop` → SVG 偵測 false（test page 注入 polyfill 補）＋引擎合成 click 缺座標→`mouseEventToContainerPoint` NaN→`fire` 前拋 Invalid LatLng（**真實瀏覽器無此問題**；handler 邏輯已以 `layer.fire("click")` 直接驗證 panel 開啟✓）。click 交互的最終確認建議合併前在真實瀏覽器看一眼。
+1. ~~gazetteer（鄉鎮/縣級 JSON）~~ **✅（2026/9/1）**：`build/make_gazetteer.py` → `build/gazetteer.json`（towns 368 / counties 22，覆蓋全部現行鄉鎮市、無需手動補位；建立細節與陷阱見 git history）。
+2. `build/cbph.py`：抓 4 類→驗證→合併進 `map.geo.json` — **✅（2026/9/2）**：4 類告警抓取、polygon→GeoJSON、UTC→UTC+8、503/404 容錯；`site.py` 呼叫 `cbph.build_map_geojson()` 寫 `build/map.geo.json`（build 中間檔、gitignore）。公開 `/map/data.json` 屬步驟 6。
+3. `/map/` 骨架 — **✅（2026/9/2）**：`build/map_page.py`＋`build/tiles.py`（離線瓦片；來源陷阱——OSM 官方 server 對本機 IP 假 200 封鎖、改用 `tile.openstreetmap.de`——見 `tiles.py` 頭註）＋`build/static/leaflet/`（Leaflet 1.9.4 自託）。功能詳見上方「地圖頁 UI」；入口：首頁 nav＋llms.txt。
 4. 雨量站＋颱風軌跡/風圈＋特報（gazetteer）層
 5. ~~2b 災情新聞點層（人工餵料）~~ 暫緩（見 §2b）
 6. v2：`/map/data.json` 公開＋deep link＋時間線快照
@@ -176,7 +158,7 @@ ja 頁目前只有 UI 詞彙是日文、內容（新聞/CWA 資料）全為中�
 
 - **build 不再生成 `public/ja/`**、移除頁首語言切換（`build/site.py` 語言迴圈改回單語言）。
 - **`build/i18n.py` 的 `STRINGS` 表與 ja 字串保留不動**——日後加任何語言（含復原 ja）只是開一行配置。
-- **文件同步**：`AGENTS.md`「多語言」章節、`WORKFLOW.md` §3 驗證清單（刪「④ 雙語言輸出確認」）、§1 例行流程涉及 `/ja/` 的部分。
+- **文件同步**：`AGENTS.md`「網站專案」的 i18n 項、`WORKFLOW.md` §3 驗證清單（刪「④ 雙語言輸出確認」）、§1 例行流程涉及 `/ja/` 的部分。
 - 機翻自撰彙整文字（Google/DeepL，build 時）已評估但**作廢**（2026/8/28）：CWA 資料不該翻譯（條款＋正確性）、新聞摘要無翻譯授權（版權）；不列入待辦。
 
 ---
@@ -237,10 +219,7 @@ ja 頁目前只有 UI 詞彙是日文、內容（新聞/CWA 資料）全為中�
 
 ### 與現有架構的兼容性
 
-- 不影響現有 `颱風/`、`災情/` 的事件驅動流程
-- CWA API 抓取已自動化，不需新增金鑰或排程
-- 可與 §2 地圖紅警功能共用 gazetteer（若有）
-- 與 RSS 災情抓取（§1）獨立，不互相依賴
+- 沿用現有 CWA 抓取（不需新金鑰/排程）；可與 §2 共用 gazetteer；與 §1 RSS 獨立。
 
 ---
 
@@ -272,7 +251,6 @@ ja 頁目前只有 UI 詞彙是日文、內容（新聞/CWA 資料）全為中�
 - 純 build 期 Python 改動，不碰 CWA/API，符合「災情新聞人工把關」原則。
 
 ### 注意事項
-- Web Share / clipboard 在非安全環境（http）不可用；本站已 https，無虞。
 - Line 分享文字有長度上限，摘要需控制長度。
 - 分享按鈕只放「事件頁」；首頁「事件 Hero 入口卡」是中性入口（無 severity 色系），**不放**（符合 AGENTS.md 設計意圖）。
 - 建議執行順序：**A（Web Share ＋ 複製連結）→ B（＋ Line 一鍵）→ C（＋ OG 分享圖卡）**，目前全列為最低優先、暫未實作。
