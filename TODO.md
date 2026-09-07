@@ -3,13 +3,92 @@
 > 專案背景、設計原則、技術架構與部署流程分別見 `README.md`、`AGENTS.md`、`WORKFLOW.md`，本文件只放**未完成的待辦**；已完成項目的設計史不留在此（看 git history 或各文件）。
 > 最後更新：2026/9/7（§1：風傳媒 RSS 復查恢復、關鍵詞第一輪修剪）
 
-> 優先級：§1 RSS 殘餘細項（高，隨事件順手做）、§2 地圖紅警（高，實作中：執行順序 1 gazetteer＋2 cbph→map.geo.json＋3 `/map/` 骨架 ✅（2026/9/2）、下一步 4 觀測層；四大決策定案：cbph 採用、每 2 小時、自動層先上、獨立 `/map/` 頁；首批 = 執行順序 1–4＋6）、§3 平常天氣報導（中，構想待討論）、§4 ja 移除／§5 分享按鈕（低）。
+> 優先級：§1 RSS 殘細項（高，隨事件順手做）、§2 地圖紅警（高，實作中：執行順序 1 gazetteer＋2 cbph→map.geo.json＋3 `/map/` 骨架 ✅（2026/9/2）、下一步 4 觀測層；四大決策定案：cbph 採用、每 2 小時、自動層先上、獨立 `/map/` 頁；首批 = 執行順序 1–4＋6）、§6 停班停課板塊（中高，待實作）、§4 平常天氣報導（中，構想待討論）、§3 ja 移除／§5 分享按鈕（低）。
+
+---
+
+## 6. 停班停課板塊（中高優先級，2026/9/6 提出）
+
+### 問題意識
+
+停班停課資訊是颱風/豪雨事件中**使用者最高頻查詢的資訊之一**，但目前網站完全沒有呈現。
+
+- 目前停班停課資訊只存在於災情/颱風 Markdown 原文中（如 `0904_低壓帶_南北台灣豪雨.md` 的新北金山萬里 8 校停課撤離、`0818_18_沙德爾_SAUDEL.md` 的完整停班停課章節）
+- build 時這些資訊**被丟棄了**——沒有被提取並渲染到 HTML 網頁上
+- 首頁零處出現「停班」或「停課」，`build/cwa.py`、`build/site.py`、`build/i18n.py` 完全沒有相關邏輯
+
+### 資料來源痛點
+
+停班停課**沒有統一的中央 API**，資料分散且非結構化：
+
+| 來源 | 說明 | 結構化程度 |
+|------|------|------------|
+| 教育部/人事總處 | 僅針對颱風天，由各地方政府自行決定 | ⚠️ 非結構化公告 |
+| 各縣市政府 | 鄉鎮市自主宣布停課（如屏東春日鄉、滿州鄉） | ❌ 無標準格式 |
+| 新聞媒體轉傳 | 中央社、風傳媒等轉發 | ❌ 非官方來源 |
+
+這跟氣象署警報不同（CWA API 可標準化抓取），停班停課**沒有標準化 API**。資料的**更新頻率低**（通常只在重大事件中才會有）、且多數是「無停班停課」的宣告。
+
+### 實作方向（已定案）
+
+**採用方向 A：從 Markdown 提取**——在災情/颱風 Markdown 中建立標準化的停班停課表格格式，build 時提取並彙整到首頁「停班停課」區塊。
+
+#### 規範草案
+
+**Markdown 檔案格式**：在各事件檔案中，建立一個標準化的停班停課章節（類似現有災情表格格式）：
+
+```markdown
+## 停班停課
+
+| 日期 | 區域 | 狀態 | 說明 | 來源 |
+|------|------|------|------|------|
+| 2026/9/5 | 新北市金山區、萬里區 | 停課 | 預防性停課，8 校撤離 | [公視新聞網](URL) |
+| 2026/9/5 | 基隆市暖暖區 | 無停班停課 | 在地居民對未宣布停課表示不滿 | 自行觀察 |
+```
+
+**build 提取邏輯**（新增至 `build/site.py` 或新模組 `build/suspension.py`）：
+
+1. 掃描所有活躍/結束事件的 Markdown 檔案
+2. 解析「停班停課」章節，提取表格資料
+3. 彙整成結構化資料（日期、區域、狀態、說明、來源）
+4. 渲染到首頁一個「停班停課」區塊（卡片式，依日期倒序排列）
+5. 連結回原始事件檔案
+
+**首頁渲染**：在「目前風險狀態列」下方、「氣象總覽」上方，新增一個「停班停課」區塊：
+
+```
+┌─────────────────────────────────────┐
+│  📚 停班停課（2026/9/5 更新）        │
+├─────────────────────────────────────┤
+│  🟡 新北市金山區、萬里區  停課       │
+│     預防性停課，8 校撤離 → 查看事件  │
+├─────────────────────────────────────┤
+│  🟢 基隆市、台北市、桃園市  無        │
+│     未達停班停課標準                 │
+└─────────────────────────────────────┘
+```
+
+#### 執行順序
+
+1. **定義 Markdown 格式規範**：在 `AGENTS.md` 中新增停班停課章節的標準格式（跟災情表格一樣）
+2. **補齊現有檔案**：將現有事件檔案（`0904`、`0818`）的停班停課資訊重新格式化為標準表格
+3. **實作 build 提取邏輯**：`build/suspension.py` 或 `build/site.py` 新增解析與渲染
+4. **首頁渲染**：新增「停班停課」區塊到首頁 HTML 模板
+5. **i18n**：新增 `suspension` 字串到 `build/i18n.py`
+6. **文件更新**：同步更新 `AGENTS.md`、`WORKFLOW.md`（例行更新流程中加入停班停課檢查）
+
+### 與現有架構的兼容性
+
+- 不影響現有 `颱風/`、`災情/` 的事件驅動流程
+- 沿用現有 build 流水線（每 2 小時 cron），不需新排程、新金鑰
+- 資料來源是 repo 內已有的 Markdown，零外部依賴
+- 跟 §2 地圖紅警、§4 平常天氣報導 獨立，不互相依賴
 
 ---
 
 ## 1. RSS 災情抓取：殘餘細項（✅ 半自動方案已於 2026/8/30 實作）
 
-> 已實作部分：`build/rss.py` 於 build 時抓 verified feeds → 48h 時間過濾＋去重＋關鍵詞初判 → 產出 `build/rss_candidates.json`（gitignored、**從不進 `public/`**）；人 / LLM 審查後挑中者以 `- [標題](URL) — 媒體名` 寫入事件 markdown「XX災情新聞來源」章節才上線。設計定案與實測記錄見 git history（2026/8/29–8/30 commits），流程見 `AGENTS.md`「資料來源規範」與 `WORKFLOW.md` §1/§3。
+> 已實作：`build/rss.py` build 時自動抓 verified feeds 產出候選清單 `build/rss_candidates.json`（**從不進 `public/`**）；人 / LLM 審查後挑中者寫入事件檔「XX災情新聞來源」章節才上線（流程見 `WORKFLOW.md` §1）。
 
 **剩餘待辦**：
 - ~~風傳媒（storm.mg）待復查~~ ✅ **2026/9/7 復查：RSS 已恢復**——端點是 `/api/getRss/channel_id/{N}?path=...`（9=國內、2=新聞；舊 `/feed`、`/rss` 仍回 HTML/404 非 XML），已加入 `rss_sources.json` verified 來源並實測入列，Obscura 回退方案不再需要。
@@ -40,28 +119,14 @@
 
 #### cbph 災防告警 API（2026/9/1 實測，新增資料源）
 
-cbph.cwa.gov.tw＝「預報中心資訊發布查詢系統」（CWA Broadcast Product History），即 CWA「災防訊息彙整」（`/V8/C/P/PWS/PWS.html`，該頁本身只有文字清單）背後的地圖查詢系統。**公開 JSON API、免 key**（build 時抓取，無 CORS 問題；預設 curl UA 即可）。
-
-- **Endpoints**（實測 2026/9/1）：
-  - `GET https://cbph.cwa.gov.tw/api/global/` — 目前告警，依 4 類分組（前端再按 `is_active`＋`expires` 過濾）
-  - `GET https://cbph.cwa.gov.tw/api/{type}/?issuetime_after=&issuetime_before=&county=` — 歷史（預設最新 50 筆）
-  - type slugs：`cells`＝大雷雨即時訊息、`tywinds`＝颱風強風告警、`mountainstorms`＝山區暴雨警示訊息、`largesurfs`＝巨浪告警
-- **每筆欄位**：`identifier`（例 `cwa.gov.tw_thunderstorm_20260901142900_100`）、`official_id`、`sent`/`onset`/`effective`/`expires`（**UTC**，`Z` 結尾）、`is_active`、`msg_type`、`description`（告警原句）、`cmam_text`（細胞廣播原文）、`cb_enabled`、`county[]`/`town[]`（含鄉鎮）、`coastal_county[]`/`coastal_town[]`、**`polygon`**（字串：`lat,lon lat,lon ...`，多 ring 以 `;` 分開＝**官方影響區域座標**）、`geocode_dict`（實測 50 筆全空）
-- **官方頁 deep link**：`https://cbph.cwa.gov.tw/ui/?type={type}&identifier={identifier}`（點擊詳情卡可回連官方頁）
-- **實測陷阱**（2026/9/1）：
-  1. `largesurfs` 目前回 **503**（空類型/不存在路徑皆可能 503）——503/404 一律容錯跳過。
-  2. `county=` 過濾不可靠（實測宜蘭縣 0 筆，但資料裡有宜蘭）——build 端抓全量自行 filter。
-  3. 預設 50 筆 `is_active` 全 True（mountainstorms 例）——build 端仍須自行驗 `is_active`＋`expires`。
-  4. **非 Open Data 正式目錄**：無 SLA、無變更通知；build 端 try/except＋輕量 schema 驗證，失敗跳過＋warning、**不中斷 build**（沿用 RSS 守則）。
-  5. 時區 UTC——build 端一律轉 UTC+8（沿用固定 UTC+8 慣例）。
-  6. 引用措辭：UI 註明「資料來源：中央氣象署災防告警系統（PWS）」。
-- **更新頻率疑慮**：大雷雨即時訊息 lifespan 約 2 小時＝每 2 小時 cron 的下限，事件高峰期可能整筆錯過 → 見下方「待決定」。
+實測記錄（endpoints、每筆欄位——含 `polygon` 官方影響區域座標、`cmam_text` 細胞廣播、deep link——與 503/`county=` 過濾不可靠/`is_active` 須自行驗證/UTC/無 SLA 等陷阱）一律以 `AGENTS.md`「CWA cbph 災防告警 API」節為**單一事實來源**，實作前先讀它。
+- **更新頻率疑慮**：大雷雨即時訊息 lifespan 約 2 小時＝每 2 小時 cron 的下限，事件高峰期可能整筆錯過一週期——已接受 trade-off（見下方「決策」2；事件期間可加頻）。
 
 ### 2b. 災情新聞點層（人工/agent 餵料，可選疊層；**暫緩（2026/9/1 定）**）
 
 - 來源：RSS（見 §1）＋災情 markdown；鄉鎮名經 gazetteer 對照上圖，每筆附新聞來源連結。
 - 維持人工把關（核心原則：災情新聞不自動推）；缺了不影響 2a CWA 層運作。
-- 上線時程：**CWA 自動層先上、本層暫緩**，未來有時間再繼續實作（gazetteer 本就要建，2b 建好後可直接沿用）。
+- gazetteer 本就要建，2b 建好後可直接沿用。
 
 ### 選型（已定：Leaflet + OpenStreetMap，非 Google Maps）
 
@@ -85,12 +150,12 @@ cbph.cwa.gov.tw＝「預報中心資訊發布查詢系統」（CWA Broadcast Pro
 - OSM 瓦片署名義務：頁尾必顯示 `© OpenStreetMap contributors`。
 - 無 JS fallback：顯示既有靜態 SVG 總覽。
 
-### 決策（2026/9/1 提出並全部定案）
+### 決策（2026/9/1 全部定案）
 
-1. **cbph 採用為資料源** ✅：非正式 API、無 SLA（不保證穩定、改版/停用不通知、無支援）但資料本身是 CWA 公開資訊，以「轉引」措辭呈現；唯一提供官方影響區域 polygon 的來源；容錯沿用 RSS 守則（失敗跳過＋warning、不中斷 build）。
-2. **更新頻率＝與自動部署同頻，每 2 小時** ✅；有需求可於事件期間加頻至 30–60 分鐘。已接受 trade-off：大雷雨 lifespan 約 2 小時＝頻率下限，高峰期可能整筆錯過一期。
-3. **2b 新聞點層暫緩** ✅：CWA 自動層先上；2b 保留於本節，未來有時間再實作。
-4. **前端呈現＝選項 A：獨立 `/map/` 頁** ✅：先做完整獨立頁；「A＋首頁靜態 SVG 告警區快照」不在首批，獨立頁完成後有時間再實驗。
+1. 採用 cbph 為資料源（非正式 API、無 SLA，以「轉引」措辭呈現；容錯沿用 RSS 守則）
+2. 更新頻率＝與自動部署同頻、每 2 小時（事件期間可加頻至 30–60 分鐘；接受 trade-off：大雷雨 lifespan 約 2 小時）
+3. 2b 新聞點層暫緩
+4. 前端呈現＝選項 A：獨立 `/map/` 頁（「A＋首頁靜態 SVG 告警區快照」不在首批）
 
 ### 執行順序（2026/9/1 決策定案；首批＝1–4＋6，在 DEV 分支開發、經確認後合併 main）
 
@@ -100,7 +165,7 @@ cbph.cwa.gov.tw＝「預報中心資訊發布查詢系統」（CWA Broadcast Pro
    **瓦片來源陷阱（2026/9/2 實測）**：OSM 官方 server（含 a./c. 副域）對本機 IP 回**假 200＋封鎖頁 PNG**（967 張全中、換 UA 無效）；CARTO 全端點需 API key（瓦片帶浮水印）；**改用 OSM 德國社群 server `tile.openstreetmap.de`**（免 key、20 張抽樣全數乾淨）。`tiles.py` 已加 HTTP 狀態碼＋PNG magic 雙重驗證防再發。z8–z11 共 967 張（~15MB），`build/_tile_cache/` 持久化命中、缺的才補抓。
    **驗證**：Obscura headless 端到端（合成 3 筆告警）：polygon 渲染✓、圖層計數 2/1/0/0✓、圖層開關✓、bottom-sheet 開關✓、`node --check` 兩頁 JS✓。已知引擎限制（不影響生產）：obscura 引擎缺 `SVGSVGElement.createSVGRect` 與 `HTMLElement.clientLeft/clientTop` → SVG 偵測 false（test page 注入 polyfill 補）＋引擎合成 click 缺座標→`mouseEventToContainerPoint` NaN→`fire` 前拋 Invalid LatLng（**真實瀏覽器無此問題**；handler 邏輯已以 `layer.fire("click")` 直接驗證 panel 開啟✓）。click 交互的最終確認建議合併前在真實瀏覽器看一眼。
 4. 雨量站＋颱風軌跡/風圈＋特報（gazetteer）層
-5. ~~2b 災情新聞點層（人工餵料）~~ **暫緩（2026/9/1 定），未來有時間再實作**
+5. ~~2b 災情新聞點層（人工餵料）~~ 暫緩（見 §2b）
 6. v2：`/map/data.json` 公開＋deep link＋時間線快照
 
 ---
