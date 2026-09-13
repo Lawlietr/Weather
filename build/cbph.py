@@ -8,7 +8,7 @@ Endpoints（2026/9/1 實測）：
 - GET /api/{type}/  — 歷史（預設最新 50 筆；county= 過濾不可靠，抓全量自行 filter）
 
 陷阱（實測）：
-- 空類型回 503（如 largesurfs）→ 503/404 一律容錯跳過。
+- 空類型回 503（如 largesurfs）→ 503/404 視為該類型空清單、不記 warning（4 類全 503 時記一條全站異常 warning）。
 - 預設回傳 is_active 可能全 True → build 端自行驗 is_active＋expires。
 - 時間皆 UTC（Z 結尾）→ 一律轉 UTC+8（沿用固定 UTC+8 慣例）。
 - polygon 欄位為字串「lat,lon lat,lon ...」，多 ring 以「;」分開＝官方影響區域座標。
@@ -36,7 +36,10 @@ TYPES = {
 
 
 class CbphFetchError(RuntimeError):
-    pass
+    """抓取失敗；`status` 屬性＝HTTP 狀態碼（非 HTTP 錯誤時為 None）。"""
+    def __init__(self, msg, status=None):
+        super().__init__(msg)
+        self.status = status
 
 
 def _get_json(path):
@@ -49,7 +52,7 @@ def _get_json(path):
         raise CbphFetchError(f"curl 失敗（returncode={p.returncode}）")
     body, _, code = p.stdout.rpartition("\n")
     if code.strip() != "200":
-        raise CbphFetchError(f"HTTP {code or '?'}")
+        raise CbphFetchError(f"HTTP {code or '?'}", status=int(code) if code.strip().isdigit() else None)
     return json.loads(body)
 
 
@@ -117,10 +120,17 @@ def fetch_alerts(only_active=False, warnings=None):
     warnings：可選 list，累積 warning 字串（呼叫端可用於 build log）。
     """
     alerts = []
+    empty_via_503 = []
     for slug in TYPES:
         try:
             data = _get_json(f"/{slug}/")
         except (CbphFetchError, json.JSONDecodeError, subprocess.TimeoutExpired) as e:
+            # 503/404 ＝ 該類型無生效中告警（2026/9/1 實測，見本模組 docstring）→ 視為空清單、不記 warning；
+            # 其他錯誤才記 warning（沿用 RSS 容錯守則：跳過、不中斷）。
+            if getattr(e, "status", None) in (503, 404):
+                empty_via_503.append(slug)
+                print(f"[info] cbph {slug}: HTTP {e.status}＝該類型無告警 — 視為空")
+                continue
             msg = f"cbph {slug}: 抓取失敗（{e}）— 跳過"
             print(f"[warning] {msg}")
             if warnings is not None:
@@ -132,6 +142,11 @@ def fetch_alerts(only_active=False, warnings=None):
             if only_active and not a["still_valid"]:
                 continue
             alerts.append(a)
+    # 4 類全部 503：可能並非全空而是 cbph 全站故障——保留一條 warning 提醒（避免靜默）。
+    if len(empty_via_503) == len(TYPES) and warnings is not None:
+        msg = f"cbph: 4 類全部回 HTTP 503/404（{', '.join(empty_via_503)}）— 可能 cbph 服務異常，請人工查官方頁"
+        print(f"[warning] {msg}")
+        warnings.append(msg)
     return alerts
 
 
