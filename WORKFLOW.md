@@ -183,6 +183,15 @@ cd public && python3 -m http.server 8080
     需環境變數 `CLOUDFLARE_API_TOKEN`＋`CLOUDFLARE_ACCOUNT_ID`（已設在 `~/.zshrc`，金鑰不進 repo）。
   - 自訂域名 DNS 紀錄（如重建需重設）：三個 zone 各一筆 CNAME `weather.* → weather-9kb.pages.dev`（proxied on）。
   - 與 GitHub Pages 為**同一份 `public/` 的平行託管**；兩边都要更新時，先 build 一次、再分別跑上面的兩個推送流程。
+- **測試站（2026/9/13 上線，DEV 預覽專用）**：
+  - 專案：`wea-testing`，自訂域名 <https://weatesting.avpclub.eu.org/>（DNS CNAME `weatesting.avpclub.eu.org → wea-testing.pages.dev`、proxied on 已建；**CF API 不接受 `.eu.org` 多層 TLD（8000015），自訂域名只能在 dashboard 加**——Workers & Pages → wea-testing → Custom domains）。
+  - **純手動部署，不在任何自動部署範圍**（cron／`deploy.sh`／Actions 都只推 `weather` 專案）：
+    ```bash
+    ./build/build.sh
+    npx -y wrangler@latest pages deploy public --project-name wea-testing --branch main
+    ```
+    ⚠️ 務必帶 `--branch main`（自訂域名指向 production branch；wrangler 預取目前 git 分支名，DEV 上會部署成 `dev` 預覽而不生效）。
+  - 用途：DEV 功能預覽（首個：§7 颱風動態淘汰機制）。正式上線流程仍是 DEV→main 合併後由自動部署／`deploy.sh` 更新 `weather`。
 
 ## 7. 排程與自動更新
 

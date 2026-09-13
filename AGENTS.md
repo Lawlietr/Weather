@@ -218,4 +218,5 @@ cbph.cwa.gov.tw＝「預報中心資訊發布查詢系統」，即 CWA「災防�
 ### 部署（指令、域名與救回方式詳 `WORKFLOW.md` §6）
 
 - **Cloudflare Pages**（主要公開通道，`weather.avpclub.eu.org` 等 3 自訂域名）＋ **GitHub Pages**（備用 mirror，orphan `gh-pages` 分支、只收 `public/`）。
+- **測試站**：`wea-testing` 專案（`weatesting.avpclub.eu.org`），DEV 預覽專用、**純手動部署**、不在自動部署範圍；指令與重建守則→`WORKFLOW.md` §6。
 - **GitHub 公開 repo 不接收**：build 腳本、災情/颱風 markdown 原文、內部倉庫資訊、金鑰——一律不外流到 `gh-pages` 或任何公開輸出。
