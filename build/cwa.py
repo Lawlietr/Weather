@@ -668,12 +668,18 @@ def cwa_section_html(lang, data, errors, stale, mode, has_active_event):
         parts.append(f'<div class="cwa-warn">{t(lang, "cwa_warn_partial", bad=bad)}</div>')
     elif mode == "cache":
         parts.append(f'<div class="cwa-warn">{t(lang, "cwa_warn_cache")}</div>')
-    parts.append(render_typhoon_card(
-        lang, filter_typhoon_stale(data.get("typhoons", []), data.get("marine_alert", [])),
-        stale.get("typhoons")))
+    # 排序（2026/9/13 定案、方案 A）：有活動氣旋 → 颱風卡頂位；無活動氣旋且資料抓取正常 → 置底
+    #（警報／特報卡承接當下風險訊號）；抓取失敗（stale）仍維持頂位——警示狀態不降級。
+    typhoons_live = filter_typhoon_stale(data.get("typhoons", []), data.get("marine_alert", []))
+    typhoon_card = render_typhoon_card(lang, typhoons_live, stale.get("typhoons"))
+    typhoon_first = bool(typhoons_live) or bool(stale.get("typhoons"))  # 只有「空＋抓取正常」才置底
+    if typhoon_first:
+        parts.append(typhoon_card)
     parts.append(render_alert_card(lang, data.get("marine_alert", []), data.get("reports", []),
                                    stale.get("marine_alert", stale.get("reports"))))
     parts.append(render_rain_card(lang, data.get("rain", []), has_active_event, stale.get("rain")))
+    if not typhoon_first:
+        parts.append(typhoon_card)
     return f"""
 <section class="cwa">
 <h2>{t(lang, "cwa_title")}</h2>
