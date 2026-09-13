@@ -407,6 +407,7 @@ def current_risk_level(lang, data, stale, mode):
     與事件的歷史分級（severity）完全獨立：severity 是事件最終量級（固定），
     這裡只回答「現在有沒有危險」。依據：
     - 生效中熱帶氣旋（有分析資料）：max wind >= 24.5 m/s → red，否則 yellow
+      （過時氣旋依 TYPHOON_STALE_HOURS 淘汰，與首頁颱風卡同規則，避免已消散氣旋推高狀態列）
     - 海上颱風警報（未解除）→ red
     - 災害性天氣特報（未解除）：沿用 _sev_color 分級（紅/黃），綠色級別不計入
     雨量觀測值不計入：那是「過去累計」，不是當前危險信號。
@@ -423,7 +424,7 @@ def current_risk_level(lang, data, stale, mode):
     lifted_recent = []  # 已解除且未過 TTL 的警報/特報（供中性狀態列註記）
     d = data or {}
     now = datetime.now(TZ_TW)
-    for c in d.get("typhoons", []):
+    for c in filter_typhoon_stale(d.get("typhoons", []), d.get("marine_alert", []), now=now):
         fixes = c.get("analysis") or []
         if not fixes:
             continue
@@ -464,6 +465,41 @@ def current_risk_level(lang, data, stale, mode):
 
 
 # ---------------------------------------------------------------- 區塊渲染
+
+# 颱風卡 TTL：最新一筆 analysis fix 超過此時數即從首頁移除。
+# CWA 對活動中氣旋每 6 小時更新一次 fix，漏 4 個週期（24h）代表 CWA
+# 已停止追蹤（消散／不再關注，例：科羅旺 2026/9/7 後 API 仍回傳但無新 fix）。
+# 例外：W-C0034-001 對該氣旋有生效中（未解除）海上颱風警報者保留（防 API 延遲）。
+# 注意：/map/ 用原始 fetch_typhoons() 全量軌跡，只有首頁卡用過濾後子集（TODO §7/§2）。
+TYPHOON_STALE_HOURS = 24
+
+
+def filter_typhoon_stale(typhoons, marine, now=None):
+    """淘汰過時氣旋（見 TYPHOON_STALE_HOURS 註解）。全部淘汰時回傳空清單，
+    render_typhoon_card 會顯示「無活動中熱帶氣旋」空狀態。"""
+    now = now or datetime.now(TZ_TW)
+    active_names, has_active = set(), False
+    for m in marine:
+        if not m.get("title"):
+            continue
+        if "解除" in m["title"] or m.get("category") == "END":
+            continue
+        has_active = True
+        n = (m.get("typhoon_name") or "").strip()
+        if n:
+            active_names.add(n)
+    kept = []
+    for c in typhoons:
+        a = c.get("analysis") or []
+        ts = _ts_parse(a[-1].get("DateTime")) if a else None
+        stale = ts is not None and (now - ts) > timedelta(hours=TYPHOON_STALE_HOURS)
+        if stale and ((c.get("name") or "").strip() in active_names
+                      or (has_active and not active_names)):  # 有海警但名稱解析失敗→全保留（fail-safe）
+            stale = False
+        if not stale:
+            kept.append(c)
+    return kept
+
 
 def render_typhoon_card(lang, typhoons, stale_at=None):
     """颱風卡永遠顯示：無資料時顯示「無活動中熱帶氣旋」。"""
@@ -632,7 +668,9 @@ def cwa_section_html(lang, data, errors, stale, mode, has_active_event):
         parts.append(f'<div class="cwa-warn">{t(lang, "cwa_warn_partial", bad=bad)}</div>')
     elif mode == "cache":
         parts.append(f'<div class="cwa-warn">{t(lang, "cwa_warn_cache")}</div>')
-    parts.append(render_typhoon_card(lang, data.get("typhoons", []), stale.get("typhoons")))
+    parts.append(render_typhoon_card(
+        lang, filter_typhoon_stale(data.get("typhoons", []), data.get("marine_alert", [])),
+        stale.get("typhoons")))
     parts.append(render_alert_card(lang, data.get("marine_alert", []), data.get("reports", []),
                                    stale.get("marine_alert", stale.get("reports"))))
     parts.append(render_rain_card(lang, data.get("rain", []), has_active_event, stale.get("rain")))
