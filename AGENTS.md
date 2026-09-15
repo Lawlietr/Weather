@@ -221,6 +221,24 @@ cbph.cwa.gov.tw＝「預報中心資訊發布查詢系統」，即 CWA「災防�
 - **官方頁 deep link**：`https://cbph.cwa.gov.tw/ui/?type={type}&identifier={identifier}`
 - **陷阱（實測）**：空類型回 503（如 largesurfs）；`county=` 過濾不可靠（自行 filter）；**非 Open Data 正式目錄**（無 SLA）→ build 端容錯、失敗跳過＋warning 不中斷；時間 UTC；UI 引用註明「資料來源：中央氣象署災防告警系統」。設計與用途 → `TODO.md` §2。
 
+## context-mode 知識庫（本機 agent 查詢加速器，2026/9/15 啟用）
+
+**本節只適用於開發環境（此機）。** 自動部署的排程機（Ubuntu LXC，見 `LOCAL_CRON.md`）是**獨立系統**：它只跑 `build/deploy-cron.sh`（抓 CWA → build → 推 CF/Pages），不做推理、不需也不需安裝 context-mode——那台機器上沒有本知識庫、也不需要重建。
+
+**已索引來源**（source label；本機 FTS5、**不版本化、不進 git**——單一事實來源永遠是 repo 內 markdown，這裡只是免重讀的查詢快取）：
+
+| source label | 來源 | 用途 |
+|---|---|---|
+| `CWA_API.md 欄位查表` | `build/CWA_API.md` | 寫解析碼前查欄位/實測差異 |
+| `WORKFLOW.md runbook` | `WORKFLOW.md` | 查例行流程、部署、排程 |
+| `CWA OpenAPI dataset 目錄` | `opendata.cwa.gov.tw/apidoc/v1`（80 datasets） | 查 dataset 用途/參數 |
+
+**規則**：
+- 動到相關文件（改 `CWA_API.md`/`WORKFLOW.md`、CWA 上下線 dataset）後**重跑 `ctx_index`** 更新快取（`path:` 形式索引有 staleness 標記）。
+- 查詢模式：`ctx_search(queries: [...], source: "CWA_API.md 欄位查表")` 抽段落，**不必整檔讀**；查不到再讀原檔。
+- `災情/`、`颱風/` 事件內容**不要索引**（`llms.txt`/`llms-full.txt` 已是 agent 取用層）。
+- **換機重建**：KB 與 session 記憶都在本機、不隨 repo 走。開發環境遷移/重裝後，照上表重跑 3 個索引（本機 2 個 `ctx_index`＋1 個 `ctx_fetch_and_index`，分內完成）；遺失的只有快取與 session 級記憶，持久知識都在 repo markdown。
+
 ## Obscura 無頭瀏覽器
 
 用於爬取 API 沒有的 JavaScript 渲染頁面（如 CWA 官網頁面）。**工具本身的使用說明見 skill `/root/.pi/agent/skills/obscura/SKILL.md`**（binary `/usr/local/bin/obscura`，Docker 容器 `obscura`，MCP HTTP port 3000）。repo 相關：
