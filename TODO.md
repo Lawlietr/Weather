@@ -11,6 +11,8 @@
 
 **✅ 已實作（2026/9/15）**：首頁 JSON-LD（WebSite＋Organization）與事件頁 Article JSON-LD；全頁 meta description／Open Graph（含 `assets/og.png`，`build/make_og_image.py` 純 stdlib 產生）／canonical；`<meta name="is-agentic-site-type" content="content">`；信任頁 `/about/`、`/contact/`、`/privacy/`（zh＋ja，各 ≥500 字）；404 頁加 agent 指引（llms.txt／sitemap.xml 連結）；llms.txt 加「使用指引」段；footer 加關於／聯絡／隱私＋llms.txt／sitemap 連結。實作於 `build/site.py`（`render_page` 加 `page_url`/`jsonld` 參、`build_trust_pages()`）＋`build/i18n.py`。
 
+**✅ 分數收尾二輪（2026/9/15，78→目標 ~85）**：Organization JSON-LD 補 `contactPoint`（GitHub Issues）＋國家層級 `address`；build 產出站對外的 `/AGENTS.md`（agent when-to-use/引用指引，與 repo 內 AGENTS.md 不同）；404 頁加字面 markdown 語法區塊（agent-friendly 404 滿分要求）；llms.txt 引用 `/AGENTS.md`。
+
 **不追項（錯配、有意跳過）**：markdown content negotiation（需 Pages Function 動態 Accept 協商，破壞純靜態不變項；agent 取 markdown 已由 `llms-full.txt` 覆蓋）；OpenAPI／JSON error／api-catalog（RFC 9727）／Web Bot Auth（RFC 9421）（本站無公開 API——掃描器的「API」視角是跟隨 llms.txt 連結抓到 CWA 的 apidoc YAML 觸發的，非本站問題）。**注意**：`is-agentic-site-type` tag 只改預設顯示視角、不加分；API 視角仍會計分，故分數天花板受限。
 
 ---

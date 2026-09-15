@@ -185,6 +185,7 @@ footer .wrap{max-width:900px;margin:0 auto;padding:0 16px}
 footer .footer-links{margin-top:8px;opacity:.85}
 footer .footer-links a{color:inherit;text-decoration:none}
 .agent-note{opacity:.8;font-size:.9rem}
+.agent-md{display:inline-block;margin-top:6px;background:rgba(255,255,255,.07);padding:8px 12px;border-radius:6px;font-size:.78rem;line-height:1.6;white-space:pre-wrap;word-break:break-all}
 .backlink{display:inline-block;margin-bottom:10px}
 .scrim{display:none}
 /* 平板與手機（<1024px）：側欄改為抽屜式 */
@@ -779,7 +780,10 @@ def home_jsonld():
                  "description": t(DEFAULT_LANG, "meta_desc")},
                 {"@type": "Organization", "name": t(DEFAULT_LANG, "site_title"),
                  "url": SITE_BASE + "/", "sameAs": [GITHUB_URL],
-                 "description": t(DEFAULT_LANG, "meta_desc")},
+                 "description": t(DEFAULT_LANG, "meta_desc"),
+                 "contactPoint": {"@type": "ContactPoint", "contactType": "customer support",
+                                  "url": GITHUB_URL + "/issues"},
+                 "address": {"@type": "PostalAddress", "addressCountry": "TW"}},
             ]}
 
 
@@ -814,8 +818,40 @@ def build_trust_pages(events, ts, groups):
             p.write_text(page, encoding="utf-8")
 
 
+def agents_md_text():
+    """站對外的 AGENTS.md（供 AI agent 的 when-to-use/引用指引；is-agentic 的
+    agent-instruction check 要求。與 repo 內的 AGENTS.md——給維護者的——不同）。"""
+    return f"""# AGENTS.md — 供 AI agent 與自動化工具
+
+網站：{t(DEFAULT_LANG, "site_title")}（{SITE_BASE}）
+記錄台灣目前與歷史上發生的天氣事件（颱風、豪雨、低壓帶等）與各縣市災情的純靜態網站。
+
+## 何時使用
+- 查詢「台灣目前或近期正在發生的天氣事件」（颱風、豪雨、大雨特報、低壓帶、西南風水氣等）
+- 各縣市災情（淹水、樹倒、落石、停電）、停班停課、交通影響
+- 颱風警報／海上警報時程與 CWA 災害天氣特報
+
+## 資料來源與即時性
+- 本站為每 2 小時自動 build 的快照，**非即時**。氣象資料（颱風軌跡、警報特報、雨量、風力）build 時取自 CWA Open Data API；颱風警報期間約每 3～6 小時更新一次。
+- 引用時請註明頁首「產生時間」與該筆紀錄的時戳。緊急資訊（警報發布、停班停課、避難）請直接以 CWA 與各縣市政府最新公告為準。
+- 內容為繁體中文；日文介面在 /ja/（事件正文仍為繁中原文）。
+
+## 取用內容
+- /llms.txt — 本站內容索引（事件清單、概述、結構與資料說明）
+- /llms-full.txt — 全部事件全文
+- 事件頁（/events/*.html）— 警報時程、災情紀錄、交通影響、防災作為
+- /map/ — 災防告警地圖（CWA PWS 災防告警系統）
+- /about/ /contact/ /privacy/ — 網站說明、聯絡方式、隱私說明
+
+## 引用格式
+- 引用災情請保留該筆的新聞來源連結（含媒體名稱與日期）
+- 氣象數值請註明資料來源為 CWA Open Data API 及資料產生時間
+- 授權：本站內容 CC BY-NC-SA 4.0（姓名標示、非商業性、相同方式分享）；CWA 資料以 CWA 官方條款為準
+"""
+
+
 def build_misc_files(events, ts, groups):
-    """404 頁（各語言）＋ robots.txt ＋ sitemap.xml。
+    """404 頁（各語言）＋ robots.txt ＋ sitemap.xml ＋ 站對外 AGENTS.md。
 
     404.html 是 Cloudflare Pages 的關鍵開關：專案沒有 top-level 404.html 時，
     Pages 視為 SPA，所有未匹配路徑回 index.html＋HTTP 200（soft-404，爬蟲無法
@@ -833,11 +869,14 @@ def build_misc_files(events, ts, groups):
             base, outdir = "../", OUT / lang
         outdir.mkdir(parents=True, exist_ok=True)
         nav = build_nav(lang, events, base + "index.html", base, "__notfound__", groups)
+        # agent 指引：HTML 錨點（給人看）＋字面 markdown 語法（is-agentic 的
+        # agent-friendly 404 滿分要求「short markdown body」）
+        agent_md = (f"- [{t(lang, 'notfound_llms')}]({SITE_BASE}/llms.txt)\n"
+                    f"- [{t(lang, 'notfound_sitemap')}]({SITE_BASE}/sitemap.xml)")
         content = (f'<h1>{t(lang, "notfound_title")}</h1>'
                    f'<p>{t(lang, "notfound_body")}</p>'
-                   f'<p class="agent-note">{t(lang, "notfound_agent")} '
-                   f'<a href="{base}llms.txt">{t(lang, "notfound_llms")}</a>・'
-                   f'<a href="{base}sitemap.xml">{t(lang, "notfound_sitemap")}</a></p>'
+                   f'<p class="agent-note">{t(lang, "notfound_agent")}</p>'
+                   f'<pre class="agent-md">{agent_md}</pre>'
                    f'<a class="backlink" href="{base}index.html">{t(lang, "back_home")}</a>')
         page = render_page(lang, t(lang, "notfound_title"), ts, base + "index.html", nav, content)
         (outdir / "404.html").write_text(page, encoding="utf-8")
@@ -845,6 +884,9 @@ def build_misc_files(events, ts, groups):
     # --- robots.txt（沒有 404.html 時它會被 SPA fallback 吃掉，故與 404 一同產出）---
     (OUT / "robots.txt").write_text(
         "User-agent: *\nAllow: /\n\nSitemap: " + SITE_BASE + "/sitemap.xml\n", encoding="utf-8")
+
+    # --- 站對外 AGENTS.md（agent instruction：when-to-use/引用格式）---
+    (OUT / "AGENTS.md").write_text(agents_md_text(), encoding="utf-8")
 
     # --- sitemap.xml（繁中頁：首頁＋地圖＋事件頁；ja 頁由站内連結發現）---
     def d(x: datetime.datetime) -> str:
@@ -930,7 +972,7 @@ def build_llms_files(events, ts, cwa_ctx):
               "- 每筆災情均附新聞來源與連結，並標注時間戳（格式：`YYYY/M/D HH:MM`）。",
               "- 災害分級：🔴 重大／🟡 警戒／🟢 一般。",
               "- 首頁的颱風軌跡、警報特報、雨量 TOP-10 等氣象資料由 build 時自 CWA API 抓取，非即時。",
-              "- 完整事件全文另見 `llms-full.txt`（同一網址下）；完整頁面清單見 `/sitemap.xml`。",
+              "- 完整事件全文另見 `llms-full.txt`（同一網址下）；完整頁面清單見 `/sitemap.xml`；agent 使用指引見 `/AGENTS.md`。",
               "",
               "## 使用指引（供 AI agent／自動化工具）",
               "",
