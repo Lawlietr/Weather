@@ -1,9 +1,17 @@
 # TODO：待辦事項
 
 > 專案背景、設計原則、技術架構與部署流程分別見 `README.md`、`AGENTS.md`、`WORKFLOW.md`，本文件只放**未完成的待辦**；已完成項目的設計史不留在此（看 git history 或各文件）。
-> 最後更新：2026/9/15（§9 颱風卡置底、§8 cbph 503 假警報均已合併 main 上線；新增 build 產出 `404.html`（修 Cloudflare Pages 無 404.html 的 SPA soft-404）＋`robots.txt`＋`sitemap.xml`；§7 颱風動態淘汰已合併 main 上線；另設測試站 wea-testing／weatesting.avpclub.eu.org，詳 WORKFLOW.md §6；2026/9/7 全檔精簡：已完成項目細節收為一線，細節看 git history／模組註解）
+> 最後更新：2026/9/15（§11 AI bot 可偵測性強化：JSON-LD／OG meta／信任頁／404 agent 指引／llms.txt 使用指引，已合併 main 上線；§9 颱風卡置底、§8 cbph 503 假警報均已合併 main 上線；新增 build 產出 `404.html`（修 Cloudflare Pages 無 404.html 的 SPA soft-404）＋`robots.txt`＋`sitemap.xml`；§7 颱風動態淘汰已合併 main 上線；另設測試站 wea-testing／weatesting.avpclub.eu.org，詳 WORKFLOW.md §6；2026/9/7 全檔精簡：已完成項目細節收為一線，細節看 git history／模組註解）
 
 > 優先級：§8 cbph 503 假警報（高，✅ 已實作、已合併 main、待自動部署生效）＞ §2 地圖紅警（高，實作中：執行順序 1–3 ✅、下一步 4 觀測層）＞ §6 停班停課板塊（中高，待實作）＞ §4 平常天氣報導（中，構想待討論）＞ §10 零星災情縣市分組寫法（中低，待選定 A/B）＞ §1 RSS 殘細項（低，隨隨事件微調）＞ §3 ja 移除／§5 分享按鈕（低）。
+
+---
+
+## 11. AI bot 可偵測性強化（✅ 2026/9/15 完成並上線；背景：is-agentic.com 掃描 52/100）
+
+**✅ 已實作（2026/9/15）**：首頁 JSON-LD（WebSite＋Organization）與事件頁 Article JSON-LD；全頁 meta description／Open Graph（含 `assets/og.png`，`build/make_og_image.py` 純 stdlib 產生）／canonical；`<meta name="is-agentic-site-type" content="content">`；信任頁 `/about/`、`/contact/`、`/privacy/`（zh＋ja，各 ≥500 字）；404 頁加 agent 指引（llms.txt／sitemap.xml 連結）；llms.txt 加「使用指引」段；footer 加關於／聯絡／隱私＋llms.txt／sitemap 連結。實作於 `build/site.py`（`render_page` 加 `page_url`/`jsonld` 參、`build_trust_pages()`）＋`build/i18n.py`。
+
+**不追項（錯配、有意跳過）**：markdown content negotiation（需 Pages Function 動態 Accept 協商，破壞純靜態不變項；agent 取 markdown 已由 `llms-full.txt` 覆蓋）；OpenAPI／JSON error／api-catalog（RFC 9727）／Web Bot Auth（RFC 9421）（本站無公開 API——掃描器的「API」視角是跟隨 llms.txt 連結抓到 CWA 的 apidoc YAML 觸發的，非本站問題）。**注意**：`is-agentic-site-type` tag 只改預設顯示視角、不加分；API 視角仍會計分，故分數天花板受限。
 
 ---
 

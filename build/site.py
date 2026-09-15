@@ -182,6 +182,9 @@ ul.news-list li a{word-break:break-all}
 .archive-list li{padding:10px 0;border-bottom:1px solid var(--line)}
 footer{background:var(--head-bg);color:#cfd8dc;padding:20px 0;font-size:.85rem;margin-top:40px}
 footer .wrap{max-width:900px;margin:0 auto;padding:0 16px}
+footer .footer-links{margin-top:8px;opacity:.85}
+footer .footer-links a{color:inherit;text-decoration:none}
+.agent-note{opacity:.8;font-size:.9rem}
 .backlink{display:inline-block;margin-bottom:10px}
 .scrim{display:none}
 /* 平板與手機（<1024px）：側欄改為抽屜式 */
@@ -378,6 +381,7 @@ PAGE_TMPL = """<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>__TITLE__</title>
+__SEO__
 <style>__CSS__</style>
 <script>/* 避免閃爍：先還原主題偏好再渲染 */(function(){var t=null;try{t=localStorage.getItem("wtf-theme")}catch(e){}if(t!=="light"&&t!=="dark")t="dark";document.documentElement.setAttribute("data-theme",t);})();</script>
 </head>
@@ -405,7 +409,7 @@ __GITHUB__
 __CONTENT__
 </main>
 <footer><div class="wrap">
-<p>__FOOTER__</p>
+__FOOTER__
 </div></footer>
 </div>
 </div>
@@ -487,13 +491,38 @@ def build_nav(lang, events, home_link, base, current_url, groups):
     return "".join(parts)
 
 
-def render_page(lang, title, ts, home_link, nav_html, content):
+def render_page(lang, title, ts, home_link, nav_html, content,
+                page_url=None, jsonld=None, og_type="website"):
+    """page_url：本页的絕對 URL（SITE_BASE 前綴）；有值時才產出 meta description /
+    Open Graph / canonical / is-agentic site-type / JSON-LD（404 頁傳 None 不出）。"""
+    seo = []
+    if page_url:
+        desc = t(lang, "meta_desc")
+        seo += [f'<meta name="description" content="{desc}">',
+                f'<meta property="og:title" content="{title}">',
+                f'<meta property="og:description" content="{desc}">',
+                f'<meta property="og:type" content="{og_type}">',
+                f'<meta property="og:url" content="{page_url}">',
+                f'<meta property="og:image" content="{SITE_BASE}/assets/og.png">',
+                f'<link rel="canonical" href="{page_url}">',
+                '<meta name="is-agentic-site-type" content="content">']
+        if jsonld is not None:
+            seo.append('<script type="application/ld+json">'
+                       + json.dumps(jsonld, ensure_ascii=False) + '</script>')
+    base = home_link[:-len("index.html")] if home_link.endswith("index.html") else home_link
+    footer = (f'<p>{t(lang, "footer")}</p>'
+              f'<p class="footer-links">'
+              f'<a href="{base}about/index.html">{t(lang, "footer_about")}</a>・'
+              f'<a href="{base}contact/index.html">{t(lang, "footer_contact")}</a>・'
+              f'<a href="{base}privacy/index.html">{t(lang, "footer_privacy")}</a>'
+              f'｜<a href="{base}llms.txt">llms.txt</a>・<a href="{base}sitemap.xml">sitemap.xml</a>'
+              f'</p>')
     page = PAGE_TMPL
     for k, v in (("__LANG__", lang), ("__TITLE__", title), ("__HOME_LINK__", home_link),
                  ("__UPDATED__", t(lang, "updated", ts=ts)),
                  ("__LANG_SWITCH__", lang_switch_html(lang, home_link)),
                  ("__GITHUB__", github_icon_html(lang)), ("__NAV__", nav_html),
-                 ("__FOOTER__", t(lang, "footer")),
+                 ("__FOOTER__", footer), ("__SEO__", "\n".join(seo)),
                  ("__CSS__", CSS), ("__JS__", JS), ("__CONTENT__", content)):
         page = page.replace(k, v)
     return page
@@ -727,6 +756,63 @@ def build_event_page(lang, ev, ts, depth):
 
 SITE_BASE = "https://weather.avpclub.eu.org"
 
+TRUST_PAGES = [
+    ("about", "about", "AboutPage"),
+    ("contact", "contact", "ContactPage"),
+    ("privacy", "privacy", "WebPage"),
+]
+
+
+def _paras(text):
+    """多段文字 → <p>（段內單換行轉 <br>，供信任頁的條列式段落）。"""
+    return "".join("<p>" + p.strip().replace("\n", "<br>") + "</p>"
+                   for p in text.split("\n\n") if p.strip())
+
+
+def home_jsonld():
+    """首頁 JSON-LD：WebSite＋Organization（is-agentic 的 JSON-LD / Organization
+    schema / Brand name 三項 check 一次解決）。"""
+    return {"@context": "https://schema.org",
+            "@graph": [
+                {"@type": "WebSite", "name": t(DEFAULT_LANG, "site_title"),
+                 "url": SITE_BASE + "/", "inLanguage": ["zh-Hant", "ja"],
+                 "description": t(DEFAULT_LANG, "meta_desc")},
+                {"@type": "Organization", "name": t(DEFAULT_LANG, "site_title"),
+                 "url": SITE_BASE + "/", "sameAs": [GITHUB_URL],
+                 "description": t(DEFAULT_LANG, "meta_desc")},
+            ]}
+
+
+def event_jsonld(e):
+    return {"@context": "https://schema.org", "@type": "Article",
+            "name": e["name"], "url": SITE_BASE + "/" + "/".join(e["url"]),
+            "description": e["summary"], "inLanguage": "zh-Hant",
+            "isPartOf": {"@type": "WebSite", "url": SITE_BASE + "/"}}
+
+
+def build_trust_pages(events, ts, groups):
+    """信任錨點頁 /about/ /contact/ /privacy/（zh＋ja，各 ≥500 字；
+    is-agentic 的 Trust anchor pages check 要求）。"""
+    for lang in LANGS:
+        outdir = OUT if i18n.is_default(lang) else OUT / lang
+        prefix = "" if i18n.is_default(lang) else lang + "/"
+        for slug, key, schema_type in TRUST_PAGES:
+            nav = build_nav(lang, events, "index.html", "", f"__{slug}__", groups)
+            content = (f'<article>'
+                       f'<h1>{t(lang, key + "_title")}</h1>'
+                       + _paras(t(lang, key + "_body"))
+                       + f'<a class="backlink" href="index.html">{t(lang, "back_home")}</a>'
+                       '</article>')
+            page_url = SITE_BASE + "/" + prefix + slug + "/"
+            page = render_page(
+                lang, t(lang, key + "_title"), ts, "index.html", nav, content,
+                page_url=page_url,
+                jsonld={"@context": "https://schema.org", "@type": schema_type,
+                        "name": t(lang, key + "_title"), "url": page_url})
+            p = outdir / slug / "index.html"
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(page, encoding="utf-8")
+
 
 def build_misc_files(events, ts, groups):
     """404 頁（各語言）＋ robots.txt ＋ sitemap.xml。
@@ -749,6 +835,9 @@ def build_misc_files(events, ts, groups):
         nav = build_nav(lang, events, base + "index.html", base, "__notfound__", groups)
         content = (f'<h1>{t(lang, "notfound_title")}</h1>'
                    f'<p>{t(lang, "notfound_body")}</p>'
+                   f'<p class="agent-note">{t(lang, "notfound_agent")} '
+                   f'<a href="{base}llms.txt">{t(lang, "notfound_llms")}</a>・'
+                   f'<a href="{base}sitemap.xml">{t(lang, "notfound_sitemap")}</a></p>'
                    f'<a class="backlink" href="{base}index.html">{t(lang, "back_home")}</a>')
         page = render_page(lang, t(lang, "notfound_title"), ts, base + "index.html", nav, content)
         (outdir / "404.html").write_text(page, encoding="utf-8")
@@ -761,6 +850,9 @@ def build_misc_files(events, ts, groups):
     def d(x: datetime.datetime) -> str:
         return x.strftime("%Y-%m-%d")
     urls = [(SITE_BASE + "/", d(now)), (SITE_BASE + "/map/", d(now))]
+    for slug, _, _ in TRUST_PAGES:
+        urls.append((SITE_BASE + "/" + slug + "/", d(now)))
+        urls.append((SITE_BASE + "/ja/" + slug + "/", d(now)))
     for e in events:
         urls.append((SITE_BASE + "/" + "/".join(e["url"]),
                      d(datetime.datetime.fromtimestamp(e["mtime"], tz8))))
@@ -770,6 +862,14 @@ def build_misc_files(events, ts, groups):
         xml.append(f"  <url><loc>{loc}</loc><lastmod>{lastmod}</lastmod></url>")
     xml.append("</urlset>")
     (OUT / "sitemap.xml").write_text("\n".join(xml) + "\n", encoding="utf-8")
+
+    # --- og.png（OG 卡片圖；build/static/og.png 由 make_og_image.py 產生並 commit）---
+    static_og = Path(__file__).resolve().parent / "static" / "og.png"
+    if static_og.exists():
+        (OUT / "assets").mkdir(parents=True, exist_ok=True)
+        shutil.copy2(static_og, OUT / "assets" / "og.png")
+    else:
+        print("[warning] build/static/og.png 缺失——先跑 build/make_og_image.py（og:image 將 404）")
 
 
 def build_llms_files(events, ts, cwa_ctx):
@@ -830,7 +930,15 @@ def build_llms_files(events, ts, cwa_ctx):
               "- 每筆災情均附新聞來源與連結，並標注時間戳（格式：`YYYY/M/D HH:MM`）。",
               "- 災害分級：🔴 重大／🟡 警戒／🟢 一般。",
               "- 首頁的颱風軌跡、警報特報、雨量 TOP-10 等氣象資料由 build 時自 CWA API 抓取，非即時。",
-              "- 完整事件全文另見 `llms-full.txt`（同一網址下）。",
+              "- 完整事件全文另見 `llms-full.txt`（同一網址下）；完整頁面清單見 `/sitemap.xml`。",
+              "",
+              "## 使用指引（供 AI agent／自動化工具）",
+              "",
+              "- 何時使用：查詢「台灣目前或近期正在發生的天氣事件」（颱風、豪雨、低壓帶等）與各縣市災情、停班停課、交通影響時，以本站為彙整入口。",
+              "- 即時性：本站為每 2 小時自動 build 的快照，**非即時**；引用時請註明頁首「產生時間」與該筆紀錄的時戳。",
+              "- 引用方式：引用災情請保留該筆的新聞來源連結；氣象數值請註明資料來源為 CWA Open Data API 及資料產生時間。",
+              "- 內容範圍：本檔為索引；全部事件全文見 `llms-full.txt`；事件頁含警報時程、災情紀錄、交通影響、防災作為等完整章節。",
+              "- 官方資訊：停班停課、警報發布、避難等官方決定，以 CWA 與各縣市政府公告為準，本站僅為彙整。",
               "",
               "## 授權",
               "",
@@ -875,7 +983,8 @@ def main():
         outdir.mkdir(parents=True, exist_ok=True)
         home = render_page(lang, t(lang, "site_title"), ts, "index.html",
                            build_nav(lang, events, "index.html", "", "__home__", groups),
-                           build_home(lang, events, ts, groups, cwa_ctx))
+                           build_home(lang, events, ts, groups, cwa_ctx),
+                           page_url=SITE_BASE + "/", jsonld=home_jsonld())
         (outdir / "index.html").write_text(home, encoding="utf-8")
 
         for e in events:
@@ -883,12 +992,15 @@ def main():
             base = "../" * depth
             page = render_page(lang, e["name"], ts, base + "index.html",
                                build_nav(lang, events, base + "index.html", base, "/".join(e["url"]), groups),
-                               build_event_page(lang, e, ts, depth))
+                               build_event_page(lang, e, ts, depth),
+                               page_url=SITE_BASE + "/" + "/".join(e["url"]),
+                               jsonld=event_jsonld(e), og_type="article")
             out_path = outdir.joinpath(*e["rel"])
             out_path.parent.mkdir(parents=True, exist_ok=True)
             out_path.write_text(page, encoding="utf-8")
 
     build_llms_files(events, ts, cwa_ctx)
+    build_trust_pages(events, ts, groups)
     build_misc_files(events, ts, groups)
 
     # 地圖紅警（TODO §2）：cbph 災防告警 → build/map.geo.json（build 中間檔，gitignore）。
