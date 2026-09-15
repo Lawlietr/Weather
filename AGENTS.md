@@ -154,7 +154,7 @@
 - **颱風資料**（軌跡、強度、位置、預測）、**警報與特報**（海上颱風警報、大雨特報、強風特報）、**雨量/風力/浪高**：以中央氣象署（CWA）API 為主
 - **災防告警區**（大雷雨/颱風強風/山區暴雨/巨浪，含官方影響區域 polygon、細胞廣播狀態）：以 CWA cbph API（`cbph.cwa.gov.tw/api/`，免 key、build 時抓取）為主；欄位與陷阱見下方「CWA cbph 災防告警 API」節
 - **災情紀錄**（淹水、樹倒、落石、停電等）：以各縣市新聞媒體為輔，引用時請註明出處
-- **停班停課**：以教育部或各縣市政府公告為主
+- **停班停課**：以**人事行政總處（DGPA）CAP feed**為主（由各縣市政府公告、結構化、免 key；見下方「DGPA 停班停課 feed」節），人工查證用 DGPA 22 縣市查詢頁；事件檔存檔層引用時仍註明原始出處（縣市政府公告/新聞）
 - **交通影響**：以交通部或各縣市政府公告為主，新聞媒體為輔
 - **措辭跟隨來源、不自行解讀（2026/9/1 定）**：對路徑、強度、登陸與對台影響的判斷性表述，一律引來源原話（CWA API 數值、CWA 發言人/公告口吻），**不得加「二次登陸」「直接侵台」等推測性升級詞**——以 CWA 當時路徑為準（例：9/1 沙德爾返回時 CWA 預測登陸廣東、口徑為「直接侵台機會低」，就照此寫；CWA 修訂路徑後再更新）。
 - **災情來源優先級（build）**：repo 現有 `災情/` markdown → **RSS** → Obscura 抓取。每筆附**新聞來源**，僅給**少量摘要＋原連結**。
@@ -239,6 +239,18 @@ cbph.cwa.gov.tw＝「預報中心資訊發布查詢系統」，即 CWA「災防�
 - `災情/`、`颱風/` 事件內容**不要索引**（`llms.txt`/`llms-full.txt` 已是 agent 取用層）。
 - **換機重建**：KB 與 session 記憶都在本機、不隨 repo 走。開發環境遷移/重裝後，照上表重跑 3 個索引（本機 2 個 `ctx_index`＋1 個 `ctx_fetch_and_index`，分內完成）；遺失的只有快取與 session 級記憶，持久知識都在 repo markdown。
 
+## DGPA 停班停課 feed（2026/9/15 實測）
+
+人事行政總處（DGPA）「天然災害停止上班停止上課情形」——中央統一發布、由各縣市政府經人事總處公告；託管於 NCDR 災防警報平台（`alerts.ncdr.nat.gov.tw`），data.gov.tw 資料集 20457 正式公開（政府資料開放授權條款 v1），**免 key**。
+
+- **Endpoint**：`GET https://alerts.ncdr.nat.gov.tw/RssAtomFeed.ashx?AlertType=33`（Atom）。每筆 `<entry>` 統一結構（實測 14 筆全同型）：`a:id`（CAP id、無 urn 前綴）、`a:updated`（ISO8601 公告/更新時間）、`a:summary`（通知原文）、`a:link[@rel=alternate]`（完整 CAP URL）、`cap:effective`/`cap:expires`（**中文 12 小時制**，如「2026/8/22 下午 02:10:00」；「上午 12 點」＝00:00）。
+- **完整 CAP**（feed 的 alternate link）：ISO8601 時間＋`info/area/areaDesc`（「縣市/鄉鎮」文字）＋`geocode`（Taiwan_Geocode_103 縣市代碼，如 `09`＝屏東）。
+- **⚠️ feed 是滾動近期視窗、不是「目前生效中」清單**——舊公告留存數週；「是否目前相關」由 `build/dgpa.py` 的 `is_current()` 判斷（影響日＝expires 為今天或之後、或 sent 不超過 24h；CAP 的 expires≈影響日 00:00，故影響日當天全天仍顯示）。
+- **陷阱**：feed 或單筆 CAP 可能 404/超時 → 該筆跳過＋warning、不中斷 build（同 cbph/RSS 慣例）；feed 抓不到 → 首頁卡不顯示。CAP 時間以 ISO8601 為準，feed 中文格式只作 fallback。
+- **發布機制（官方）**：全日/上午停班須**前一日 19:00–22:00 前**發布；下午/晚間停班**當日上午 10:30 前**發布。人工查證頁：`https://dgpa.gov.tw/typh/daily/nds.html`（頁面顯示「資料來源：各縣市政府」）。
+- **首頁呈現（2026/9/15 定案）**：有 currently 相關公告 → 卡展開、**置頂於「颱風動態」卡之上**；無 → 收起卡（「目前無停班停課公告」＋資料截至時間）**置底**；實作與 i18n 見 `build/dgpa.py`、`build/cwa.py` 的 `cwa_section_html()`。
+- **事件檔存檔層**：feed 不存歷史，事件期間的停班停課另寫入事件檔「停班停課」章節（標準表格、格式見 `TODO.md` §6）；既有事件檔不回填。
+
 ## Obscura 無頭瀏覽器
 
 用於爬取 API 沒有的 JavaScript 渲染頁面（如 CWA 官網頁面）。**工具本身的使用說明見 skill `/root/.pi/agent/skills/obscura/SKILL.md`**（binary `/usr/local/bin/obscura`，Docker 容器 `obscura`，MCP HTTP port 3000）。repo 相關：
@@ -270,7 +282,7 @@ cbph.cwa.gov.tw＝「預報中心資訊發布查詢系統」，即 CWA「災防�
 
 ### 網站結構
 
-- **首頁**：頂部「目前風險狀態列」（`build/cwa.py: current_risk_level()` 由 CWA 目前生效中之熱帶氣旋／海上颱風警報／災害天氣特報自動推導：紅/黃/綠/**中性**（無生效中項目但有 ≤48h 內解除紀錄）/未知；與事件 `severity` 無關）→ 氣象彙整（颱風軌跡/警報特報/雨量/風力；**颱風卡淘汰過時氣旋**：最新 analysis fix 超過 24h（`TYPHOON_STALE_HOURS`）即移除、有生效中海上颱風警報者豁免，`/map/` 仍用全量軌跡；警報特報卡**混排、時間倒序**，已解除項置底灰化、超過 48h（`LIFTED_TTL_HOURS`）不顯示；**卡片排序**：有活動氣旋時颱風卡頂位、無活動氣旋且抓取正常時置底（抓取失敗仍頂位，警示不降級））→ 事件 Hero（中性入口卡，無 severity 色系與徽章）＋ 各縣市災情總覽（**build 時跨所有事件檔依縣聚合、時間倒序、每縣最新 8 筆；純靜態、無資料庫**）→ 過去事件封存（含 severity 徽章）。
+- **首頁**：頂部「目前風險狀態列」（`build/cwa.py: current_risk_level()` 由 CWA 目前生效中之熱帶氣旋／海上颱風警報／災害天氣特報自動推導：紅/黃/綠/**中性**（無生效中項目但有 ≤48h 內解除紀錄）/未知；與事件 `severity` 無關）→ 氣象彙整（颱風軌跡/警報特報/雨量/風力；**颱風卡淘汰過時氣旋**：最新 analysis fix 超過 24h（`TYPHOON_STALE_HOURS`）即移除、有生效中海上颱風警報者豁免，`/map/` 仍用全量軌跡；警報特報卡**混排、時間倒序**，已解除項置底灰化、超過 48h（`LIFTED_TTL_HOURS`）不顯示；**卡片排序**：有 currently 相關停班停課公告（DGPA feed）時**停班停課卡頂位**（層級最高）、無時收起卡置底（抓取失敗不顯示，見「DGPA 停班停課 feed」節）；有活動氣旋時颱風卡頂位、無活動氣旋且抓取正常時置底（抓取失敗仍頂位，警示不降級））→ 事件 Hero（中性入口卡，無 severity 色系與徽章）＋ 各縣市災情總覽（**build 時跨所有事件檔依縣聚合、時間倒序、每縣最新 8 筆；純靜態、無資料庫**）→ 過去事件封存（含 severity 徽章）。
 - **各縣市子頁（選用）**：該縣市災情按時間倒序。
 - **災防告警地圖 `/map/`（2026/9/2 上線）**：`build/map_page.py`＋自託 Leaflet 1.9.4（`build/static/leaflet/`）＋離線瓦片；cbph 4 類告警官方 polygon 分色渲染、hover/click 詳情卡、圖層開關、`<noscript>` fallback、行動版 bottom-sheet；資料全 build 時寫入（`map.geo.json` 嵌入頁面，前端零外部請求）。細節與待辦見 `TODO.md` §2。
 

@@ -18,6 +18,7 @@ from pathlib import Path
 
 import cwa
 import cbph
+import dgpa
 import tiles as tiles_mod
 import map_page
 from urllib.parse import quote
@@ -156,6 +157,10 @@ ul.news-list li a{word-break:break-all}
 /* CWA 氣象總覽 */
 .cwa-warn{background:var(--chip-bg);border:1px solid var(--yellow);border-radius:8px;padding:10px 14px;margin:8px 0}
 .cwa-fail{border-color:var(--yellow)}
+.susp-card.collapsed{opacity:.85;padding:10px 16px}
+ul.susp-list{list-style:none;padding:0;margin:6px 0}
+ul.susp-list li{padding:8px 0;border-bottom:1px dashed var(--line)}
+ul.susp-list li:last-child{border-bottom:none}
 /* 目前風險狀態列：由 CWA 目前之警報/特報推導（與事件歷史 severity 無關） */
 .risk-bar{border:2px solid var(--line);border-radius:10px;padding:12px 18px;margin:14px 0;background:var(--card)}
 .risk-bar.risk-red{border-color:var(--red);background:var(--red-bg)}
@@ -673,7 +678,7 @@ def risk_bar_html(lang, level, items, ts, stale):
 </section>"""
 
 
-def build_home(lang, events, ts, groups, cwa_ctx):
+def build_home(lang, events, ts, groups, cwa_ctx, susp=None):
     active = [e for e in events if e["status"] == "active"]
     ended = [e for e in events if e["status"] != "active"]
     parts = []
@@ -685,7 +690,7 @@ def build_home(lang, events, ts, groups, cwa_ctx):
     parts.append(risk_bar_html(lang, level, items, ts, stale))
 
     # 2. CWA 氣象總覽（現況資料來源，移至事件 hero 上方；build 時本機抓取，金鑰不出現在輸出）
-    parts.append(cwa.cwa_section_html(lang, *cwa_ctx, has_active_event=bool(active)))
+    parts.append(cwa.cwa_section_html(lang, *cwa_ctx, has_active_event=bool(active), susp=susp))
 
     # 3. Hero：active 事件入口卡（中性卡；severity 徽章只在事件頁與封存清單顯示）
     if active:
@@ -1021,13 +1026,21 @@ def main():
         sys.exit("找不到任何含 front matter 的事件檔案")
     groups = compute_groups(events)
     cwa_ctx = cwa.load_snapshot()
+    # 停班停課（DGPA CAP feed）：best-effort——feed 抓不到 → susp=None（卡不顯示）
+    # 不中斷 build（同 cbph/RSS 慣例；單筆 CAP 失敗在 dgpa.fetch 內部已跳過）。
+    try:
+        susp = dgpa.fetch()
+        print(f"DGPA 停班停課 feed：{len(susp[0])} 筆（目前相關：{sum(1 for e in susp[0] if dgpa.is_current(e))}）")
+    except Exception as exc:
+        print(f"warning: DGPA 停班停課 feed 抓取失敗，卡不顯示：{exc}")
+        susp = None
 
     for lang in LANGS:
         outdir = OUT if i18n.is_default(lang) else OUT / lang
         outdir.mkdir(parents=True, exist_ok=True)
         home = render_page(lang, t(lang, "site_title"), ts, "index.html",
                            build_nav(lang, events, "index.html", "", "__home__", groups),
-                           build_home(lang, events, ts, groups, cwa_ctx),
+                           build_home(lang, events, ts, groups, cwa_ctx, susp),
                            page_url=SITE_BASE + "/", jsonld=home_jsonld())
         (outdir / "index.html").write_text(home, encoding="utf-8")
 

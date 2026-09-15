@@ -27,6 +27,7 @@ from pathlib import Path
 
 import i18n
 from i18n import t
+import dgpa
 from taiwan_geo import ISLANDS
 
 TZ_TW = timezone(timedelta(hours=8))
@@ -651,8 +652,14 @@ def render_rain_card(lang, rain, has_active_event, stale_at=None):
 </div>"""
 
 
-def cwa_section_html(lang, data, errors, stale, mode, has_active_event):
-    """回傳「氣象總覽」section 的 HTML（mode=none 時只有警示）。"""
+def cwa_section_html(lang, data, errors, stale, mode, has_active_event, susp=None):
+    """回傳「氣象總覽」section 的 HTML（mode=none 時只有警示）。
+
+    susp：dgpa.fetch() 的 (entries, ok, ts) 或 None（抓取失敗不顯示）。卡片置位（2026/9/15 定案）：
+    - 有 currently 相關停班停課公告 → 停班卡**頂位**（層級高於颱風動態）；
+    - 無 → 收起卡置於卡片區**底部**；
+    - 抓取失敗 → 不顯示（dgpa.render_card 回傳空字串）。
+    """
     note = f'<p class="meta">{t(lang, "cwa_data_note")}</p>' if t(lang, "cwa_data_note") else ""
     if mode == "none":
         why = next(iter(errors.values()), "未知錯誤") if errors else "未知錯誤"
@@ -673,6 +680,13 @@ def cwa_section_html(lang, data, errors, stale, mode, has_active_event):
     typhoons_live = filter_typhoon_stale(data.get("typhoons", []), data.get("marine_alert", []))
     typhoon_card = render_typhoon_card(lang, typhoons_live, stale.get("typhoons"))
     typhoon_first = bool(typhoons_live) or bool(stale.get("typhoons"))  # 只有「空＋抓取正常」才置底
+    # 停班停課卡置位（2026/9/15 定案）：有 currently 相關公告 → 頂位（高於颱風卡）；
+    # 無 → 收起卡置底；susp=None（抓取失敗）→ 不顯示。dgpa 為獨立法令來源，不在 CWA stale 體系內。
+    susp_html = dgpa.render_card(lang, susp) if susp is not None else ""
+    susp_live = (susp is not None and susp[1]
+                 and any(dgpa.is_current(e) for e in susp[0]))
+    if susp_live:
+        parts.append(susp_html)
     if typhoon_first:
         parts.append(typhoon_card)
     parts.append(render_alert_card(lang, data.get("marine_alert", []), data.get("reports", []),
@@ -680,6 +694,8 @@ def cwa_section_html(lang, data, errors, stale, mode, has_active_event):
     parts.append(render_rain_card(lang, data.get("rain", []), has_active_event, stale.get("rain")))
     if not typhoon_first:
         parts.append(typhoon_card)
+    if susp_html and not susp_live:
+        parts.append(susp_html)  # 收起卡置底
     return f"""
 <section class="cwa">
 <h2>{t(lang, "cwa_title")}</h2>
