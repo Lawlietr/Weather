@@ -102,6 +102,8 @@ header.site h1{font-size:1.1rem;margin:0;flex:1;min-width:0;white-space:nowrap;o
 .icon-btn{background:none;border:none;border-radius:8px;color:inherit;padding:6px;display:inline-flex;cursor:pointer;line-height:0;flex:none}
 .icon-btn:hover{background:rgba(255,255,255,.15)}
 .lang-switch{display:inline-flex;gap:2px;flex:none}
+/* 2026/9/15：隱藏語言切換按鈕（ja 內容保留、/ja/ 直接 URL 仍可進；要恢復刪掉本行即可） */
+.lang-switch{display:none}
 .lang-switch a,.lang-switch .on{padding:2px 9px;border-radius:6px;font-size:.78rem;line-height:1.6}
 .lang-switch a{color:#b0bec5}
 .lang-switch a:hover{text-decoration:none;background:rgba(255,255,255,.15)}
