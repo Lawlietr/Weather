@@ -1,9 +1,9 @@
 # TODO：待辦事項
 
 > 專案背景、設計原則、技術架構與部署流程分別見 `README.md`、`AGENTS.md`、`WORKFLOW.md`，本文件只放**未完成的待辦**；已完成項目的設計史不留在此（看 git history 或各文件）。
-> 最後更新：2026/9/15（§4 平常時期天氣報導降級為不採（偏離事件+災情定位、靜態站無在地化能力）；§11 AI bot 可偵測性強化：JSON-LD／OG meta／信任頁／404 agent 指引／llms.txt 使用指引，已合併 main 上線；§9 颱風卡置底、§8 cbph 503 假警報均已合併 main 上線；新增 build 產出 `404.html`（修 Cloudflare Pages 無 404.html 的 SPA soft-404）＋`robots.txt`＋`sitemap.xml`；§7 颱風動態淘汰已合併 main 上線；另設測試站 wea-testing／weatesting.avpclub.eu.org，詳 WORKFLOW.md §6；2026/9/7 全檔精簡：已完成項目細節收為一線，細節看 git history／模組註解）
+> 最後更新：2026/9/15（§1 RSS 改標「完成、剩餘僅隨事件維護」；§4 平常時期天氣報導降級為不採（偏離事件+災情定位、靜態站無在地化能力）；§11 AI bot 可偵測性強化：JSON-LD／OG meta／信任頁／404 agent 指引／llms.txt 使用指引，已合併 main 上線；§9 颱風卡置底、§8 cbph 503 假警報均已合併 main 上線；新增 build 產出 `404.html`（修 Cloudflare Pages 無 404.html 的 SPA soft-404）＋`robots.txt`＋`sitemap.xml`；§7 颱風動態淘汰已合併 main 上線；另設測試站 wea-testing／weatesting.avpclub.eu.org，詳 WORKFLOW.md §6；2026/9/7 全檔精簡：已完成項目細節收為一線，細節看 git history／模組註解）
 
-> 優先級：§8 cbph 503 假警報（高，✅ 已實作、已合併 main、待自動部署生效）＞ §2 地圖紅警（高，實作中：執行順序 1–3 ✅、下一步 4 觀測層）＞ §6 停班停課板塊（中高，待實作）＞ §10 零星災情縣市分組寫法（中低，待選定 A/B）＞ §1 RSS 殘細項（低，隨隨事件微調）＞ §3 ja 移除／§5 分享按鈕（低）。
+> 優先級：§8 cbph 503 假警報（高，✅ 已實作、已合併 main、待自動部署生效）＞ §2 地圖紅警（高，實作中：執行順序 1–3 ✅、下一步 4 觀測層）＞ §6 停班停課板塊（中高，待實作）＞ §10 零星災情縣市分組寫法（中低，待選定 A/B）＞ §3 ja 移除／§5 分享按鈕（低）；§1 RSS 已完成（關鍵詞微調＝隨事件維護，非待辦）。
 
 ---
 
@@ -151,13 +151,13 @@ cbph API 對「**目前沒有生效中告警的類型**」回 HTTP 503（非空�
 
 ---
 
-## 1. RSS 災情抓取：殘餘細項（✅ 半自動方案已於 2026/8/30 實作）
+## 1. RSS 災情抓取（✅ 2026/8/30 完成；剩餘僅隨事件維護，非待辦）
 
 > 已實作：`build/rss.py` build 時自動抓 verified feeds 產出候選清單 `build/rss_candidates.json`（**從不進 `public/`**）；人 / LLM 審查後挑中者寫入事件檔「XX災情新聞來源」章節才上線（流程見 `WORKFLOW.md` §1）。
 
-**剩餘待辦**：
-- 關鍵詞清單（`rss.py` 的 `KEYWORDS`）隨事件期間 `rss_candidates.json` 的 flag 假陽性/假陰性實戰資料微調（2026/9/7 已完成第一輪修剪，細節見 git history）。
-- （可選）事件期間候選量太大時，考慮把 flag 條目渲染到首頁供快速瀏覽（非必需）。
+**維護註記（非待辦）**：
+- 關鍵詞清單（`rss.py` 的 `KEYWORDS`）隨事件期間 `rss_candidates.json` 的 flag 假陽性/假陰性實戰資料微調——只有事件期間才有實戰依據；2026/9/7 已完成第一輪修剪（細節見 git history）。
+- （可選構想）事件期間候選量太大時，把 flag 條目渲染到首頁供快速瀏覽（非必需）。
 
 已完成：風傳媒（storm.mg）RSS 復查恢復（2026/9/7，端點與入列見 `AGENTS.md`「新聞 RSS 來源」）。
 
