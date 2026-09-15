@@ -82,43 +82,12 @@
 
 ### 零星災情的寫法（2026/9/15 定案：A/B 並用，判斷標準＝對應事件 status）
 
-「零星災情」＝不屬於任何事件檔的小災情。判斷對策：
+「零星災情」＝不屬於任何事件檔的小災情。判斷：
 
-1. **對應事件仍 `status: active` → 併入該事件檔（A）**：在該檔含縣名的章節（如 `## 宜蘭縣災情`）以四欄表 append 一行，原地更新「最後修改」行。符合「新進展附加在檔尾」慣例。
-2. **事件已 `ended` 或無對應事件 → 建最小事件檔（B）**：`災情/{YYYY}/{MM}/{MMDD}_{事件類型}_{名稱}.md`，範本：
+1. **對應事件仍 `status: active` → 併入該事件檔（A）**：在該檔含縣名的章節以四欄表 append 一行，原地更新「最後修改」行。
+2. **事件已 `ended` 或無對應事件 → 建最小事件檔（B）**：`災情/{YYYY}/{MM}/{MMDD}_{事件類型}_{名稱}.md`，**建檔即 `status: ended`**（不進「目前事件」區）。
 
-   ```markdown
-   ---
-   event: 2026/9/12 零星災情｜台東樹倒
-   status: ended
-   severity: 🟢一般
-   ---
-
-   ## 災害概述
-
-   2026/9/12 台東市一筆樹倒（與 0904 低壓帶事件無直接關係，獨立記錄）。
-
-   ## 台東縣災情
-
-   | 時間 | 地點 | 類型 | 說明 |
-   |------|------|------|------|
-   | 2026/9/12 18:00 | 台東市成功路 | 樹倒 | 大樹倒伏阻路，路政已清理（來源：XXX 新聞 2026/9/12） |
-
-   ## 備註
-
-   與 2026/9/4 低壓帶事件（[連結]）無直接因果，故獨立建檔。
-   ```
-
-   约定：`事件類型` 寫具體（如 `零星`、`颱風尾`）；`severity` 通常 `🟢一般`；**建檔即 `status: ended`**（零星事件天短命，不進「目前事件」區）；備註欄一句話說明，若與過去事件有因果就放該事件頁連結。
-
-**必守限制**：
-
-- 每個 md 檔**必須有 front matter**（`event`/`status`/`severity`），否則 build 忽略該檔——不能建「只有災情表」的純災情檔。
-- 災情行時間**用完整年份**（如 `2026/9/12 18:00`）：不帶年份時 build 靠檔案路徑 `{YYYY}/{MM}/` 推定。
-- 首页「各縣市災情」每縣**最多顯示最新 8 筆**；完整歷史在各事件頁。
-- build 程式**不需改動**（現行聚合機制已涵蓋）；「某縣市歷年全量災情」獨立頁是日後構想（TODO §10）。
-- **每個 markdown 檔都須有 front matter**（`event`／`status`／`severity` 等），否則 build 忽略該檔。零星災情無既有檔可併時，建最小事件檔（最小 front matter ＋ 災情表即可）。
-- 完整機制與零星災情寫法（方案 A 併入既有事件檔／B 建最小事件檔）見 `TODO.md §10`。
+**B 案範本與必守限制**（front matter 必填、災情行時間帶完整年份、每縣最多顯示 8 筆等）→ `WORKFLOW.md` §2.3。範例實檔：`災情/2026/09/0912_零星_台東樹倒與土石流.md`。
 
 ## 颱風編號規範
 
@@ -151,10 +120,10 @@
 
 ## 資料來源規範
 
-- **颱風資料**（軌跡、強度、位置、預測）、**警報與特報**（海上颱風警報、大雨特報、強風特報）、**雨量/風力/浪高**：以中央氣象署（CWA）API 為主
-- **災防告警區**（大雷雨/颱風強風/山區暴雨/巨浪，含官方影響區域 polygon、細胞廣播狀態）：以 CWA cbph API（`cbph.cwa.gov.tw/api/`，免 key、build 時抓取）為主；欄位與陷阱見下方「CWA cbph 災防告警 API」節
+- **颱風資料**（軌跡、強度、位置、預測）、**警報與特報**（海上颱風警報、大雨特報、強風特報）、**雨量/風力/浪高**：以中央氣象署（CWA）API 為主（欄位查表 → `build/CWA_API.md`）
+- **災防告警區**（大雷雨/颱風強風/山區暴雨/巨浪，含官方影響區域 polygon、細胞廣播狀態）：以 CWA cbph API（`cbph.cwa.gov.tw/api/`，免 key、build 時抓取）為主；欄位與陷阱 → `build/CWA_API.md`「CWA cbph」節
 - **災情紀錄**（淹水、樹倒、落石、停電等）：以各縣市新聞媒體為輔，引用時請註明出處
-- **停班停課**：以**人事行政總處（DGPA）CAP feed**為主（由各縣市政府公告、結構化、免 key；見下方「DGPA 停班停課 feed」節），人工查證用 DGPA 22 縣市查詢頁；事件檔存檔層引用時仍註明原始出處（縣市政府公告/新聞）
+- **停班停課**：以**人事行政總處（DGPA）CAP feed**為主（由各縣市政府公告、結構化、免 key；端點與陷阱 → `build/dgpa.py` 頭註），人工查證用 DGPA 22 縣市查詢頁；事件檔存檔層引用時仍註明原始出處（縣市政府公告/新聞）
 - **交通影響**：以交通部或各縣市政府公告為主，新聞媒體為輔
 - **措辭跟隨來源、不自行解讀（2026/9/1 定）**：對路徑、強度、登陸與對台影響的判斷性表述，一律引來源原話（CWA API 數值、CWA 發言人/公告口吻），**不得加「二次登陸」「直接侵台」等推測性升級詞**——以 CWA 當時路徑為準（例：9/1 沙德爾返回時 CWA 預測登陸廣東、口徑為「直接侵台機會低」，就照此寫；CWA 修訂路徑後再更新）。
 - **災情來源優先級（build）**：repo 現有 `災情/` markdown → **RSS** → Obscura 抓取。每筆附**新聞來源**，僅給**少量摘要＋原連結**。
@@ -164,9 +133,19 @@
 
 ## 新聞 RSS 來源
 
-- **一律先讀 `build/rss_sources.json`** 取得來源清單（`sources` 9 家已實測可用；`failed_sources` 失效**勿呼叫**；`usage_notes` 為完整抓取守則），不要自行重新查或寫死 URL。
-- 重點：解析器需相容 `rss20`（`<item>`）與 `atom`（`<entry>`，公視是 Atom）；LTN feed 檔頭有 BOM；**民報域名是 `peoplenews.tw`（非 `minmax.tw`）**；單一來源 404/超時**不中斷 build**（跳過＋記 warning）。
-- **風傳媒（storm.mg）**：RSS 端點為 `/api/getRss/channel_id/{N}?path=...`（**非** `/feed`、`/rss`——那兩個回 HTML/404）；災情優先抓 `channel_id/9`（國內）＋`channel_id/2`（新聞總匯）；2026/9/7 實測恢復可用，已列入 `rss_sources.json` verified 來源。
+**一律先讀 `build/rss_sources.json`** 取得來源清單（`sources` 已實測可用；`failed_sources` 失效**勿呼叫**；`usage_notes` 為完整抓取守則——含 rss20/atom 解析、BOM、民報域名、風傳媒端點、失敗降級等所有陷阱），不要自行重新查或寫死 URL。
+
+## 參考索引（本檔只留常駐規則；特定任務的細節直接去指定處查）
+
+| 主題 | 去哪查 |
+|------|--------|
+| CWA API 欄位 / 事件類型優先級 / 關鍵陷阱 | `build/CWA_API.md`（或 `ctx_search(source: "CWA_API.md 欄位查表")` 抽段落） |
+| cbph 災防告警（endpoints、polygon、陷阱） | `build/CWA_API.md`「CWA cbph」節 |
+| 停班停課 feed（端點、實測結構、發布機制） | `build/dgpa.py` 頭註（單一事實來源） |
+| RSS 來源清單與抓取守則 | `build/rss_sources.json`（`usage_notes`） |
+| 例行更新 / 新事件 / 零星災情範本 / 驗證 / 部署 / 排程 | `WORKFLOW.md`（零星災情範本 §2.3） |
+| Obscura 工具用法 | Skill `/root/.pi/agent/skills/obscura/SKILL.md` |
+| 構想與待辦 | `TODO.md` |
 
 ## Git
 
@@ -179,47 +158,15 @@
 
 ## 中央氣象署（CWA）Open Data API
 
-⭐ **逐 dataset 欄位查表**（結構、呼叫範例、Python 範例、實測差異）：**`build/CWA_API.md`**——解析資料前讀它。
+⭐ **逐 dataset 欄位查表＋事件類型優先級＋關鍵陷阱**：**`build/CWA_API.md`**——解析資料前讀它（或 `ctx_search` 抽段落）。
 
-### API Key
+- **API Key**：環境變數 `CWA_API_KEY`（已設 `~/.zshrc`／專案 `.env` gitignored）。**不得硬編碼或 commit 到 Git**；程式用 `os.getenv("CWA_API_KEY")`。
+- **Base URL**：`https://opendata.cwa.gov.tw/api/v1/rest/datastore/{Data ID}?Authorization=${CWA_API_KEY}&format=JSON`
+- **最致命兩坑**：① 回傳結構**與官方文件不同**——改解析碼前**先 dump 真實回傳**，勿照舊文件猜；② **不支援 CORS**——所有氣象資料 build 時本機抓取寫入靜態 HTML。
 
-以環境變數 `CWA_API_KEY` 讀取（已設在 `~/.zshrc`；也可放專案 `.env`，已 gitignore）。**不得硬編碼或 commit 到 Git**；程式用 `os.getenv("CWA_API_KEY")` 讀取。
+## CWA cbph 災防告警 API（PWS）
 
-### Base URL
-
-```
-https://opendata.cwa.gov.tw/api/v1/rest/datastore/{Data ID}?Authorization=${CWA_API_KEY}&format=JSON
-```
-
-### API 優先級說明（依事件類型）
-
-| 優先級 | 颱風事件 | 豪雨/大雨事件（非颱風） |
-|--------|----------|--------------------------|
-| **P0（必須）** | W-C0034-005（軌跡）、W-C0034-001（海警） | W-C0033-002/003（豪大雨特報）、O-A0002-001（雨量站） |
-| **P1（重要）** | W-C0033-001（強風特報）、W-C0033-003、O-A0001-001（逐時氣象） | W-C0033-001（強風特報）、O-A0001-001（逐時氣象）、C-B0025-001（每日雨量）、F-D0047-xxx（鄉鎮預報） |
-| **P2（輔助）** | F-C0032-001、F-D0047-xxx、F-A0021-001（潮汐） | C-B0024-001（30天觀測）、C-B0074-001/002（測站基本資料）、F-C0032-001、F-A0021-001（潮汐） |
-
-> 完整官方清單（80 筆）見 `https://opendata.cwa.gov.tw/apidoc/v1`（OpenAPI YAML；web 清單頁是 SPA 爬不到）。常見但**已 404**、勿呼叫的 Data ID：O-A0013~19、F-C0033-001、F-C0034-001、F-A0045-001、W-C0024-001、F-C0040-001、O-C0010-001——改抓 CWA 官網頁面（obscura）或新聞。
-
-### ⚠️ 關鍵陷阱（實測；處置細節見 `build/CWA_API.md`「實測差異」與 `WORKFLOW.md` §4–5）
-
-1. O-A0001/O-A0002-001 的 `Now.Precipitation`＝**本日 0 時至目前累計**（非 1 小時）；1 小時用 `Past1hr`。
-2. 回傳結構**與官方文件不同**（W-C0034-005 多一層 `TropicalCyclones`、移動欄位是 `MovingSpeed/MovingDirection`）：改解析碼前**先 dump 真實回傳**，勿照舊文件猜。
-3. O-B0075-001（48h 海況）回傳空 JSON；海況改看 CWA 官網頁面或新聞。
-4. **不支援 CORS**：前端無法直接呼叫，氣象資料必須 build 時本機抓取後寫入靜態 HTML。
-5. forecast 欄位可能為 `None`：格式化前**必做 null 檢查**（`f"{None:.1f}"` 會崩潰）。
-6. 更新頻率：颱風警報每 3~6 小時、氣旋資料每 6 小時；每 30~60 分鐘查一次即可。
-
----
-
-## CWA cbph 災防告警 API（PWS，2026/9/1 實測）
-
-cbph.cwa.gov.tw＝「預報中心資訊發布查詢系統」，即 CWA「災防訊息彙整」（`www.cwa.gov.tw/V8/C/P/PWS/PWS.html`；該頁只有文字清單）背後的地圖查詢系統。**公開 JSON API、免 key**；CORS 同 Open Data 不可依賴，一律 build 時本機抓取。
-
-- **Endpoints**：`GET /api/global/`（目前生效告警，4 類分組）；`GET /api/{type}/?issuetime_after=&issuetime_before=&county=`（歷史，預設最新 50 筆）。type slugs：`cells`＝大雷雨即時訊息、`tywinds`＝颱風強風告警、`mountainstorms`＝山區暴雨警示訊息、`largesurfs`＝巨浪告警。
-- **每筆欄位**：`identifier`、`official_id`、`sent`/`onset`/`effective`/`expires`（UTC）、`is_active`、`msg_type`、`description`（告警原句）、`cmam_text`（細胞廣播原文）、`cb_enabled`、`county[]`/`town[]`（含鄉鎮）、`coastal_*`、**`polygon`**（字串 `lat,lon lat,lon ...`，多 ring 以 `;` 分開＝官方影響區域座標）、`geocode_dict`（實測空）。
-- **官方頁 deep link**：`https://cbph.cwa.gov.tw/ui/?type={type}&identifier={identifier}`
-- **陷阱（實測）**：空類型回 503（如 largesurfs）；`county=` 過濾不可靠（自行 filter）；**非 Open Data 正式目錄**（無 SLA）→ build 端容錯、失敗跳過＋warning 不中斷；時間 UTC；UI 引用註明「資料來源：中央氣象署災防告警系統」。設計與用途 → `TODO.md` §2。
+災防告警（大雷雨/颱風強風/山區暴雨/巨浪，含官方影響區域 polygon）以 `cbph.cwa.gov.tw/api/` 為主（公開 JSON、免 key、build 時本機抓取；**非 Open Data 正式目錄、無 SLA** → build 端容錯、失敗跳過不中斷）。**完整 endpoints、欄位（polygon、cmam_text）、陷阱（503、UTC、deep link）→ `build/CWA_API.md`「CWA cbph」節**。
 
 ## context-mode 知識庫（本機 agent 查詢加速器，2026/9/15 啟用）
 
@@ -241,31 +188,20 @@ cbph.cwa.gov.tw＝「預報中心資訊發布查詢系統」，即 CWA「災防�
 
 ## DGPA 停班停課 feed（2026/9/15 實測）
 
-人事行政總處（DGPA）「天然災害停止上班停止上課情形」——中央統一發布、由各縣市政府經人事總處公告；託管於 NCDR 災防警報平台（`alerts.ncdr.nat.gov.tw`），data.gov.tw 資料集 20457 正式公開（政府資料開放授權條款 v1），**免 key**。
-
-- **Endpoint**：`GET https://alerts.ncdr.nat.gov.tw/RssAtomFeed.ashx?AlertType=33`（Atom）。每筆 `<entry>` 統一結構（實測 14 筆全同型）：`a:id`（CAP id、無 urn 前綴）、`a:updated`（ISO8601 公告/更新時間）、`a:summary`（通知原文）、`a:link[@rel=alternate]`（完整 CAP URL）、`cap:effective`/`cap:expires`（**中文 12 小時制**，如「2026/8/22 下午 02:10:00」；「上午 12 點」＝00:00）。
-- **完整 CAP**（feed 的 alternate link）：ISO8601 時間＋`info/area/areaDesc`（「縣市/鄉鎮」文字）＋`geocode`（Taiwan_Geocode_103 縣市代碼，如 `09`＝屏東）。
-- **⚠️ feed 是滾動近期視窗、不是「目前生效中」清單**——舊公告留存數週；「是否目前相關」由 `build/dgpa.py` 的 `is_current()` 判斷（影響日＝expires 為今天或之後、或 sent 不超過 24h；CAP 的 expires≈影響日 00:00，故影響日當天全天仍顯示）。
-- **陷阱**：feed 或單筆 CAP 可能 404/超時 → 該筆跳過＋warning、不中斷 build（同 cbph/RSS 慣例）；feed 抓不到 → 首頁卡不顯示。CAP 時間以 ISO8601 為準，feed 中文格式只作 fallback。
-- **發布機制（官方）**：全日/上午停班須**前一日 19:00–22:00 前**發布；下午/晚間停班**當日上午 10:30 前**發布。人工查證頁：`https://dgpa.gov.tw/typh/daily/nds.html`（頁面顯示「資料來源：各縣市政府」）。
-- **首頁呈現（2026/9/15 定案）**：有 currently 相關公告 → 卡展開、**置頂於「颱風動態」卡之上**；無 → 收起卡（「目前無停班停課公告」＋資料截至時間）**置底**；實作與 i18n 見 `build/dgpa.py`、`build/cwa.py` 的 `cwa_section_html()`。
-- **事件檔存檔層**：feed 不存歷史，事件期間的停班停課另寫入事件檔「停班停課」章節（標準表格、格式見 `TODO.md` §6）；既有事件檔不回填。
+停班停課（各縣市政府公告、人事行政總處中央統一發布）以 CAP feed 為主：`GET https://alerts.ncdr.nat.gov.tw/RssAtomFeed.ashx?AlertType=33`（免 key）。**⚠️ feed 是滾動近期視窗、不是「目前生效中」清單**——「是否目前相關」由 `build/dgpa.py` 的 `is_current()` 判斷。**完整 feed/CAP 欄位實測結構、陷阱、發布機制 → `build/dgpa.py` 頭註**（單一事實來源；人工查證頁 `dgpa.gov.tw/typh/daily/nds.html` 亦在其中）。首頁卡呈現定案（有相關公告→展開置頂於颱風卡之上／無→收起置底）→ 見下方「網站結構」；事件檔存檔層 → `TODO.md` §6。
 
 ## Obscura 無頭瀏覽器
 
-用於爬取 API 沒有的 JavaScript 渲染頁面（如 CWA 官網頁面）。**工具本身的使用說明見 skill `/root/.pi/agent/skills/obscura/SKILL.md`**（binary `/usr/local/bin/obscura`，Docker 容器 `obscura`，MCP HTTP port 3000）。repo 相關：
+爬 API 沒有的 JS 渲染頁面（如 CWA 官網頁面）。**工具用法見 skill `/root/.pi/agent/skills/obscura/SKILL.md`**。本 repo 特定事實：
 
-- **CWA 頁面**：颱風頁在 `P/Typhoon/`——`TY_WARN.html`（警報狀態）、`TY_NEWS.html`（路徑潛勢預報）、`TY_WIND.html`（強風告警）；舊路徑 `Typhoon.html` 已移除。
-- 首頁 `https://www.cwa.gov.tw/V8/C/` 有 SVG JS 錯誤（`getTotalLength is not a function`），不影響主要內容。
-- 多語句 JS 需包 IIFE：`(function(){ ... })()`。
-- SSRF 保護會阻擋 private network，需加 `--allow-private-network`。
-- Docker 容器未運行時：`docker run -d --name obscura -p 3000:3000 h4ckf0r0day/obscura mcp --http --port 3000 --host 0.0.0.0`
+- CWA 颱風頁：`P/Typhoon/TY_WARN.html`（警報狀態）、`TY_NEWS.html`（路徑潛勢）、`TY_WIND.html`（強風）；舊路徑 `Typhoon.html` 已移除；首頁 SVG JS 錯誤不阻擋主要內容。
+- 多語句 JS 需包 IIFE；SSRF 阻擋需 `--allow-private-network`；容器未運行：`docker run -d --name obscura -p 3000:3000 h4ckf0r0day/obscura mcp --http --port 3000 --host 0.0.0.0`
 
 ---
 
 ## 網站專案（已上線：Cloudflare Pages ×3 自訂域名；GitHub Pages 備用 mirror）
 
-- **文件分工**：runbook（例行更新、新事件、驗證清單、部署、排程、陷阱）→ `WORKFLOW.md`；CWA 欄位查表 → `build/CWA_API.md`；手動路徑 → `MANUAL_UPDATE.md`；本地 cron → `LOCAL_CRON.md`；構想與待辦 → `TODO.md`。
+- **文件分工**：見上方「參考索引」表（runbook → `WORKFLOW.md`；CWA 欄位 → `build/CWA_API.md`；手動路徑 → `MANUAL_UPDATE.md`；本地 cron → `LOCAL_CRON.md`；構想與待辦 → `TODO.md`）。
 - **⚠️ 更新災情前必看 `WORKFLOW.md` §8「Agent 效率規範」**：先查 repo 既有檔案／`ctx_search`／`cwa_cache.json`，只查會變的資料，同一資料一個 session 只查一次。
 - **build 入口**：`./build/build.sh`（產出 `public/`（繁中）＋ `public/ja/`（日文）、`llms.txt`（站點＋事件索引）與 `llms-full.txt`（事件全文）；CWA 資料 build 時本機抓取；另產 cbph 災防告警 `build/map.geo.json`（build 中間檔、gitignored，供 `/map/` 災防告警地圖頁消費）＋離線瓦片 `public/assets/tiles/`（z8–z11；來源與陷阱見 `build/tiles.py` 頭註：OSM 官方 server 對本機 IP 假 200 封鎖，改用 `tile.openstreetmap.de`））。
 - **颱風軌跡圖台灣輪廓**：`build/cwa.py` 的 `typhoon_svg()` 用 `build/taiwan_geo.py` 的 `ISLANDS`（本島＋澎湖／金門／馬祖／蘭嶼／綠島各自獨立 polygon）；產生器 `build/make_taiwan_geo.py`（純 Python Douglas–Peucker，無相依）重跑後會覆寫 `taiwan_geo.py`，GeoJSON 快取 `build/_geo_cache_*.json` 已 gitignore。
@@ -282,7 +218,7 @@ cbph.cwa.gov.tw＝「預報中心資訊發布查詢系統」，即 CWA「災防�
 
 ### 網站結構
 
-- **首頁**：頂部「目前風險狀態列」（`build/cwa.py: current_risk_level()` 由 CWA 目前生效中之熱帶氣旋／海上颱風警報／災害天氣特報自動推導：紅/黃/綠/**中性**（無生效中項目但有 ≤48h 內解除紀錄）/未知；與事件 `severity` 無關）→ 氣象彙整（颱風軌跡/警報特報/雨量/風力；**颱風卡淘汰過時氣旋**：最新 analysis fix 超過 24h（`TYPHOON_STALE_HOURS`）即移除、有生效中海上颱風警報者豁免，`/map/` 仍用全量軌跡；警報特報卡**混排、時間倒序**，已解除項置底灰化、超過 48h（`LIFTED_TTL_HOURS`）不顯示；**卡片排序**：有 currently 相關停班停課公告（DGPA feed）時**停班停課卡頂位**（層級最高）、無時收起卡置底（抓取失敗不顯示，見「DGPA 停班停課 feed」節）；有活動氣旋時颱風卡頂位、無活動氣旋且抓取正常時置底（抓取失敗仍頂位，警示不降級））→ 事件 Hero（中性入口卡，無 severity 色系與徽章）＋ 各縣市災情總覽（**build 時跨所有事件檔依縣聚合、時間倒序、每縣最新 8 筆；純靜態、無資料庫**）→ 過去事件封存（含 severity 徽章）。
+- **首頁**：頂部「目前風險狀態列」（`build/cwa.py: current_risk_level()` 由 CWA 目前生效中之熱帶氣旋／海上颱風警報／災害天氣特報自動推導：紅/黃/綠/**中性**（無生效中項目但有 ≤48h 內解除紀錄）/未知；與事件 `severity` 無關）→ 氣象彙整（颱風軌跡/警報特報/雨量/風力；**颱風卡淘汰過時氣旋**：最新 analysis fix 超過 24h（`TYPHOON_STALE_HOURS`）即移除、有生效中海上颱風警報者豁免，`/map/` 仍用全量軌跡；警報特報卡**混排、時間倒序**，已解除項置底灰化、超過 48h（`LIFTED_TTL_HOURS`）不顯示；**卡片排序**：有 currently 相關停班停課公告（DGPA feed）時**停班停課卡頂位**（層級最高）、無時收起卡置底（抓取失敗不顯示）；有活動氣旋時颱風卡頂位、無活動氣旋且抓取正常時置底（抓取失敗仍頂位，警示不降級）；實作詳 `build/dgpa.py` 與 `build/cwa.py` 的 `cwa_section_html()`）→ 事件 Hero（中性入口卡，無 severity 色系與徽章）＋ 各縣市災情總覽（**build 時跨所有事件檔依縣聚合、時間倒序、每縣最新 8 筆；純靜態、無資料庫**）→ 過去事件封存（含 severity 徽章）。
 - **各縣市子頁（選用）**：該縣市災情按時間倒序。
 - **災防告警地圖 `/map/`（2026/9/2 上線）**：`build/map_page.py`＋自託 Leaflet 1.9.4（`build/static/leaflet/`）＋離線瓦片；cbph 4 類告警官方 polygon 分色渲染、hover/click 詳情卡、圖層開關、`<noscript>` fallback、行動版 bottom-sheet；資料全 build 時寫入（`map.geo.json` 嵌入頁面，前端零外部請求）。細節與待辦見 `TODO.md` §2。
 

@@ -7,7 +7,8 @@
     "status 說明：verified = 已實測可用；failed = 實測失效（勿呼叫）；pending = 待復查。",
     "格式：rss20 = 用 <item>；atom = 用 <entry>。解析器需兩種都相容。",
     "build 時批次抓取；單一來源 404/超時不中斷 build，跳過並記 warning（沿用 CWA 失敗降級設計）。",
-    "只保留近期且與『當前活動事件』相關的條目（時間過濾，避免舊聞混入）。每筆附原連結，僅給摘要。"
+    "只保留近期且與『當前活動事件』相關的條目（時間過濾，避免舊聞混入）。每筆附原連結，僅給摘要。",
+    "風傳媒（storm.mg）：RSS 端點為 /api/getRss/channel_id/{N}?path=...（非 /feed、/rss——那兩個回 HTML/404）；災情優先抓 channel_id/9（國內）＋channel_id/2（新聞總匯）；2026/9/7 實測恢復可用。"
   ],
   "sources": [
     {

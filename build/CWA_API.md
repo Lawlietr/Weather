@@ -1,7 +1,7 @@
 # CWA Open Data API — 逐 dataset 欄位查表
 
 > **定位**：on-demand 查表檔，解析 CWA 資料前讀這裡。
-> - **路由**（哪種事件查哪個 dataset、P0/P1/P2 優先級）→ `AGENTS.md`「中央氣象署（CWA）Open Data API」
+> - **路由**（哪種事件查哪個 dataset、P0/P1/P2 優先級）→ 本檔「API 優先級（依事件類型）」節
 > - **實測結構陷阱** → `WORKFLOW.md` §5（各 dataset 的「實測差異」註記同內容）
 > - **完整資料集清單（80 個 Data ID）權威來源** → `https://opendata.cwa.gov.tw/apidoc/v1`（OpenAPI YAML；web 版資料清單頁是 SPA，直接爬 HTML 拿不到）
 >
@@ -9,6 +9,16 @@
 > Key 設定見 `AGENTS.md`。⚠️ CWA API **不支援 CORS**（回應無 `Access-Control-Allow-Origin`），前端無法直接呼叫，必須 build 時本機抓取寫入靜態 HTML。
 
 ---
+
+## API 優先級（依事件類型）
+
+| 優先級 | 颱風事件 | 豪雨/大雨事件（非颱風） |
+|--------|----------|--------------------------|
+| **P0（必須）** | W-C0034-005（軌跡）、W-C0034-001（海警） | W-C0033-002/003（豪大雨特報）、O-A0002-001（雨量站） |
+| **P1（重要）** | W-C0033-001（強風特報）、W-C0033-003、O-A0001-001（逐時氣象） | W-C0033-001（強風特報）、O-A0001-001（逐時氣象）、C-B0025-001（每日雨量）、F-D0047-xxx（鄉鎮預報） |
+| **P2（輔助）** | F-C0032-001、F-D0047-xxx、F-A0021-001（潮汐） | C-B0024-001（30天觀測）、C-B0074-001/002（測站基本資料）、F-C0032-001、F-A0021-001（潮汐） |
+
+> 完整官方清單（80 筆）見 `https://opendata.cwa.gov.tw/apidoc/v1`（OpenAPI YAML；web 清單頁是 SPA 爬不到）。
 
 ## P0：颱風追蹤核心
 
@@ -166,3 +176,16 @@ def get_typhoon_data():
 5. **開發指南**：https://opendata.cwa.gov.tw/devManual/insrtuction
 6. **資料清單（web 版）**：https://opendata.cwa.gov.tw/devManual/datalist（SPA，爬不到；以 apidoc/v1 YAML 為準）
 7. **Swagger**：https://opendata.cwa.gov.tw/dist/opendata-swagger.html
+8. **已 404、勿呼叫的 Data ID**（常見但已下線）：O-A0013~19、F-C0033-001、F-C0034-001、F-A0045-001、W-C0024-001、F-C0040-001、O-C0010-001——改抓 CWA 官網頁面（obscura）或新聞。
+9. **None 檢查**：forecast 類欄位可能為 `None`，格式化前**必做 null 檢查**（`f"{None:.1f}"` 會崩潰）。
+
+---
+
+## CWA cbph 災防告警 API（PWS，2026/9/1 實測）
+
+cbph.cwa.gov.tw＝「預報中心資訊發布查詢系統」，即 CWA「災防訊息彙整」（`www.cwa.gov.tw/V8/C/P/PWS/PWS.html`；該頁只有文字清單）背後的地圖查詢系統。**公開 JSON API、免 key**；CORS 同 Open Data 不可依賴，一律 build 時本機抓取。
+
+- **Endpoints**：`GET /api/global/`（目前生效告警，4 類分組）；`GET /api/{type}/?issuetime_after=&issuetime_before=&county=`（歷史，預設最新 50 筆）。type slugs：`cells`＝大雷雨即時訊息、`tywinds`＝颱風強風告警、`mountainstorms`＝山區暴雨警示訊息、`largesurfs`＝巨浪告警。
+- **每筆欄位**：`identifier`、`official_id`、`sent`/`onset`/`effective`/`expires`（UTC）、`is_active`、`msg_type`、`description`（告警原句）、`cmam_text`（細胞廣播原文）、`cb_enabled`、`county[]`/`town[]`（含鄉鎮）、`coastal_*`、**`polygon`**（字串 `lat,lon lat,lon ...`，多 ring 以 `;` 分開＝官方影響區域座標）、`geocode_dict`（實測空）。
+- **官方頁 deep link**：`https://cbph.cwa.gov.tw/ui/?type={type}&identifier={identifier}`
+- **陷阱（實測）**：空類型回 503（如 largesurfs）；`county=` 過濾不可靠（自行 filter）；**非 Open Data 正式目錄**（無 SLA）→ build 端容錯、失敗跳過＋warning 不中斷；時間 UTC；UI 引用註明「資料來源：中央氣象署災防告警系統」。設計與用途 → `TODO.md` §2。
