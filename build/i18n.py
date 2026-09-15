@@ -39,6 +39,9 @@ STRINGS = {
     "county_latest": "最新 {n} 筆",  # 見上 chip_jump
     "back_to_top": "↑ 回頂端",
     "archive_title": "過去事件封存",
+    # --- 404 頁 ---
+    "notfound_title": "找不到頁面",
+    "notfound_body": "您尋找的頁面不存在或已移動。請返回總覽。",
     # --- 事件子頁 ---
     "status_active": "目前事件",
     "status_ended": "已封存事件",
@@ -167,6 +170,9 @@ STRINGS = {
     "county_latest": "最新 {n} 件",  # 見上 chip_jump
     "back_to_top": "↑ トップへ",
     "archive_title": "過去のイベント（アーカイブ）",
+    # --- 404 ページ ---
+    "notfound_title": "ページが見つかりません",
+    "notfound_body": "お探しのページは存在しないか、移動した可能性があります。総覧に戻ってください。",
     # --- イベント詳細 ---
     "status_active": "現在進行中",
     "status_ended": "アーカイブ済み",

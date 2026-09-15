@@ -728,6 +728,50 @@ def build_event_page(lang, ev, ts, depth):
 SITE_BASE = "https://weather.avpclub.eu.org"
 
 
+def build_misc_files(events, ts, groups):
+    """404 頁（各語言）＋ robots.txt ＋ sitemap.xml。
+
+    404.html 是 Cloudflare Pages 的關鍵開關：專案沒有 top-level 404.html 時，
+    Pages 視為 SPA，所有未匹配路徑回 index.html＋HTTP 200（soft-404，爬蟲無法
+    偵測不存在頁面）；存在時自動以真正的 404 status 回傳它（見 CF 官方文件
+    「Serving Pages / SPA rendering」）。ja/404.html 供 Pages 的「就近 404」查找。
+    """
+    tz8 = datetime.timezone(datetime.timedelta(hours=8))
+    now = datetime.datetime.now(tz8)
+
+    # --- 404 頁（各語言，沿用全站模板＋側欄導覽）---
+    for lang in LANGS:
+        if i18n.is_default(lang):
+            base, outdir = "", OUT
+        else:
+            base, outdir = "../", OUT / lang
+        outdir.mkdir(parents=True, exist_ok=True)
+        nav = build_nav(lang, events, base + "index.html", base, "__notfound__", groups)
+        content = (f'<h1>{t(lang, "notfound_title")}</h1>'
+                   f'<p>{t(lang, "notfound_body")}</p>'
+                   f'<a class="backlink" href="{base}index.html">{t(lang, "back_home")}</a>')
+        page = render_page(lang, t(lang, "notfound_title"), ts, base + "index.html", nav, content)
+        (outdir / "404.html").write_text(page, encoding="utf-8")
+
+    # --- robots.txt（沒有 404.html 時它會被 SPA fallback 吃掉，故與 404 一同產出）---
+    (OUT / "robots.txt").write_text(
+        "User-agent: *\nAllow: /\n\nSitemap: " + SITE_BASE + "/sitemap.xml\n", encoding="utf-8")
+
+    # --- sitemap.xml（繁中頁：首頁＋地圖＋事件頁；ja 頁由站内連結發現）---
+    def d(x: datetime.datetime) -> str:
+        return x.strftime("%Y-%m-%d")
+    urls = [(SITE_BASE + "/", d(now)), (SITE_BASE + "/map/", d(now))]
+    for e in events:
+        urls.append((SITE_BASE + "/" + "/".join(e["url"]),
+                     d(datetime.datetime.fromtimestamp(e["mtime"], tz8))))
+    xml = ['<?xml version="1.0" encoding="UTF-8"?>',
+           '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for loc, lastmod in urls:
+        xml.append(f"  <url><loc>{loc}</loc><lastmod>{lastmod}</lastmod></url>")
+    xml.append("</urlset>")
+    (OUT / "sitemap.xml").write_text("\n".join(xml) + "\n", encoding="utf-8")
+
+
 def build_llms_files(events, ts, cwa_ctx):
     """產生 llms.txt（簡明索引＋目前風險狀態）與 llms-full.txt（事件全文），供 LLM 讀取本站內容。
 
@@ -845,6 +889,7 @@ def main():
             out_path.write_text(page, encoding="utf-8")
 
     build_llms_files(events, ts, cwa_ctx)
+    build_misc_files(events, ts, groups)
 
     # 地圖紅警（TODO §2）：cbph 災防告警 → build/map.geo.json（build 中間檔，gitignore）。
     # 容錯：單類抓取失敗記 warning（cbph 內部已印）＋寫入 map.geo.json 的 warnings 欄、
@@ -879,7 +924,7 @@ def main():
     mode = cwa_ctx[3]
     src_note = {"live": "CWA live", "partial": "CWA partial（含舊資料）", "cache": "CWA 快取", "none": "CWA 無法取得"}[mode]
     risk, _ = cwa.current_risk_level("zh-Hant", cwa_ctx[0], cwa_ctx[2], mode)
-    print(f"build 完成：{len(events)} 個事件（active {sum(1 for e in events if e['status']=='active')} / ended {sum(1 for e in events if e['status']!='active')}）｜{src_note}｜目前風險：{risk}｜llms.txt + llms-full.txt 已產生｜map.geo.json：{n_alerts} 筆生效告警｜/map/ 已產出")
+    print(f"build 完成：{len(events)} 個事件（active {sum(1 for e in events if e['status']=='active')} / ended {sum(1 for e in events if e['status']!='active')}）｜{src_note}｜目前風險：{risk}｜llms.txt + llms-full.txt + 404/robots/sitemap 已產生｜map.geo.json：{n_alerts} 筆生效告警｜/map/ 已產出")
     print(f"輸出：{OUT}")
     print(f"預覽：cd {OUT} && python3 -m http.server 8080")
 
