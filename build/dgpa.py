@@ -27,7 +27,7 @@ from datetime import datetime, timedelta, timezone
 from i18n import t
 
 FEED_URL = "https://alerts.ncdr.nat.gov.tw/RssAtomFeed.ashx?AlertType=33"
-QUERY_URL = "https://dgpa.gov.tw/typh/daily/nds.html"
+QUERY_URL = "https://www.dgpa.gov.tw/typh/daily/nds.html"  # 2026/9/15 修正：apex（無 www）連線失敗，官方僅 www 可用
 TIMEOUT = 30
 _TZ = timezone(timedelta(hours=8))
 _NS = {"a": "http://www.w3.org/2005/Atom",

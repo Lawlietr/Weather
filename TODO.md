@@ -87,7 +87,7 @@ cbph API 對「**目前沒有生效中告警的類型**」回 HTTP 503（非空�
 | 層 | 來源 | 形態 |
 |---|------|------|
 | **P0 結構化 feed** | `alerts.ncdr.nat.gov.tw/RssAtomFeed.ashx?AlertType=33` | Atom feed＋每筆完整 CAP XML：官方通知原文、`sent/effective/expires`、`areaDesc`＋`geocode`（Taiwan_Geocode_103 縣市代碼） |
-| P1 人工查證頁 | DGPA 22 縣市即時查詢頁（`dgpa.gov.tw/typh/daily/nds.html`，「資料來源：各縣市政府」） | 官方 HTML，feed 異常時人工對照 |
+| P1 人工查證頁 | DGPA 22 縣市即時查詢頁（`https://www.dgpa.gov.tw/typh/daily/nds.html`，「資料來源：各縣市政府」；僅 www 可用） | 官方 HTML，feed 異常時人工對照 |
 | P2 事件存檔 | 事件 markdown「停班停課」章節（人工） | 歷史紀錄層（本節剩餘工作） |
 
 發布機制（官方）：全日/上午停班須**前一日 19:00–22:00 前**發布、下午/晚間停班**當日上午 10:30 前**發布（已寫進卡面提示）。
