@@ -238,7 +238,7 @@ cd public && python3 -m http.server 8080
   到 GitHub repo → Actions tab → "Build & Deploy" → "Run workflow"。
 - **更新 agent**：負責「查 CWA API/新聞 → 更新 markdown → build → push」。
   輸入就是本文件 §1～§3；agent 不需懂解析細節，照 check 清單驗收即可。
-- **地圖紅警層（CWA，2026/8/28 定案、2026/9/1 補 cbph API 實測；gazetteer（9/1）＋cbph→`build/map.geo.json`（9/2）＋`/map/` 骨架（9/2，DEV）均已完成，剩觀測層（步驟 4））**：全自動——build 時抓 CWA（**cbph 災防告警 polygon**（`cbph.cwa.gov.tw/api/`，免 key、官方座標、免 gazetteer；`build/cbph.py` 已掛 `site.py` 流水線，任何類型失敗只 warning、不中斷 build）＋特報/雨量站/氣旋）合成 `map.geo.json`（build 中間檔、gitignore）與 `/map/` 頁（`build/map_page.py`＋自託 Leaflet 1.9.4＋離線瓦片 `build/tiles.py`；瓦片來源 `tile.openstreetmap.de`——OSM 官方 server 對本機 IP 假 200 封鎖，見 `tiles.py` 頭註），掛在**現有每 2 小時排程**上，不新增排程/agent/金鑰；陸地特報紅區仍靠 gazetteer（`build/gazetteer.json`，存 repo）轉換文字。細節見 `TODO.md` §2；災情新聞點層（§2b）維持人工把關。
+- **地圖紅警層（CWA，2026/8/28 定案、2026/9/1 補 cbph API 實測；gazetteer（9/1）＋cbph→`build/map.geo.json`（9/2）＋`/map/` 骨架（9/2，DEV）均已完成；步驟 4 觀測層拆 3 小批（9/16 定案：4a 雨量站點層實作中、4b 颱風軌跡/風圈、4c 特報陸地紅區用**自託縣界 GeoJSON**——gazetteer 只有中心點座標、無邊界多邊形））**：全自動——build 時抓 CWA（**cbph 災防告警 polygon**（`cbph.cwa.gov.tw/api/`，免 key、官方座標、免 gazetteer；`build/cbph.py` 已掛 `site.py` 流水線，任何類型失敗只 warning、不中斷 build）＋特報/雨量站/氣旋）合成 `map.geo.json`（build 中間檔、gitignore）與 `/map/` 頁（`build/map_page.py`＋自託 Leaflet 1.9.4＋離線瓦片 `build/tiles.py`；瓦片來源 `tile.openstreetmap.de`——OSM 官方 server 對本機 IP 假 200 封鎖，見 `tiles.py` 頭註），掛在**現有每 2 小時排程**上，不新增排程/agent/金鑰；陸地特報紅區仍靠 gazetteer（`build/gazetteer.json`，存 repo）轉換文字。細節見 `TODO.md` §2；災情新聞點層（§2b）維持人工把關。
 
 ---
 

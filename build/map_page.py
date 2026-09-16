@@ -7,8 +7,9 @@
   Leaflet 指向 public/assets/tiles/ → 前端零外部請求。
 - 佈局：全幅地圖（預設全台視角 z8）＋右側欄（行動版 bottom sheet）：
   點擊詳情卡＋圖例＋圖層開關＋「產生時間」（快照標示必顯示）。
-- 資料：build/map.geo.json（cbph 災防告警快照，build 時由 cbph.py 先寫）；
-  此模組只渲染、不新增抓取。顏色/等級閾值邏輯在 build 端，前端只負責渲染。
+- 資料：build/map.geo.json（cbph 災防告警 polygon 快照＋雨量站觀測點 Point，
+  build 時由 cbph.py＋cwa.fetch_rain_points() 先寫）；此模組只渲染、不新增抓取。
+  顏色/等級閾值邏輯在 build 端，前端只負責渲染。
 - 無 JS fallback：靜態告警清單＋回總覽連結（靜態 SVG 總覽在首頁）。
 - 瓦片署名義務：頁尾必顯示「© OpenStreetMap contributors」（瓦片來源 OSM 德國社群 server tile.openstreetmap.de，2026/9/2 起；官方 server 對本機 IP 假 200 封鎖，見 tiles.py 註）。
 """
@@ -22,16 +23,22 @@ from cbph import TYPES  # slug → (中文名, 配色)，與 cbph UI 一致
 MAP_CENTER = [23.8, 120.95]
 MAP_ZOOM = 8
 # 瓦片範圍稍寬於抓取 bbox，允許用戶稍微平移
-MAP_MAX_BOUNDS = [[21.2, 117.4], [27.0, 122.7]]
+# ⚠️ 本範圍的**中心點必須與 MAP_CENTER 一致**：z8 下桌面 viewport（>965px 寬）比本範圍更寬，
+# Leaflet _limitCenter 會把 viewport 重新對到範圍中心（2026/9/16 實測：舊的對稱範圍
+# [[21.2,117.4],[27.0,122.7]] 中心在 (24.1,120.05)，導致初始視圖偏西 0.9°、福建海岸偏中間）。
+# 範圍總跨維持 5.8°×5.3°，離線瓦片覆蓋 118–122°E／21.9–26.4°N（tiles.py BBOX）仍在內。
+MAP_MAX_BOUNDS = [[20.9, 118.3], [26.7, 123.6]]
 
 THEME_VARS = """
 :root{--red:#ef5350;--yellow:#ffb300;--green:#66bb6a;
 --bg:#14181c;--card:#1d242c;--line:#2f3944;--ink:#e4e8ec;--muted:#98a3af;
 --accent:#64b5f6;--chip-bg:#2a333e;--side-bg:#0f1317;--head-bg:#0c0f12;
 color-scheme:dark;}
+/* 與 site.py 主題變數同步（子集：本頁未用 risk-bg/table-head/ph-*）；
+   site.py 改主題色時須一併更新此處（2026/9/16 曾遺漏淡黃舊版）。 */
 :root[data-theme="light"]{--red:#c62828;--yellow:#ef8f00;--green:#2e7d32;
---bg:#fff6dd;--card:#fffdf4;--line:#e6d7ae;--ink:#33280f;--muted:#7d6c48;
---accent:#a05e00;--chip-bg:#f5e8c3;--side-bg:#fbf1d4;--head-bg:#263238;
+--bg:#f9f3eb;--card:#fcfaf7;--line:#d1b594;--ink:#3b2816;--muted:#76614c;
+--accent:#a35200;--chip-bg:#f2e4d4;--side-bg:#f5eee5;--head-bg:#342214;
 color-scheme:light;}
 """
 
@@ -58,6 +65,9 @@ header.site{background:var(--head-bg);color:#fff;padding:8px 0;position:sticky;t
 .layer{display:flex;align-items:center;gap:8px;padding:5px 2px;font-size:.9rem;cursor:pointer}
 .layer input{accent-color:var(--accent);width:16px;height:16px;margin:0}
 .swatch{width:14px;height:14px;border-radius:3px;flex:none}
+.swatch.round{border-radius:50%}
+.rain-legend{margin:2px 0 6px 24px;font-size:.8rem;color:var(--muted);line-height:1.9}
+.rain-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
 .layer .cnt{margin-left:auto;color:var(--muted);font-size:.85rem}
 .map-detail{font-size:.9rem}
 .map-detail .dl{margin:8px 0}
@@ -102,9 +112,10 @@ def _noscript_html(lang, fc, root_prefix):
     """無 JS fallback：靜態告警清單＋回總覽（靜態 SVG 總覽在首頁）。"""
     parts = [f'<p>{t(lang, "map_noscript")}</p>']
     feats = fc.get("features", [])
-    if feats:
+    alerts = [f for f in feats if f["properties"].get("type") != "rain"]
+    if alerts:
         lis = []
-        for f in feats:
+        for f in alerts:
             p = f["properties"]
             eff = f'{p["effective"]} → {p["expires"]}' if p.get("expires") else (p.get("effective") or "")
             counties = "、".join(p.get("counties", [])) or "—"
@@ -112,6 +123,16 @@ def _noscript_html(lang, fc, root_prefix):
         parts.append(f'<ul>{"".join(lis)}</ul>')
     else:
         parts.append(f'<p>{t(lang, "map_none")}</p>')
+    rain = [f for f in feats if f["properties"].get("type") == "rain"]
+    if rain:
+        parts.append(f'<p><b>{t(lang, "map_noscript_rain")} {len(rain)} 站</b></p>')
+        parts.append(
+            "<ul>" + "".join(
+                f'<li>{f["properties"]["name"]}（{f["properties"].get("county", "")}'
+                f'{f["properties"].get("township", "")}）：'
+                f'{t(lang, "map_rain_p1hr")} {f["properties"]["p1hr"]}mm ／ '
+                f'{t(lang, "map_rain_p24hr")} {f["properties"]["p24hr"]}mm</li>'
+                for f in rain[:10]) + "</ul>")
     parts.append(f'<p><a href="{root_prefix}index.html">← {t(lang, "back_home")}</a></p>')
     return '<div class="map-noscript">' + "".join(parts) + "</div>"
 
@@ -127,10 +148,12 @@ def build(OUT, fc, events, warnings=None):
         assets = "../assets/" if is_default(lang) else "../../assets/"
         base = "../"  # /map/ → 本語言根
 
-        # 每筆 feature 附上 repo 相關事件連結（build 端計算，前端只渲染）
+        # 每筆 feature 附上 repo 相關事件連結（build 端計算，前端只渲染）；
+        # 雨量站點用單值 county 欄。
         for f in fc.get("features", []):
-            f["properties"]["repo_links"] = _events_for_counties(
-                events, f["properties"].get("counties", []))
+            p = f["properties"]
+            counties = p.get("counties") or ([p["county"]] if p.get("county") else [])
+            p["repo_links"] = _events_for_counties(events, counties)
 
         counts = {slug: 0 for slug in TYPES}
         for f in fc.get("features", []):
@@ -141,6 +164,18 @@ def build(OUT, fc, events, warnings=None):
             f'<span class="swatch" style="background:{color}"></span>{name}'
             f'<span class="cnt">{counts[slug]}</span></label>'
             for slug, (name, color) in TYPES.items())
+        rain_feats = [f for f in fc.get("features", []) if f["properties"].get("type") == "rain"]
+        layers_html += (
+            f'<label class="layer"><input type="checkbox" data-type="rain" checked>'
+            f'<span class="swatch round" style="background:#dc2626"></span>{t(lang, "map_layer_rain")}'
+            f'<span class="cnt">{len(rain_feats)}</span></label>')
+        if rain_feats:
+            layers_html += (
+                f'<div class="rain-legend">'
+                f'<span><i style="background:#dc2626"></i>{t(lang, "map_rain_l3")}</span><br>'
+                f'<span><i style="background:#ea580c"></i>{t(lang, "map_rain_l2")}</span><br>'
+                f'<span><i style="background:#f59e0b"></i>{t(lang, "map_rain_l1")}</span>'
+                f'</div>')
 
         warn_html = ""
         if fc.get("warnings"):
@@ -160,9 +195,15 @@ def build(OUT, fc, events, warnings=None):
             "repo": t(lang, "map_repo"),
             "repo_none": t(lang, "map_no_repo"),
             "src": t(lang, "map_src"),
+            "rain_loc": t(lang, "map_rain_loc"),
+            "rain_p1hr": t(lang, "map_rain_p1hr"),
+            "rain_p24hr": t(lang, "map_rain_p24hr"),
+            "rain_pday": t(lang, "map_rain_pday"),
+            "rain_obs": t(lang, "map_rain_obs"),
+            "rain_note": t(lang, "map_rain_note"),
         }, ensure_ascii=False)
 
-        n = len(fc.get("features", []))
+        n = len([f for f in fc.get("features", []) if f["properties"].get("type") != "rain"])
         none_p = json.dumps('<p class="muted">' + t(lang, "map_none") + "</p>", ensure_ascii=False)
         page = f"""<!DOCTYPE html>
 <html lang="{lang}">
@@ -230,6 +271,14 @@ def build(OUT, fc, events, warnings=None):
     var polys = [];
     byType[type].forEach(function(f){{
       var p = f.properties;
+      if (f.geometry.type === "Point"){{
+        var mk = L.circleMarker([f.geometry.coordinates[1], f.geometry.coordinates[0]],
+          {{radius: p.radius, color: "#fff", weight: 2, fillColor: p.color, fillOpacity: 0.95}});
+        mk.bindTooltip(p.name + " " + (p.township || "") + "　" + LABELS.rain_p1hr + " " + p.p1hr + "mm", {{sticky: true}});
+        mk.on("click", function(){{ showRainDetail(p); }});
+        polys.push(mk);
+        return;
+      }}
       var tip = p.type_name + (p.effective ? " " + p.effective + " → " + (p.expires || "") : "");
       var counties = (p.counties || []).join("、");
       if (counties) tip += "（" + counties + "）";
@@ -271,6 +320,17 @@ def build(OUT, fc, events, warnings=None):
     if ((p.towns || []).length) row(LABELS.town, p.towns.join("、"));
     row(LABELS.desc, p.description || "—");
     row(LABELS.cmam, (p.cmam_text || "—") + (p.cb_enabled ? "（" + LABELS.cb_on + "）" : "（" + LABELS.cb_off + "）"));
+    addRepo(p);
+    if (p.source_url){{
+      var s = document.createElement("p");
+      var a2 = document.createElement("a");
+      a2.href = p.source_url; a2.target = "_blank"; a2.rel = "noopener";
+      a2.textContent = "↗ " + LABELS.src;
+      s.appendChild(a2); detail.appendChild(s);
+    }}
+    panel.classList.add("open");
+  }}
+  function addRepo(p){{
     var repo = document.createElement("div"); repo.className = "dl";
     var rk = document.createElement("div"); rk.className = "dt"; rk.textContent = LABELS.repo;
     repo.appendChild(rk);
@@ -288,13 +348,23 @@ def build(OUT, fc, events, warnings=None):
       repo.appendChild(none);
     }}
     detail.appendChild(repo);
-    if (p.source_url){{
-      var s = document.createElement("p");
-      var a2 = document.createElement("a");
-      a2.href = p.source_url; a2.target = "_blank"; a2.rel = "noopener";
-      a2.textContent = "↗ " + LABELS.src;
-      s.appendChild(a2); detail.appendChild(s);
-    }}
+  }}
+  function showRainDetail(p){{
+    detail.innerHTML = "";
+    var h = document.createElement("div"); h.className = "type-head";
+    var sw = document.createElement("span"); sw.className = "swatch round"; sw.style.background = p.color;
+    var name = document.createElement("span"); name.textContent = p.name;
+    h.appendChild(sw); h.appendChild(name); detail.appendChild(h);
+    row(LABELS.rain_loc, [p.county, p.township].filter(Boolean).join(""));
+    row(LABELS.rain_p1hr, p.p1hr + " mm");
+    row(LABELS.rain_p24hr, p.p24hr + " mm");
+    row(LABELS.rain_pday, p.pday + " mm");
+    row(LABELS.rain_obs, p.obs || "—");
+    addRepo(p);
+    var note = document.createElement("p");
+    note.className = "muted"; note.style.cssText = "font-size:.8rem;margin:10px 0 0";
+    note.textContent = LABELS.rain_note;
+    detail.appendChild(note);
     panel.classList.add("open");
   }}
 

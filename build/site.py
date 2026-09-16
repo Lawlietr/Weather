@@ -1081,6 +1081,18 @@ def main():
     build_dir = Path(__file__).resolve().parent
     n_alerts, _cbph_warnings = cbph.build_map_geojson(build_dir / "map.geo.json")
 
+    # 觀測層（TODO §2 執行順序 4a）：雨量站超閾值 → 併入 map.geo.json。
+    # 容錯獨立於 cbph：失敗只跳該層、不中斷 build（沿用 RSS 守則）。
+    try:
+        geo = json.loads((build_dir / "map.geo.json").read_text(encoding="utf-8"))
+        rain_pts = cwa.fetch_rain_points()
+        geo["features"] = geo.get("features", []) + rain_pts
+        (build_dir / "map.geo.json").write_text(
+            json.dumps(geo, ensure_ascii=False, indent=1), encoding="utf-8")
+        print(f"map 雨量站層：{len(rain_pts)} 站（超閾值）")
+    except Exception as e:
+        print(f"[warning] map 雨量站層：{e} — 跳過該層")
+
     # 地圖紅警（TODO §2 執行順序 3）：/map/ 獨立頁＋離線瓦片＋自託 Leaflet。
     # 全部容錯不中斷：瓦片缺 → 空白底；Leaflet/靜態檔缺失 → 地圖頁退化（noscript 清單仍在）。
     geo_path = build_dir / "map.geo.json"

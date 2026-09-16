@@ -190,6 +190,75 @@ def fetch_rain():
     return out[:10]
 
 
+# /map/ 雨量站觀測層三級閾值（2026/9/16 定案、真實資料校準）：
+# 條件為「p1hr ≥ 閾值 **或** p24hr ≥ 閾值」，同時滿足多級時取最高級。
+# 校準例（2026/9/16 14:50，淡雨日）：L3 0 站 / L2 1 站 / L1 13 站——淡雨日
+# 點數可控，颱風期間高自然上升。詳見 TODO.md §2 執行順序 4a。
+RAIN_LEVELS = (
+    # (p1hr 閾值 mm, p24hr 閾值 mm, 顏色, 半徑 px)
+    (50.0, 250.0, "#dc2626", 11),
+    (25.0, 100.0, "#ea580c", 8),
+    (10.0, 50.0, "#f59e0b", 5),
+)
+
+
+def fetch_rain_points():
+    """O-A0002-001 超閾值雨量站 → /map/ 觀測層 Point features（map_page.py 渲染）。
+
+    - 座標必須取 `GeoInfo.Coordinates` 中 **WGS84** 一筆（另有 TWD67，與 OSM
+      瓦片座標系不符、會偏移）。
+    - 低於最低級閾值者不上圖；與 fetch_rain()（首頁 top 10）各自獨立抓取
+      （每次 build 多一次 HTTP、可接受；故障互相獨立，單層失敗不影響他層）。
+    - obs 統一轉「YYYY/M/D HH:MM」（UTC+8）。
+    - 回傳依 p1hr 降序（noscript fallback 取前 10 即雨量最大者）。
+    """
+    d = _get_json("O-A0002-001")
+    out = []
+    for s in d.get("records", {}).get("Station", []):
+        el = s.get("RainfallElement", {})
+        p1 = _num((el.get("Past1hr") or {}).get("Precipitation")) or 0.0
+        p24 = _num((el.get("Past24hr") or {}).get("Precipitation")) or 0.0
+        pday = _num((el.get("Now") or {}).get("Precipitation")) or 0.0
+        lvl = next(
+            ((color, radius) for m1, m24, color, radius in RAIN_LEVELS
+             if p1 >= m1 or p24 >= m24),
+            None)
+        if lvl is None:
+            continue
+        color, radius = lvl
+        geo = s.get("GeoInfo", {})
+        lat = lon = None
+        for c in geo.get("Coordinates", []):
+            if c.get("CoordinateName") == "WGS84":
+                lat, lon = _num(c.get("StationLatitude")), _num(c.get("StationLongitude"))
+                break
+        if lat is None or lon is None:
+            continue
+        obs_raw = (s.get("ObsTime") or {}).get("DateTime", "")
+        try:
+            obs = datetime.fromisoformat(obs_raw).astimezone(TZ_TW).strftime("%Y/%-m/%-d %H:%M")
+        except (TypeError, ValueError):
+            obs = obs_raw
+        out.append({
+            "type": "Feature",
+            "geometry": {"type": "Point", "coordinates": [lon, lat]},
+            "properties": {
+                "type": "rain",
+                "type_name": "雨量站",
+                "color": color,
+                "radius": radius,
+                "name": s.get("StationName", ""),
+                "county": geo.get("CountyName", ""),
+                "township": geo.get("TownName", ""),
+                "p1hr": p1, "p24hr": p24, "pday": pday,
+                "obs": obs,
+                "source": "CWA O-A0002-001",
+            },
+        })
+    out.sort(key=lambda f: -f["properties"]["p1hr"])
+    return out
+
+
 def load_snapshot():
     """回傳 (data, errors, stale, mode)。
     mode: live（全部成功）/ partial（部分成功）/ cache（全敗用快取）/ none（全敗無快取）

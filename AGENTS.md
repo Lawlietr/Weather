@@ -151,7 +151,7 @@
 
 - 預設分支：`main`（原 `master` 已更名）
 - Remotes：`origin`＝內部 Forgejo（`ssh://fg/lawliet/Weather.git`，內網，Identity `~/.ssh/id_rsa_gitea`）；`github`＝公開 repo `Lawlietr/Weather`（SSH `git@github.com:Lawlietr/Weather.git`，key `id_ed25519_github`，直推即可、**不需要 `GH_PAT`**）。commit 後**兩邊都推**：`git push origin <branch> && git push github <branch>`
-- 功能開發在 `DEV` 分支，**經使用者確認後才合併回 `main`**
+- **開發流程（2026/9/16 重申：勿直接 commit/push `main`）**：所有開發在 `DEV` 分支 commit→build＋部署測試站 `wea-testing`、真瀏覽器（Playwright）驗證→**經使用者同意後**才將 `DEV` 合併進 `main` 並推 `main`（兩邊 remote 皆推）。生產自動部署（`build/deploy-cron.sh`→`deploy.sh`）**以 repo 目前 checkout 為準、無分支邏輯**：DEV 開發期間跑自動部署＝DEV 內容上生產；合併回 `main` 後切回 `main` 再部署即恢復生產為已合併狀態。
 - 無 lint/test 指令；**排程狀態（2026/8/29 起）**：GitHub Actions 僅保留 `workflow_dispatch`（排程已停用，原因：runner 到 CWA 連線不穩定、會推舊資料）；**主力自動更新通道＝本地 cron**（CWA 前置檢查 3 次重試、失敗中止）。部署指令與恢復 Actions 的條件 → `WORKFLOW.md` §7
 
 ---
@@ -193,6 +193,8 @@
 ## Obscura 無頭瀏覽器
 
 爬 API 沒有的 JS 渲染頁面（如 CWA 官網頁面）。**工具用法見 skill `/root/.pi/agent/skills/obscura/SKILL.md`**。本 repo 特定事實：
+
+- **⚠️ `/map/`（Leaflet 向量層）驗證一律先用 Playwright 真 Chromium，不要用 obscura 截圖判層（2026/9/16 實測）**：obscura 引擎缺 SVG 1.1 factory API（`createSVGRect` 等）→ `L.Browser.svg === false` → 所有向量層（雨量圓點、告警 polygon）不渲染且無 console 輸出，截圖會假陽性「圖層空」。Playwright 跑法：`NODE_PATH=/root/opencode-stuffs/steam-deck-utilities/web/node_modules node <script>`（Chromium 在 `~/.cache/ms-playwright`，npx 預設解析路徑沒有 browser 不可用）；驗證要點＝`.leaflet-overlay-pane path.leaflet-interactive` 的數量＋fill 顏色分佈＋實際中心座標（可用 tile src 座標反算）。obscura 的 SVG/console 缺陷已備妥 bug 報告文本待回報。
 
 - CWA 颱風頁：`P/Typhoon/TY_WARN.html`（警報狀態）、`TY_NEWS.html`（路徑潛勢）、`TY_WIND.html`（強風）；舊路徑 `Typhoon.html` 已移除；首頁 SVG JS 錯誤不阻擋主要內容。
 - 多語句 JS 需包 IIFE；SSRF 阻擋需 `--allow-private-network`；容器未運行：`docker run -d --name obscura -p 3000:3000 h4ckf0r0day/obscura mcp --http --port 3000 --host 0.0.0.0`
