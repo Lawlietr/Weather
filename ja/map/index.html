@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>災害警戒マップ｜台湾の天気と災害情報</title>
+<script>/* 避免閃爍：先還原主題偏好再渲染 */(function(){var t=null;try{t=localStorage.getItem("wtf-theme")}catch(e){}if(t!=="light"&&t!=="dark")t="dark";document.documentElement.setAttribute("data-theme",t);})();</script>
+<style>
+:root{--red:#ef5350;--yellow:#ffb300;--green:#66bb6a;
+--bg:#14181c;--card:#1d242c;--line:#2f3944;--ink:#e4e8ec;--muted:#98a3af;
+--accent:#64b5f6;--chip-bg:#2a333e;--side-bg:#0f1317;--head-bg:#0c0f12;
+color-scheme:dark;}
+:root[data-theme="light"]{--red:#c62828;--yellow:#ef8f00;--green:#2e7d32;
+--bg:#fff6dd;--card:#fffdf4;--line:#e6d7ae;--ink:#33280f;--muted:#7d6c48;
+--accent:#a05e00;--chip-bg:#f5e8c3;--side-bg:#fbf1d4;--head-bg:#263238;
+color-scheme:light;}
+
+*{box-sizing:border-box}
+body.map-page{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei","Hiragino Sans","Noto Sans JP","Yu Gothic","Meiryo",sans-serif;color:var(--ink);background:var(--bg);line-height:1.7;font-size:16px}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.muted{color:var(--muted)}
+header.site{background:var(--head-bg);color:#fff;padding:8px 0;position:sticky;top:0;z-index:40}
+.site-bar{max-width:none;margin:0;padding:2px 14px;display:flex;align-items:center;gap:10px}
+.site-bar h1{font-size:1.05rem;margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.backlink{color:#b0bec5;white-space:nowrap;flex:none}
+.updated{color:#b0bec5;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none}
+.map-wrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;height:calc(100vh - 49px)}
+#map{min-height:320px;background:var(--bg)}
+.leaflet-container{background:var(--bg);font:inherit}
+.map-panel{background:var(--card);border-left:1px solid var(--line);overflow-y:auto}
+.panel-tab{display:none}
+.panel-body{padding:14px 16px}
+.map-updated{font-size:.85rem;color:var(--muted);margin:0 0 10px}
+.map-warn{background:var(--chip-bg);border:1px solid var(--yellow);border-radius:8px;padding:8px 12px;margin:8px 0;font-size:.85rem}
+.map-panel h3{font-size:.95rem;border-bottom:1px solid var(--line);padding-bottom:4px;margin:18px 0 8px}
+.layer{display:flex;align-items:center;gap:8px;padding:5px 2px;font-size:.9rem;cursor:pointer}
+.layer input{accent-color:var(--accent);width:16px;height:16px;margin:0}
+.swatch{width:14px;height:14px;border-radius:3px;flex:none}
+.layer .cnt{margin-left:auto;color:var(--muted);font-size:.85rem}
+.map-detail{font-size:.9rem}
+.map-detail .dl{margin:8px 0}
+.map-detail .dt{color:var(--muted);font-size:.8rem;margin-bottom:1px}
+.map-detail .dd{white-space:pre-wrap;word-break:break-word}
+.map-detail .dd-src{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:.85rem}
+.map-detail ul{list-style:none;padding:0;margin:4px 0}
+.map-detail li{padding:3px 0}
+.map-detail .type-head{display:flex;align-items:center;gap:8px;font-weight:700;font-size:1rem}
+.map-noscript{padding:20px;font-size:.95rem}
+.map-noscript ul{padding-left:18px}
+footer.map-foot{background:var(--head-bg);color:#90a4ae;padding:8px 14px;font-size:.78rem}
+/* 行動版（<768px）：右側欄改為 bottom sheet */
+@media(max-width:767px){
+.map-wrap{display:block;height:auto}
+#map{height:62vh;min-height:320px}
+.map-panel{position:fixed;left:0;right:0;bottom:0;z-index:50;border-left:none;border-top:2px solid var(--line);
+border-radius:14px 14px 0 0;max-height:70vh;transform:translateY(calc(100% - 46px));transition:transform .25s ease;box-shadow:0 -6px 24px rgba(0,0,0,.35)}
+.map-panel.open{transform:translateY(0)}
+.panel-tab{display:flex;align-items:center;gap:8px;width:100%;padding:11px 14px;background:none;border:none;
+color:var(--ink);font:inherit;font-weight:700;cursor:pointer}
+.panel-tab .updated{margin-left:auto}
+#panel-close{display:inline-flex;background:none;border:none;color:var(--muted);font-size:1rem;cursor:pointer;padding:4px}
+.panel-body{padding-bottom:24px}
+}
+</style>
+<link rel="stylesheet" href="../../assets/leaflet/leaflet.css">
+</head>
+<body class="map-page">
+<header class="site">
+<div class="site-bar">
+<a class="backlink" href="../index.html">← 総覧に戻る</a>
+<h1>🗺 災害警戒マップ</h1>
+<span class="updated">生成時間：2026/9/16 14:16（2時間ごとに更新・リアルタイムではありません）</span>
+</div>
+</header>
+<div class="map-wrap">
+<div id="map">
+<noscript><div class="map-noscript"><p>JavaScript が無効です：以下は静的な警報リストです。インタラクティブ地図には JS が必要です。</p><p>現在有効な災害防警報はありません</p><p><a href="../index.html">← ← 総覧に戻る</a></p></div></noscript>
+</div>
+<aside class="map-panel" id="panel">
+<button class="panel-tab" id="panel-tab" aria-expanded="false">
+<span>⚠️ 警戒マップ・有効 0 件</span>
+<span class="updated">生成時間：2026/9/16 14:16（2時間ごとに更新・リアルタイムではありません）</span>
+<span id="panel-close" role="button" aria-label="閉じる">✕</span>
+</button>
+<div class="panel-body">
+<p class="map-updated">生成時間：2026/9/16 14:16（2時間ごとに更新・リアルタイムではありません）</p>
+
+<h3>レイヤー</h3>
+<label class="layer"><input type="checkbox" data-type="cells" checked><span class="swatch" style="background:#f59e0b"></span>大雷雨即時訊息<span class="cnt">0</span></label><label class="layer"><input type="checkbox" data-type="tywinds" checked><span class="swatch" style="background:#ef4444"></span>颱風強風告警<span class="cnt">0</span></label><label class="layer"><input type="checkbox" data-type="mountainstorms" checked><span class="swatch" style="background:#7c3aed"></span>山區暴雨警示<span class="cnt">0</span></label><label class="layer"><input type="checkbox" data-type="largesurfs" checked><span class="swatch" style="background:#0ea5e9"></span>巨浪告警<span class="cnt">0</span></label>
+<h3>警報の詳細</h3>
+<div class="map-detail" id="detail"><p class="muted">地図上の警戒領域をクリックすると詳細が表示されます</p></div>
+</div>
+</aside>
+</div>
+<footer class="map-foot">出典：中央気象局災害防報システム（PWS）　·　© OpenStreetMap contributors</footer>
+<script id="map-data" type="application/json">{"type": "FeatureCollection", "generated_at": "2026/9/16 14:16", "source": "中央氣象署災防告警系統（PWS）", "api": "cbph.cwa.gov.tw", "note": "build 時快照、每 2 小時更新、非即時", "warnings": [], "features": []}</script>
+<script src="../../assets/leaflet/leaflet.js"></script>
+<script>
+(function(){
+  var raw = document.getElementById("map-data");
+  var detail = document.getElementById("detail");
+  var panel = document.getElementById("panel");
+  var mapEl = document.getElementById("map");
+  if (!raw || typeof L === "undefined") return;
+  var DATA = JSON.parse(raw.textContent);
+  var LABELS = {"official": "公式番号", "effective": "有効期間", "county": "影響県市", "town": "影響町村", "desc": "告警原文", "cmam": "セルブロードキャスト", "cb_on": "セルブロードキャスト有効", "cb_off": "セルブロードキャスト無効", "repo": "当サイトの関連災害記録", "repo_none": "関連する災害記録はありません", "src": "CWA災害防報公式ページへ戻る"};
+
+  var map = L.map(mapEl, {minZoom:8, maxZoom:11});
+  map.setView([23.8, 120.95], 8);
+  map.setMaxBounds([[21.2, 117.4], [27.0, 122.7]]);
+  L.tileLayer("../../assets/tiles/{z}/{x}_{y}.png",
+    {minZoom:8, maxZoom:11, attribution:"© OpenStreetMap contributors"}).addTo(map);
+
+  var byType = {};
+  DATA.features.forEach(function(f){
+    (byType[f.properties.type] = byType[f.properties.type] || []).push(f);
+  });
+  var layerByType = {};
+  Object.keys(byType).forEach(function(type){
+    var polys = [];
+    byType[type].forEach(function(f){
+      var p = f.properties;
+      var tip = p.type_name + (p.effective ? " " + p.effective + " → " + (p.expires || "") : "");
+      var counties = (p.counties || []).join("、");
+      if (counties) tip += "（" + counties + "）";
+      (f.geometry.coordinates || []).forEach(function(ring){
+        var pg = L.polygon(ring.map(function(c){ return [c[1], c[0]]; }),
+          {color: p.color, weight: 2, fillColor: p.color, fillOpacity: 0.35});
+        pg.bindTooltip(tip, {sticky: true});
+        pg.on("click", function(){ showDetail(p); });
+        polys.push(pg);
+      });
+    });
+    var lg = L.layerGroup(polys).addTo(map);
+    layerByType[type] = lg;
+  });
+
+  document.querySelectorAll(".layer input").forEach(function(cb){
+    cb.addEventListener("change", function(){
+      var lg = layerByType[cb.dataset.type];
+      if (!lg) return;
+      if (cb.checked) lg.addTo(map); else map.removeLayer(lg);
+    });
+  });
+
+  function row(label, value){
+    var d = document.createElement("div"); d.className = "dl";
+    var k = document.createElement("div"); k.className = "dt"; k.textContent = label;
+    var v = document.createElement("div"); v.className = "dd"; v.textContent = value;
+    d.appendChild(k); d.appendChild(v); detail.appendChild(d);
+  }
+  function showDetail(p){
+    detail.innerHTML = "";
+    var h = document.createElement("div"); h.className = "type-head";
+    var sw = document.createElement("span"); sw.className = "swatch"; sw.style.background = p.color;
+    var name = document.createElement("span"); name.textContent = p.type_name;
+    h.appendChild(sw); h.appendChild(name); detail.appendChild(h);
+    row(LABELS.official, p.official_id || "—");
+    row(LABELS.effective, (p.effective || "—") + " → " + (p.expires || "—"));
+    row(LABELS.county, (p.counties || []).join("、") || "—");
+    if ((p.towns || []).length) row(LABELS.town, p.towns.join("、"));
+    row(LABELS.desc, p.description || "—");
+    row(LABELS.cmam, (p.cmam_text || "—") + (p.cb_enabled ? "（" + LABELS.cb_on + "）" : "（" + LABELS.cb_off + "）"));
+    var repo = document.createElement("div"); repo.className = "dl";
+    var rk = document.createElement("div"); rk.className = "dt"; rk.textContent = LABELS.repo;
+    repo.appendChild(rk);
+    var links = p.repo_links || [];
+    if (links.length){
+      var ul = document.createElement("ul");
+      links.forEach(function(e){
+        var li = document.createElement("li");
+        var a = document.createElement("a"); a.href = "../" + e.url; a.textContent = e.name;
+        li.appendChild(a); ul.appendChild(li);
+      });
+      repo.appendChild(ul);
+    } else {
+      var none = document.createElement("div"); none.className = "dd"; none.textContent = LABELS.repo_none;
+      repo.appendChild(none);
+    }
+    detail.appendChild(repo);
+    if (p.source_url){
+      var s = document.createElement("p");
+      var a2 = document.createElement("a");
+      a2.href = p.source_url; a2.target = "_blank"; a2.rel = "noopener";
+      a2.textContent = "↗ " + LABELS.src;
+      s.appendChild(a2); detail.appendChild(s);
+    }
+    panel.classList.add("open");
+  }
+
+  // 行動版 bottom sheet 開關
+  var tab = document.getElementById("panel-tab");
+  function toggle(){
+    var open = panel.classList.toggle("open");
+    tab.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  if (tab) tab.addEventListener("click", function(ev){
+    if (ev.target.id === "panel-close" || ev.target === tab) toggle();
+  });
+  if (!DATA.features.length){
+    detail.innerHTML = "<p class=\"muted\">現在有効な災害防警報はありません</p>";
+  }
+})();
+</script>
+</body>
+</html>
