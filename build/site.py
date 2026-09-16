@@ -69,13 +69,24 @@ CSS = """
 --accent:#64b5f6;--chip-bg:#2a333e;--side-bg:#0f1317;--side-ink:#c9d1d9;
 --head-bg:#0c0f12;--table-head:#252e38;--ph-bg:#241f12;--ph-line:#6e5a1e;--ph-ink:#d3bd7d;
 color-scheme:dark;}
+/* 浅色主題＝琥珀：暖橙奶油調（hue 26–33）；舊版背景 hue 42–45 為純黃，視覺呈「淡黃」而非琥珀 */
 :root[data-theme="light"]{--red:#c62828;--yellow:#ef8f00;--green:#2e7d32;
---bg:#fff6dd;--card:#fffdf4;--line:#e6d7ae;--ink:#33280f;--muted:#7d6c48;
---accent:#a05e00;--chip-bg:#f5e8c3;--side-bg:#fbf1d4;--side-ink:#4d3f22;
---head-bg:#263238;--table-head:#f7edd0;--ph-bg:#fff8e1;--ph-line:#c9a227;--ph-ink:#6d5410;
+--bg:#f9f3eb;--card:#fcfaf7;--line:#d1b594;--ink:#3b2816;--muted:#76614c;
+--accent:#a35200;--chip-bg:#f2e4d4;--side-bg:#f5eee5;--side-ink:#5d4732;
+--head-bg:#342214;--table-head:#f1e7da;--ph-bg:#f7edde;--ph-line:#b8772e;--ph-ink:#5a3616;
 color-scheme:light;}
+/* light 模式：header/footer 原硬編碼冷灰字→暖灰；CTA 按鈕白字（深色字在琥珀底僅 2.7:1） */
+[data-theme="light"] .updated{color:#d1ba9f}
+[data-theme="light"] .lang-switch a{color:#d1ba9f}
+[data-theme="light"] footer{color:#d8c9b6}
+[data-theme="light"] .hero-cta{color:#fff}
 *{box-sizing:border-box}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei","Hiragino Kaku Gothic ProN","Hiragino Sans","Noto Sans JP","Yu Gothic","Meiryo",sans-serif;color:var(--ink);background:var(--bg);line-height:1.7;font-size:16px}
+/* 無 JS 純 CSS 小修飾：鍵盤焦點、選取色、數字等寬、減動效 */
+a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+::selection{background:var(--accent);color:#fff}
+.updated,.t-time{font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
 /* 版面：左側欄 + 右側內容（內容置中） */
 .layout{display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
 .sidebar{background:var(--side-bg);border-right:1px solid var(--line);position:sticky;top:0;height:100vh;overflow-y:auto;padding:16px 10px}
