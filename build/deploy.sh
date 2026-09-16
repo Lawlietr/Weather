@@ -100,7 +100,10 @@ fi
 if [ "$NO_CF" -ne 1 ]; then
   echo
   echo "==> [2/4] 部署到 Cloudflare Pages"
-  npx -y wrangler@latest pages deploy public --project-name "$CF_PROJECT"
+  # 明確 --branch main（＝專案 production branch）：wrangler 未指定時會從
+  # 目前 git 分支推断，DEV 開發期間跑部署會只產預覽 alias、自訂域名不更新
+  # （2026/9/16 實測）。內容仍來自目前 checkout（DEV 內容上生產＝刻意行為，見 AGENTS.md Git 節）。
+  npx -y wrangler@latest pages deploy public --project-name "$CF_PROJECT" --branch main
 else
   echo
   echo "==> [2/4] 跳過 Cloudflare（--no-cf）"
