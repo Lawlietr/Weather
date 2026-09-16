@@ -1,308 +1,46 @@
-# TODO：待辦事項
-
-> 專案背景、設計原則、技術架構與部署流程分別見 `README.md`、`AGENTS.md`、`WORKFLOW.md`，本文件只放**未完成的待辦**；已完成項目的設計史不留在此（看 git history 或各文件）。
-> 最後更新：2026/9/15（§1 RSS 改標「完成、剩餘僅隨事件維護」；§4 平常時期天氣報導降級為不採（偏離事件+災情定位、靜態站無在地化能力）；§11 AI bot 可偵測性強化：JSON-LD／OG meta／信任頁／404 agent 指引／llms.txt 使用指引，已合併 main 上線；§9 颱風卡置底、§8 cbph 503 假警報均已合併 main 上線；新增 build 產出 `404.html`（修 Cloudflare Pages 無 404.html 的 SPA soft-404）＋`robots.txt`＋`sitemap.xml`；§7 颱風動態淘汰已合併 main 上線；§10 零星災情定案（A/B 並用、判斷標準＝事件 status，規則＋最小事件檔範本寫入 AGENTS.md，build 不需改動）；另設測試站 wea-testing／weatesting.avpclub.eu.org，詳 WORKFLOW.md §6；2026/9/7 全檔精簡：已完成項目細節收為一線，細節看 git history／模組註解）
-
-> 優先級：§2 地圖紅警（高，實作中：執行順序 1–3 ✅、下一步 4 觀測層）＞ §6 停班停課板塊（中高，待實作）＞ §5 分享按鈕（低）；§1 RSS 已完成（關鍵詞微調＝隨事件維護，非待辦）；§3（ja 保留、切換按鈕隱藏）、§8 cbph 503、§9 颱風卡排序、§10 零星災情寫法、§11 AI bot 可偵測性均已完成。
-
----
-
-## 11. AI bot 可偵測性強化（✅ 2026/9/15 完成並上線；背景：is-agentic.com 掃描 52/100）
-
-**✅ 已實作（2026/9/15）**：首頁 JSON-LD（WebSite＋Organization）與事件頁 Article JSON-LD；全頁 meta description／Open Graph（含 `assets/og.png`，`build/make_og_image.py` 純 stdlib 產生）／canonical；`<meta name="is-agentic-site-type" content="content">`；信任頁 `/about/`、`/contact/`、`/privacy/`（zh＋ja，各 ≥500 字）；404 頁加 agent 指引（llms.txt／sitemap.xml 連結）；llms.txt 加「使用指引」段；footer 加關於／聯絡／隱私＋llms.txt／sitemap 連結。實作於 `build/site.py`（`render_page` 加 `page_url`/`jsonld` 參、`build_trust_pages()`）＋`build/i18n.py`。
-
-**✅ 分數收尾二輪（2026/9/15，78→目標 ~85）**：Organization JSON-LD 補 `contactPoint`（GitHub Issues）＋國家層級 `address`；build 產出站對外的 `/AGENTS.md`（agent when-to-use/引用指引，與 repo 內 AGENTS.md 不同）；404 頁加字面 markdown 語法區塊（agent-friendly 404 滿分要求）；llms.txt 引用 `/AGENTS.md`。
-
-**不追項（錯配、有意跳過）**：markdown content negotiation（需 Pages Function 動態 Accept 協商，破壞純靜態不變項；agent 取 markdown 已由 `llms-full.txt` 覆蓋）；OpenAPI／JSON error／api-catalog（RFC 9727）／Web Bot Auth（RFC 9421）（本站無公開 API——掃描器的「API」視角是跟隨 llms.txt 連結抓到 CWA 的 apidoc YAML 觸發的，非本站問題）。**注意**：`is-agentic-site-type` tag 只改預設顯示視角、不加分；API 視角仍會計分，故分數天花板受限。
-
----
-
-## 9. 氣象總覽卡片排序：無颱風時颱風卡置底（高優先級；2026/9/13 定案並實作、測試站已驗證、已合併 main）
-
-### 問題
-
-首頁「氣象總覽」卡片順序寫死為「颱風動態→警報與特報→雨量 TOP 10」；無活動氣旋時，颱風卡以「目前無活動中熱帶氣旋」空狀態佔據最高位，而當下真正的風險訊號（如生效中的陸上強風特報）被壓在下面。
-
-### 定案（方案 A：空則置底）
-
-**規則：過濾後有活動氣旋 → 颱風卡頂位（版面不變）；無活動氣旋且資料抓取正常 → 置底**（警報/特報卡承接風險訊號）。**例外：颱風資料抓取失敗（stale）時維持頂位**——警示狀態不降級。不採「空則完全隱藏」：空狀態是「查過、沒颱風」的確認訊號，且卡片內的 stale 故障標籤會跟著消失。
-
-實作：`build/cwa.py: cwa_section_html()` 約 10 行（`typhoon_first = bool(typhoons_live) or bool(stale.get("typhoons"))` 決定插入位置）。單元測試 5 案（有氣旋/空/空＋stale/有氣旋＋stale/過時淘汰）＋真實 build 驗證（2026/9/13：警報→雨量→颱風空卡）。已部署測試站 wea-testing 驗證。已合併 main（`a8bc806`）。
-
----
-
-## 8. cbph 503 假警報：地圖頁顯示「抓取失敗」誤示（高優先級；2026/9/13 定案並實作、測試站驗證、已合併 main）
-
-### 問題
-
-cbph API 對「**目前沒有生效中告警的類型**」回 HTTP 503（非空陣列）——此行為 2026/9/1 已實測並寫入 `AGENTS.md` 陷阱清單與 `build/cbph.py` docstring，但實作只做到「不中斷 build」、**沒做到「不算 warning」**：`fetch_alerts()` 對所有錯誤一律寫入 `warnings`，`build/map_page.py` 又將每條 warning 渲染成地圖頁 ⚠️。結果：某類型無告警＝使用者在 `/map/` 看到誤導性的「cbph {type}: 抓取失敗（HTTP 503）— 跳過」。
-
-**實測例證（2026/9/13，正式站地圖）**：largesurfs（巨浪）無生效中告警 → 503；同刻 cells／tywinds／mountainstorms 皆 200。純表面問題（其餘三層正常、build 成功），但誤示「資料源故障」。
-
-### 修復方案（已定案）
-
-`build/cbph.py` 一處小改（約 10 行）：
-
-1. `fetch_alerts()` 捕獲 `CbphFetchError` 時判斷狀態碼：**503／404 → 視為該類型空清單**，不進 `warnings`（可只打 build log）；其他狀態碼維持現行 warning。
-2. （可選強化）若 4 類**全部**回 503 → 保留**一條** warning（防 cbph 全站故障被靜默）。
-
-用時預估：修改＋單元驗證約 15 分鐘、真實 build 驗證約 10 分鐘（現況 largesurfs 正是 503，可直接實測）；部署走 DEV→main 既有流程（或先上測試站 wea-testing 預覽）。
-
-**實作（2026/9/13，DEV）**：`CbphFetchError` 帶 `status` 屬性；`fetch_alerts()` 對 503/404 視為該類型空清單（只打 `[info]`、不進 `warnings`）；4 類全 503/404 時記一條「可能 cbph 服務異常」全站 warning。單元測試 5/5（stub `_get_json`）；真實 build：largesurfs 503 → `[info]`、零 warning、地圖頁無「抓取失敗」。已部署測試站 wea-testing 驗證（`/map/` 200、零「抓取失敗」、生效 0 筆）。2026/9/13 合併 main（未手動部署，由自動部署下個週期生效）。
-
----
-
-## 7. 颱風動態區塊淘汰機制（✅ 2026/9/13 定案並實作、已合併 main 並上線）
-
-### 問題意識
-
-首頁「氣象總覽」下的**颱風動態　CWA W-C0034-005** 區塊，是 build 時自動抓取 CWA 熱帶氣旋軌跡 API 生成。該 API 把 CWA 追蹤的**所有**熱帶氣旋都回傳，包含在太平洋上、對台無影響或已消散者。目前 `build/cwa.py: render_typhoon_card()` **只要 cyclone 有 analysis fix 就顯示，沒有任何新鮮度或相關性過濾**，因此過時／已離開的氣旋會一直掛在首頁。
-
-**實測例證（2026/9/13）**：
-- 首頁 `public/index.html` 最後 build 於 2026/9/7，仍顯示 **科羅旺（2026 第 27 號）**，觀測時間 9/7 08:00。
-- 同日實測 CWA W-C0034-005，API **仍回傳科羅旺**：fix 時間 `2026-09-07T20:00:00+08:00`、風速 12 m/s（即 CWA 已多日未更新該氣旋，但仍列在軌跡中）。
-- 結論：**即使現在重跑 build，它一樣會顯示**——問題不在 build 沒跑，而在渲染邏輯沒過濾。
-
-**對照現有機制**：警報卡 `render_alert_card()` 已設 `LIFTED_TTL_HOURS = 48`，會淘汰「已解除」且超過 48h 的警報；**颱風卡沒有對等的淘汰機制**，這是設計缺口（已於 2026/9/13 補上，見下）。
-
-### 為何會遺漏（根因，兩層疊加）
-
-1. **渲染邏輯缺失**：`render_typhoon_card` 從未設計氣旋淘汰/過濾。首頁 CWA 區塊完全由 API 生成、無 TTL、無「對台相關性」過濾。科羅旺已被刪為 `颱風/` 檔案（對台無影響、不符合 AGENTS.md 建檔門檻），但那個刪除只影響 markdown 檔案，**對自動生成的首頁卡片無效**。
-2. **更新管道與本機分離**：本地主力 cron（`0 */2 * * *`）的自動部署跑在**開發環境**，**不是這台機器**——這是刻意設計，讓開發／修改不會自動影響正式服務。因此這台（開發/手動端）首頁停在哪裡、多老，不會被自動更新修好，也不會被自動偵測到過時。
-
-### 定案與實作（2026/9/13）
-
-採用**方向 A（新鮮度 TTL）＝ `TYPHOON_STALE_HOURS = 24`**：最新 analysis fix 超過 24h（＝漏 4 個 CWA 6h 更新週期，代表 CWA 已停止追蹤）即從首頁移除；全部淘汰顯示現有 `typhoon_none` 空狀態。`W-C0034-001` 對該氣旋有**生效中（未解除）海上颱風警報者豁免**（防 API 延遲；警報名稱解析失敗時 fail-safe 全保留）。**不採 B（對台相關性）**：CWA 對遠洋氣旋本身就不會定期更新 fix，TTL 已自然淘汰絕大多數噪音；若日後出現「CWA 持續追蹤但與台無關」的卡位案例再補。
-
-實作位置：`build/cwa.py` 新增 `filter_typhoon_stale()`，套用於（1）`cwa_section_html` 的颱風卡、（2）`current_risk_level()` 狀態列（同一缺口：過時氣旋會把風險狀態推成黃色）。**`/map/` 仍用原始 `fetch_typhoons()` 全量軌跡**（§2 地圖層需求），與首頁過濾後子集分開取用。純 build 邏輯，自動部署（本地 cron 每 2 小時）即可持續生效，無需 LLM。實測驗證（2026/9/13）：科羅旺（最後 fix 9/7）不再顯示、卡片轉空狀態、風險狀態列不受其影響。2026/9/13 合併 main 並部署生產站；先經測試站 wea-testing 預覽（詳 `WORKFLOW.md` §6）。
-
----
-
-## 6. 停班停課板塊（自動層 ✅ 2026/9/15 上線；剩餘：事件檔存檔層）
-
-### 自動層（✅ 2026/9/15 完成並上線）
-
-**重要更正：舊文「沒有統一的中央 API」是錯的。** 2026/9/15 查證到**人事行政總處（DGPA）停班停課 CAP feed**（NCDR 災防警報平台託管、data.gov.tw 資料集 20457 正式公開、免 key）：
-
-| 層 | 來源 | 形態 |
-|---|------|------|
-| **P0 結構化 feed** | `alerts.ncdr.nat.gov.tw/RssAtomFeed.ashx?AlertType=33` | Atom feed＋每筆完整 CAP XML：官方通知原文、`sent/effective/expires`、`areaDesc`＋`geocode`（Taiwan_Geocode_103 縣市代碼） |
-| P1 人工查證頁 | DGPA 22 縣市即時查詢頁（`https://www.dgpa.gov.tw/typh/daily/nds.html`，「資料來源：各縣市政府」；僅 www 可用） | 官方 HTML，feed 異常時人工對照 |
-| P2 事件存檔 | 事件 markdown「停班停課」章節（人工） | 歷史紀錄層（本節剩餘工作） |
-
-發布機制（官方）：全日/上午停班須**前一日 19:00–22:00 前**發布、下午/晚間停班**當日上午 10:30 前**發布（已寫進卡面提示）。
-
-**實作**：`build/dgpa.py`（feed 結構、陷阱、`is_current()` 判斷規則全在該檔頭註——單一事實來源）。首頁置位（2026/9/15 使用者定案）：
-- 有 currently 相關公告（影響日為今天或之後、或公告不超過 24h）→ 卡**展開置頂**（層級高於「颱風動態」卡）；
-- 無 → **收起卡置底**（一列「目前無停班停課公告」＋資料截至時間）；
-- feed 抓取失敗 → 卡不顯示＋warning，不中斷 build（同 cbph/RSS 慣例）。
-
-驗證：本地 build＋7 項 mock 測試（展開/收起/置位/None/ja）全過；上線後以真實事件驗證。
-
-### 事件檔存檔層（剩餘，非待辦——事件期間才做）
-
-feed 是**滾動近期視窗**（舊公告留存數週但不再「currently」）——**歷史存檔靠事件 markdown**：新事件建立時，事件期間從 feed/查詢頁/新聞撈停班停課，寫入事件檔「停班停課」章節（標準表格格式如下），供事件頁長期瀏覽。既有事件檔（`0818_沙德爾` 等）不回填。
-
-#### 規範草案
-
-**Markdown 檔案格式**：在各事件檔案中，建立一個標準化的停班停課章節（類似現有災情表格格式）：
-
-```markdown
-## 停班停課
-
-| 日期 | 區域 | 狀態 | 說明 | 來源 |
-|------|------|------|------|------|
-| 2026/9/5 | 新北市金山區、萬里區 | 停課 | 預防性停課，8 校撤離 | [公視新聞網](URL) |
-| 2026/9/5 | 基隆市暖暖區 | 無停班停課 | 在地居民對未宣布停課表示不滿 | 自行觀察 |
-```
-
-**build 提取邏輯**（新增至 `build/site.py` 或新模組 `build/suspension.py`）：
-
-1. 掃描所有活躍/結束事件的 Markdown 檔案
-2. 解析「停班停課」章節，提取表格資料
-3. 彙整成結構化資料（日期、區域、狀態、說明、來源）
-4. 渲染到首頁一個「停班停課」區塊（卡片式，依日期倒序排列）
-5. 連結回原始事件檔案
-
-#### 事件檔章節格式（新事件用）
-
-```markdown
-## 停班停課
-
-| 日期 | 區域 | 狀態 | 說明 | 來源 |
-|------|------|------|------|------|
-| 2026/9/5 | 新北市金山區、萬里區 | 停課 | 預防性停課，8 校撤離 | [公視新聞網](URL) |
-```
-
-（來源優序：DGPA 查詢頁/feed 原文 → 縣市政府公告 → 新聞轉發；引用時註明出處與日期。）
-
-### 與現有架構的兼容性
-
-- 沿用現有 build 流水線（每 2 小時 cron），不需新排程、新金鑰（feed 免 key）
-- 與 §2、§4 獨立，不互相依賴
-
----
-
-## 1. RSS 災情抓取（✅ 2026/8/30 完成；剩餘僅隨事件維護，非待辦）
-
-> 已實作：`build/rss.py` build 時自動抓 verified feeds 產出候選清單 `build/rss_candidates.json`（**從不進 `public/`**）；人 / LLM 審查後挑中者寫入事件檔「XX災情新聞來源」章節才上線（流程見 `WORKFLOW.md` §1）。
-
-**維護註記（非待辦）**：
-- 關鍵詞清單（`rss.py` 的 `KEYWORDS`）隨事件期間 `rss_candidates.json` 的 flag 假陽性/假陰性實戰資料微調——只有事件期間才有實戰依據；2026/9/7 已完成第一輪修剪（細節見 git history）。
-- （可選構想）事件期間候選量太大時，把 flag 條目渲染到首頁供快速瀏覽（非必需）。
-
-已完成：風傳媒（storm.mg）RSS 復查恢復（2026/9/7，端點與入列見 `AGENTS.md`「新聞 RSS 來源」）。
-
----
-
-## 2. 地圖紅警功能（實作中；2026/8/28 定案、2026/9/1 cbph API 實測、2026/9/2 執行順序 1–3 完成）
-
-在互動地圖上以紅色危險告警標註「目前或預計會有淹水/大雨的地區」，讓使用者一眼看到「現在最危險的地區在哪」。**分兩層、可獨立上線**。
-
-**定位（2026/9/1 定案）：地圖導向，非事件導向**——一張完整台灣地圖疊全部目前生效告警＋觀測＋災情點（對比 CWA cbph 的「選類型→事件列表→單事件範圍」），點擊紅色區域→該告警詳情＋本 repo 該區域相關災情紀錄。概念釐清：CWA 的「災情」是**危險告警**（哪裡可能變危險），非損失紀錄；實際災情（淹水/樹倒/停電）不在任何 CWA API，屬新聞層（2b）。
-
-### 2a. CWA 紅警層（**全自動部署**，已定案）
-
-- **掛在現有 build 流水線上**：build 時本機抓 CWA → 合成 `map.geo.json`（polygons + points，每筆帶 `level: 🔴/🟡/🟢`、`type`、`source`、`time`）→ 產地圖頁 → 部署。**沿用現有自動部署頻率（本地 cron 每 2 小時，2026/9/1 確認）**，不需新排程、新 agent、新金鑰；顏色/等級閾值邏輯全部寫死在 build 端（`cwa.py`/新模組），前端只負責渲染。
-- 資料來源對應：
-  | 地圖元素 | 來源 | 備註 |
-  |----------|------|------|
-  | PWS 災防告警區（大雷雨/颱風強風/山區暴雨/巨浪） | cbph.cwa.gov.tw `/api/global/`＋`/api/{type}/`（2026/9/1 實測新增） | **官方 polygon，免 gazetteer**；含生效時段/影響鄉鎮/細胞廣播狀態；詳見下方小節 |
-  | 雨量站紅點 | O-A0002-001 `GeoInfo` + `Past1hr`/當日累計 | 超閾值上紅，點大小/顏色深淺對應雨量等級 |
-  | 颱風軌跡/風圈 | W-C0034-005 | 預測路徑＋風圈圓環 |
-  | 海區警報多邊形 | W-C0034-001 CAP `area` | **唯一官方座標化多邊形，且是海區** |
-  | 陸地紅區（豪大雨特報影響區域） | W-C0033-002/003 | ⚠️ 影響區域是**文字/縣市清單，非座標多邊形**，必須經 gazetteer 轉換；標籤註明生效時段（「今夜起」等）。**渲染定案（2026/9/16）：選項 A——新增縣界 GeoJSON 自託進 repo**（gazetteer 只有縣/鄉鎮中心點座標、無邊界多邊形，無法直接畫縣界；動工前需確認縣界資料源） |
-- **gazetteer ✅ 已建（2026/9/1）**：`build/gazetteer.json`（產生器 `build/make_gazetteer.py`；測站/界線資料變動時才需重跑）。僅服務特報文字層＋新聞點對照（cbph 告警層用官方 polygon）；鄉鎮查不到回退縣級、再查不到不上圖。⚠️ **只有縣/鄉鎮中心點座標（lat/lon），無邊界多邊形（2026/9/16 實測）**——不足以畫縣界，見上方特報陸地層定案。
-- **不做**：像素級降雨預報雲圖（CWA 開放資料無 48h 雨量預報座標，F-C0033-001 已下架）；河川水位/土石流（O-C0010-001 已下架）——淹水類警報只能靠 2b 新聞層，粒度到鄉鎮。
-
-#### cbph 災防告警 API（2026/9/1 實測，新增資料源）
-
-實測記錄（endpoints、每筆欄位——含 `polygon` 官方影響區域座標、`cmam_text` 細胞廣播、deep link——與 503/`county=` 過濾不可靠/`is_active` 須自行驗證/UTC/無 SLA 等陷阱）一律以 `build/CWA_API.md`「CWA cbph 災防告警 API」節為**單一事實來源**，實作前先讀它。
-- **更新頻率疑慮**：大雷雨即時訊息 lifespan 約 2 小時＝每 2 小時 cron 的下限，事件高峰期可能整筆錯過一週期——已接受 trade-off（見下方「決策」2；事件期間可加頻）。
-
-### 2b. 災情新聞點層（人工/agent 餵料，可選疊層；**暫緩（2026/9/1 定）**）
-
-- 來源：RSS（見 §1）＋災情 markdown；鄉鎮名經 gazetteer 對照上圖，每筆附新聞來源連結。
-- 維持人工把關（核心原則：災情新聞不自動推）；缺了不影響 2a CWA 層運作。
-- gazetteer 本就要建，2b 建好後可直接沿用。
-
-### 選型與離線自駕（已定案並實作）
-
-- **Leaflet + OSM（非 Google Maps）**：Google 計費綁 billing、必須外連無法離線、key 暴露前端；若日後嫌 OSM 瓦片太素，改預渲染瓦片供應商（CARTO/OpenFreeMap）即可，架構不變。
-- **離線自駕（硬需求）**：JS/CSS 全自託、不引 CDN；build 時只抓台灣範圍瓦片（z8–z11，`build/_tile_cache/` 持久化、缺什麼補什麼），完全離線、零外部請求；不跑 OSM tile server，出範圍顯示空白底。
-- **保持輕量**：Leaflet 只在地圖頁載入；**首頁維持零 JS**（現有靜態 SVG 軌跡圖不換）。
-
-### 地圖頁 UI（骨架已上線 2026/9/2，剩項歸執行順序 6）
-
-- 已上線：獨立 `/map/` 頁、全幅地圖＋右側欄（行動版 bottom sheet）、點擊詳情卡（類型＋`official_id`、生效時段、影響鄉鎮、`description`、`cmam_text`＋`cb_enabled`、本 repo 災情連結、cbph 官方 deep link）、圖層配色（大雷雨 `#f59e0b`、颱風強風 `#ef4444`）＋開關、hover tooltip、「產生時間（每 2 小時更新、非即時）」、OSM 署名、`<noscript>` fallback。
-- **剩（＝執行順序 6 v2）**：deep link（`/map/?layer=&zoom=&center=`、`/map/event/{identifier}`）、`/map/data.json` 公開＋寫進 `llms.txt`、時間線快照。
-
-### 決策（2026/9/1 全部定案）
-
-1. 採用 cbph 為資料源（非正式 API、無 SLA，以「轉引」措辭呈現；容錯沿用 RSS 守則）
-2. 更新頻率＝與自動部署同頻、每 2 小時（事件期間可加頻至 30–60 分鐘；接受 trade-off：大雷雨 lifespan 約 2 小時）
-3. 2b 新聞點層暫緩
-4. 前端呈現＝選項 A：獨立 `/map/` 頁（「A＋首頁靜態 SVG 告警區快照」不在首批）
-
-### 執行順序（2026/9/1 決策定案；首批＝1–4＋6，在 DEV 分支開發、經確認後合併 main）
-
-1. ~~gazetteer（鄉鎮/縣級 JSON）~~ **✅（2026/9/1）**：`build/make_gazetteer.py` → `build/gazetteer.json`（towns 368 / counties 22，覆蓋全部現行鄉鎮市、無需手動補位；建立細節與陷阱見 git history）。
-2. `build/cbph.py`：抓 4 類→驗證→合併進 `map.geo.json` — **✅（2026/9/2）**：4 類告警抓取、polygon→GeoJSON、UTC→UTC+8、503/404 容錯；`site.py` 呼叫 `cbph.build_map_geojson()` 寫 `build/map.geo.json`（build 中間檔、gitignore）。公開 `/map/data.json` 屬步驟 6。
-3. `/map/` 骨架 — **✅（2026/9/2）**：`build/map_page.py`＋`build/tiles.py`（離線瓦片；來源陷阱——OSM 官方 server 對本機 IP 假 200 封鎖、改用 `tile.openstreetmap.de`——見 `tiles.py` 頭註）＋`build/static/leaflet/`（Leaflet 1.9.4 自託）。功能詳見上方「地圖頁 UI」；入口：首頁 nav＋llms.txt。
-4. 觀測層（2026/9/16 拆 3 小批、各批獨立上線；實作於 `cwa.py`→`map.geo.json`→`map_page.py`）：
-   - **4a 雨量站點層（2026/9/16 起）**：O-A0002-001 超閾值測站→三級點層（p1hr/p24hr ≥50/250 🔴、≥25/100 🟠、≥10/50 🟡；2026/9/16 真實資料校準：淡雨日 0/1/13 站）。座標取 **WGS84**（`GeoInfo.Coordinates[CoordinateName=WGS84]`，不可用 TWD67）；`cwa.fetch_rain_points()` 為單一事實來源。——**代碼已完成（2026/9/16）、真瀏覽器實測全點渲染正常**（obscura 無法渲染 Leaflet SVG，驗證流程見 AGENTS.md「Obscura」節）；點樣式未過關→見 4a-follow。
-   - **4a-follow 雨量點樣式重做（🔥高優先、合併 4a 後先處理；2026/9/16 使用者初審未過）**：使用者實際螢幕判斷——① 圓形仍太小；② 暖橙/琥珀色系（現行 #dc2626/#ea580c/#f59e0b）仍與 OSM 底圖幹道粗橘線（含交流道/匝道交會處的橘色三角形樣小塊）混淆、干擾視覺判斷。底圖橘線是 OSM 標準 tile 自帶、不可控→點顏色必須避開色相 ~20-40° 橘系；候選方向待討論後再動手（冷藍系【注意巨浪告警 cyan 層衝突＋海水淡藍】、深色單色＋白環＋標註、加大尺寸等）。
-   - **4b 颱風軌跡/風圈層**：W-C0034-005 觀測軌跡（實線）＋預報軌跡（虛線）＋最新預報點風圈圓環（空狀態＝無活動氣旋時圖層空，沿用「空＝查過」原則）。
-   - **4c 特報陸地紅區層**：W-C0033-002/003 文字影響區域→**選項 A 縣界 GeoJSON 自託**（2026/9/16 定案；gazetteer 無邊界多邊形）；生效時段標籤（「今夜起」等）。
-5. ~~2b 災情新聞點層（人工餵料）~~ 暫緩（見 §2b）
-6. v2：`/map/data.json` 公開＋deep link＋時間線快照
-
----
-
-## 3. ja 產出（✅ 2026/9/15 定案：不移除，隱藏語言切換按鈕）
-
-**定案**：ja 產出**保留**（`public/ja/` 照常 build、`/ja/` 直接 URL 仍可進、sitemap 含 ja URL）；只**隱藏**頁首語言切換按鈕（2026/9/15，使用者指示：隱藏不是移除，ja 翻譯日後可能恢復使用）。
-
-- 實作＝`build/site.py` 一列 CSS `.lang-switch{display:none}`（帶註解；要恢復刪該行即可）。HTML 仍渲染、`build/i18n.py` 全部不動。
-- 歷史：2026/8/28 曾定案「移除 ja 產出」（半殘體驗、維護雙倍），2026/9/15 使用者改判：內容留下、入口藏起。
-- 機翻自撰彙整文字（Google/DeepL，build 時）已評估但**作廢**（2026/8/28）：CWA 資料不該翻譯（條款＋正確性）、新聞摘要無翻譯授權（版權）；不列入待辦。
-
----
-
-## 4. 平常時期區域性天氣報導（❌ 不採，2026/9/15 定案；2026/8/29 提出）
-
-不採理由：①偏離專案「天氣事件＋災情」定位——天氣預報非事件紀錄、非預警（預警＝CWA 警報/特報呈現，首頁既有）；②純靜態站無從得知使用者位置，「在地化」不可行，北/中/南/東分組與既有雨量/特報卡重疊。唯一有獨立價值的一塊——事件期間「本次雨量 vs 30 日均值」對照（C-B0024-001）——保留為構想，日後併入 §2 或災情檔案，不獨立成卡。完整構想史（方案 A/B）見 git history（44bd5bd）。
-
----
-
-## 5. 事件分享按鈕（構想，待實作；🟢 最低優先級，2026/8/29 提出）
-
-### 目的
-讓使用者能從「事件頁」一鍵把該颱風/災情紀錄分享出去（Line、社群、複製連結等），提升災情傳播範圍。
-
-### 分享內容
-每筆事件分享出去的三樣資料（皆取自建站既有資料，不需新 API）：
-- **正規 URL**：沿用 `build/site.py` 的 `link(e)`（`{SITE_BASE}/{'/'.join(e['url'])}`），例如 `https://weather.avpclub.eu.org/events/颱風/2026/08/0807_13_白海豚_DOLPHIN.html`。
-- **標題**：`ev['name']`（例「颱風白海豚（DOLPHIN）— 2026 年第 13 號」）。
-- **摘要**：`[狀態]・[severity]・[縣市]`（例「進行中・🔴重大・台南／高雄」），控制長度以便 Line 分享。
-
-### 分享機制（三層降級）
-| 層級 | 機制 | 適合情境 | 備註 |
-|------|------|----------|------|
-| 一 | **Web Share API** `navigator.share()` | 手機原生分享列 | 最優雅；需 https（本站符合）＋使用者觸發（按鈕點擊正合適）；不可用時退到二 |
-| 二 | **複製連結到剪貼簿** | 桌面／API 不可用 | `navigator.clipboard` 失敗時退回到 `execCommand`，並顯示「已複製」提示 |
-| 三 | **平台一鍵連結**（純 URL builder） | 想直達特定 App | 台灣首需 **Line**（`https://share-line.me/dialog/?text=&url`），其次 X/Twitter、Facebook；純 URL 拼裝、**無需 API key、無 CORS**，與 build 時抓取架構不打架 |
-
-### OG / Twitter Card meta（體驗加分項，工作量最大）
-目前事件頁沒有 OG 標籤，連結貼到 Line/Slack 僅顯示裸 URL。補上 `og:title / og:description / og:image / twitter:card` 後，分享預覽會變成有標題＋severity 徽章的卡片。需一張分享圖卡（可用事件 severity 色系生成簡單圖），可與此項一起或之後單獨立。
-
-### 實作位置與方式
-- 在 `build_event_page()` 的 hero section（放 `badge`＋`status`＋`chips` 的 `<section class="card hero">`）右側加分享按鈕。
-- 加 i18n 字串：`share`、`copy_link`、`copied`（走現成 `t(lang, key)` 三級回退，ja 頁面也會有）。
-- 內聯 JS + 現有 CSS 變數（`--accent` 等），自動適配深色／淺色主題。
-- 純 build 期 Python 改動，不碰 CWA/API，符合「災情新聞人工把關」原則。
-
-### 注意事項
-- Line 分享文字有長度上限，摘要需控制長度。
-- 分享按鈕只放「事件頁」；首頁「事件 Hero 入口卡」是中性入口（無 severity 色系），**不放**（符合 AGENTS.md 設計意圖）。
-- 建議執行順序：**A（Web Share ＋ 複製連結）→ B（＋ Line 一鍵）→ C（＋ OG 分享圖卡）**，目前全列為最低優先、暫未實作。
-
----
-
-## 10. 零星災情的縣市分組寫法（✅ 2026/9/15 定案：A/B 並用、判斷標準＝事件 status；規則已寫入 AGENTS.md，build 不需改動）
-
-### 背景與現況
-
-**重點：縣市分組機制「已經存在」，且天生適合本專案的靜態架構（Cloudflare Pages、無資料庫）。** 不需要另建資料庫或動態分類。
-
-build 系統（`build/site.py`）在 build 時**跨所有事件檔聚合災情、依縣分組**，渲染到首頁「各縣市災情總覽」（卡片帶 id 供錨點跳轉，縣間按「該縣最新災情時間」倒序）。對應：
-- `extract_table_rows()`（L289）：只提取格式為 `時間|地點|類型|說明` 的四欄表格，每列＝一筆「災情行」。
-- `find_county()`（L333）：依「章節標題含縣名」或「地點文字含縣名」判讀該筆屬於哪個縣市。
-- `compute_groups()`（L577）：**跨事件**依縣分組，每縣取最新 8 筆，縣間按最新災情時間倒序。
-- 首頁 L684：`各縣市災情（跨事件，依縣分組，最新在最上）`。
-
-**結論**：零星災情只要寫成四欄災情表、並放在含縣名的章節下（或地點寫明縣市），build 就會自動把它歸縣並排在首頁「各縣市災情」，無須任何資料庫查詢。
-
-### 限制（必守）
-
-- **每個 markdown 檔都須有 front matter**（`load_events()` L338：`if not fm: continue`）。所以零星災情無法做成「只有災情、無 front matter」的純災情檔，要嘛併入既有事件檔，要嘛建最小事件檔。
-- 首页「各縣市災情」每縣**最多顯示最新 8 筆**（`compute_groups` 的 `[:8]`）；完整歷史仍在各事件頁。
-- 不帶年份的災情行靠檔案路徑 `{YYYY}/{MM}/` 推定年份（`parse_row_time`），**寫時間請用完整年份**（如 `2026/9/12 18:00`）。
-
-### 定案（2026/9/15）
-
-**A/B 並用，判斷標準＝對應事件 status**（使用者已認可；判斷規則在 `AGENTS.md`「零星災情的寫法」節、B 案範本與必守限制在 `WORKFLOW.md` §2.3）：
-
-1. **對應事件仍 `status: active` → A（併入該事件檔）**：含縣名章節 append 四欄表一行、原地更新「最後修改」行。
-2. **事件已 `ended` 或無對應事件 → B（最小事件檔）**：`災情/{YYYY}/{MM}/{MMDD}_{事件}_{名稱}.md`＋最小 front matter（建檔即 `status: ended`、通常 `🟢一般`）、備註欄一句話說明＋有因果時放原事件頁連結。
-
-### 已完成
-
-- [x] A/B 並用定案（2026/9/15，使用者指示「照你的建議開始實作」）
-- [x] `AGENTS.md` 新增「零星災情的寫法」節：A/B 判斷規則＋最小事件檔範本（front matter 最小集＋四欄表）＋必守限制（front matter 必須、時間寫完整年份、每縣顯示 8 筆上限）
-- [x] build 程式確認不需改動（現行 `extract_table_rows`/`find_county`/`compute_groups` 已涵蓋）
-
-### 剩餘（非待辦，構想）
-
-- 「某縣市歷年全量災情」獨立彙整頁：需要時才改 `site.py` 新增彙整頁。
-- 實務上第一次遇到零星災情時，依 AGENTS.md 新節執行即可；若發現範本不足再修。
+# TODO：任務帳本
+
+> 本檔只記**要做的事＋優先級＋狀態＋設計檔連結**；問題背景、定案細節、規格與陷阱在 `design/<功能>.md`（每功能領域一份）；流程 runbook（更新／build／驗證／部署）在 `WORKFLOW.md`。已完成項目的歷史細節看 git history。
+> 編號為傳統編號（§N），供既有引用對照；細節一律跟連結進 design/。
+> 最後更新：2026/9/16（拆檔：§2→`design/map.md`、§5→`design/share-button.md`、§6→`design/class-halt.md`、§1→`design/rss.md`、§3/§4/§7/§9/§10/§11→`design/site.md`；本檔瘦身為帳本）
+
+## 待辦（依優先級排序）
+
+| # | 任務 | 優先級 | 狀態 | 設計檔 |
+|---|------|--------|------|--------|
+| §2-4a-follow | 雨量點樣式重做（4a 合併後**先處理**；現行尺寸/色碼未過關） | 🔥 高 | 待辦（候選方向待討論） | [design/map.md](design/map.md) |
+| §2-4b | 颱風軌跡/風圈層（實線觀測＋虛線預報＋最新預報點風圈） | 高 | 待辦 | [design/map.md](design/map.md) |
+| §2-4c | 特報陸地紅區層（選項 A：自託縣界 GeoJSON；**動工前需確認縣界資料源**） | 高 | 待辦 | [design/map.md](design/map.md) |
+| §2-2b | 災情新聞點層（人工/agent 餵料，gazetteer 已備） | 中 | 暫緩（2026/9/1 定） | [design/map.md](design/map.md) |
+| §2-6 | /map/ v2（data.json 公開＋deep link＋時間線快照；**快照需先定案**存哪裡、留幾份） | 中 | 待辦 | [design/map.md](design/map.md) |
+| §6 | 停班停課事件檔存檔層（**事件期間才做**、非待辦；新事件時從 feed/查詢頁/新聞撈入事件檔「停班停課」章節） | 中高 | 事件期間進行 | [design/class-halt.md](design/class-halt.md) |
+| §5 | 事件分享按鈕：A Web Share＋複製連結 → B Line 一鍵 → C OG 分享圖卡 | 低 | 待辦 | [design/share-button.md](design/share-button.md) |
+| §1 | RSS 關鍵詞微調（`rss.py` `KEYWORDS`；隨事件期間 flag 假陽性/假陰性實戰資料，非獨立待辦） | 隨事件 | 隨事件維護 | [design/rss.md](design/rss.md) |
+
+## 已完成（非待辦；細節在設計檔與 git history）
+
+| # | 項目 | 完成 | 設計檔 |
+|---|------|------|--------|
+| §2-1~3 | 地圖紅警基礎（gazetteer、cbph 抓取→map.geo.json、/map/ 骨架＋離線瓦片＋自託 Leaflet） | 2026/9/2 | [design/map.md](design/map.md) |
+| §2-4a | 雨量站點層初版（三級點層＋側欄圖例＋詳情卡；樣式待 4a-follow 重做） | 2026/9/16 | [design/map.md](design/map.md) |
+| §6-自動層 | 停班停課 DGPA CAP feed 首頁卡（is_current 判斷、置頂/置底、容錯） | 2026/9/15 | [design/class-halt.md](design/class-halt.md) |
+| §1 | RSS 災情抓取（半自動：build 產候選清單、人工審查後入事件檔） | 2026/8/30 | [design/rss.md](design/rss.md) |
+| §7 | 颱風動態區塊淘汰機制（TYPHOON_STALE_HOURS 24h、海上警報豁免） | 2026/9/13 | [design/site.md](design/site.md) |
+| §8 | cbph 503 假警報修復（503/404 視為空清單、不進 warnings） | 2026/9/13 | [design/site.md](design/site.md) |
+| §9 | 氣象總覽卡片排序（無活動氣旋時颱風卡置底、stale 例外頂位） | 2026/9/13 | [design/site.md](design/site.md) |
+| §10 | 零星災情縣市分組寫法（A/B 並用、判斷標準＝事件 status） | 2026/9/15 | [design/site.md](design/site.md) |
+| §11 | AI bot 可偵測性強化（JSON-LD、OG、信任頁、404 指引、llms.txt） | 2026/9/15 | [design/site.md](design/site.md) |
+| §3 | ja 產出保留＋隱藏語言切換按鈕（機翻彙整文字作廢） | 2026/9/15 | [design/site.md](design/site.md) |
+| §4 | 平常時期區域性天氣報導（❌ 不採：偏離事件＋災情定位、靜態站無在地化能力） | 2026/9/15 | [design/site.md](design/site.md) |
+
+## 預估時數（2026/9/16，含測試站驗證與確認回合）
+
+- §2-4a-follow 點樣式重做：0.5–1h（先討論定方向）
+- §2-4b 颱風軌跡/風圈層：2.5–3.5h
+- §2-4c 特報陸地紅區層：3.5–5h（含縣界資料源確認＋自託）
+- §2-2b 新聞點層：1.5–2h（gazetteer 已備）
+- §2-6 /map/ v2：7–10h（快照存檔設計定案後）
+- §6 存檔層：2–3h（事件期間；單事件檔存檔 0.5–1h/檔）
+- §5 A / B / C：1–2h / ~1h / 3–5h
+- 合計約 25–40h；只做「高＋中高」約 12–16h。
+- 建議順序：4a-follow → 4b → 4c →（事件期間 §6）→ 5 A/B → 6 v2。

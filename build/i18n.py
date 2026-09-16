@@ -1,4 +1,4 @@
-"""多語言 UI 字串表（TODO §七.4）。
+"""多語言 UI 字串表（ja 產出定案 → design/site.md）。
 
 設計：
 - 加新語言 = 在 STRINGS 加一個 dict，不改模板、不重寫頁面。
@@ -179,7 +179,7 @@ AI agent 與自動化工具：請以 /llms.txt 讀取本站內容索引、/llms-
     "ty_cat_mod": "中度颱風",
     "ty_cat_weak": "輕度颱風",
     "ty_cat_td": "熱帶性低氣壓",
-    # --- 災防告警地圖 /map/（TODO §2）---
+    # --- 災防告警地圖 /map/（design/map.md）---
     "map_enter": "🗺 告警地圖",
     "map_title": "災防告警地圖｜台灣天氣與災情總覽",
     "map_title_short": "🗺 災防告警地圖",
@@ -383,7 +383,7 @@ AI エージェント・自動化ツール向け：/llms.txt でサイト内容�
     "ty_cat_mod": "台風",
     "ty_cat_weak": "弱い台風",
     "ty_cat_td": "熱帯低気圧",
-    # --- 災害防警報マップ /map/（TODO §2）---
+    # --- 災害防警報マップ /map/（design/map.md）---
     "map_enter": "🗺 警戒マップ",
     "map_title": "災害警戒マップ｜台湾の天気と災害情報",
     "map_title_short": "🗺 災害警戒マップ",

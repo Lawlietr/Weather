@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""RSS 災情候選清單產出（半自動方案；見 TODO.md §1）。
+"""RSS 災情候選清單產出（半自動方案；見 design/rss.md）。
 
 流程：讀 rss_sources.json → 批次抓取所有 verified 來源（勿呼叫 failed_sources）
 → 去重＋時間過濾＋關鍵詞初判 → 產出 rss_candidates.json。
@@ -35,7 +35,7 @@ TZ_TW = datetime.timezone(datetime.timedelta(hours=8))
 # 關鍵詞初判：命中僅為 flag（供審查者優先看），不做過濾。
 # 2026/9/7 第一輪修剪：移除過泛（陣風、電線、封閉、應變——日常新聞常命中但與天氣災害無關）；
 # 補漏（大雷雨、暴漲、崩塌、潰堤、巨浪、水位）。後續隨事件期間 rss_candidates.json
-# 的 flag 假陽性/假陰性實測再微調（見 TODO.md §1）。
+# 的 flag 假陽性/假陰性實測再微調（見 design/rss.md）。
 KEYWORDS = [
     "颱風", "豪雨", "豪大雨", "大雨", "暴雨", "大雷雨", "強風", "狂風",
     "淹水", "積水", "洪水", "土石流", "崩坡", "崩塌", "落石", "樹倒", "斷樹",

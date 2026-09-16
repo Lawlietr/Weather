@@ -193,7 +193,7 @@ def fetch_rain():
 # /map/ 雨量站觀測層三級閾值（2026/9/16 定案、真實資料校準）：
 # 條件為「p1hr ≥ 閾值 **或** p24hr ≥ 閾值」，同時滿足多級時取最高級。
 # 校準例（2026/9/16 14:50，淡雨日）：L3 0 站 / L2 1 站 / L1 13 站——淡雨日
-# 點數可控，颱風期間高自然上升。詳見 TODO.md §2 執行順序 4a。
+# 點數可控，颱風期間高自然上升。詳見 design/map.md（執行順序 4a）。
 RAIN_LEVELS = (
     # (p1hr 閾值 mm, p24hr 閾值 mm, 顏色, 半徑 px)
     (50.0, 250.0, "#dc2626", 11),
@@ -540,7 +540,7 @@ def current_risk_level(lang, data, stale, mode):
 # CWA 對活動中氣旋每 6 小時更新一次 fix，漏 4 個週期（24h）代表 CWA
 # 已停止追蹤（消散／不再關注，例：科羅旺 2026/9/7 後 API 仍回傳但無新 fix）。
 # 例外：W-C0034-001 對該氣旋有生效中（未解除）海上颱風警報者保留（防 API 延遲）。
-# 注意：/map/ 用原始 fetch_typhoons() 全量軌跡，只有首頁卡用過濾後子集（TODO §7/§2）。
+# 注意：/map/ 用原始 fetch_typhoons() 全量軌跡，只有首頁卡用過濾後子集（design/site.md、design/map.md）。
 TYPHOON_STALE_HOURS = 24
 
 

@@ -145,7 +145,7 @@
 | RSS 來源清單與抓取守則 | `build/rss_sources.json`（`usage_notes`） |
 | 例行更新 / 新事件 / 零星災情範本 / 驗證 / 部署 / 排程 | `WORKFLOW.md`（零星災情範本 §2.3） |
 | Obscura 工具用法 | Skill `/root/.pi/agent/skills/obscura/SKILL.md` |
-| 構想與待辦 | `TODO.md` |
+| 構想與待辦（任務帳本） | `TODO.md`（只做/優先級/狀態；細節 → `design/<功能>.md`） |
 
 ## Git
 
@@ -179,16 +179,17 @@
 | `CWA_API.md 欄位查表` | `build/CWA_API.md` | 寫解析碼前查欄位/實測差異 |
 | `WORKFLOW.md runbook` | `WORKFLOW.md` | 查例行流程、部署、排程 |
 | `CWA OpenAPI dataset 目錄` | `opendata.cwa.gov.tw/apidoc/v1`（80 datasets） | 查 dataset 用途/參數 |
+| `design/ 功能設計檔` | `design/*.md`（map/share-button/class-halt/rss/site） | 查功能定案細節、規格、陷阱（2026/9/16 拆檔新增） |
 
 **規則**：
-- 動到相關文件（改 `CWA_API.md`/`WORKFLOW.md`、CWA 上下線 dataset）後**重跑 `ctx_index`** 更新快取（`path:` 形式索引有 staleness 標記）。
+- 動到相關文件（改 `CWA_API.md`/`WORKFLOW.md`/`design/`、CWA 上下線 dataset）後**重跑 `ctx_index`** 更新快取（`path:` 形式索引有 staleness 標記）。
 - 查詢模式：`ctx_search(queries: [...], source: "CWA_API.md 欄位查表")` 抽段落，**不必整檔讀**；查不到再讀原檔。
 - `災情/`、`颱風/` 事件內容**不要索引**（`llms.txt`/`llms-full.txt` 已是 agent 取用層）。
-- **換機重建**：KB 與 session 記憶都在本機、不隨 repo 走。開發環境遷移/重裝後，照上表重跑 3 個索引（本機 2 個 `ctx_index`＋1 個 `ctx_fetch_and_index`，分內完成）；遺失的只有快取與 session 級記憶，持久知識都在 repo markdown。
+- **換機重建**：KB 與 session 記憶都在本機、不隨 repo 走。開發環境遷移/重裝後，照上表重跑 4 個索引（本機 3 個 `ctx_index`＋1 個 `ctx_fetch_and_index`，分內完成）；遺失的只有快取與 session 級記憶，持久知識都在 repo markdown。
 
 ## DGPA 停班停課 feed（2026/9/15 實測）
 
-停班停課（各縣市政府公告、人事行政總處中央統一發布）以 CAP feed 為主：`GET https://alerts.ncdr.nat.gov.tw/RssAtomFeed.ashx?AlertType=33`（免 key）。**⚠️ feed 是滾動近期視窗、不是「目前生效中」清單**——「是否目前相關」由 `build/dgpa.py` 的 `is_current()` 判斷。**完整 feed/CAP 欄位實測結構、陷阱、發布機制 → `build/dgpa.py` 頭註**（單一事實來源；人工查證頁 `https://www.dgpa.gov.tw/typh/daily/nds.html`（注意：僅 www 可用）亦在其中）。首頁卡呈現定案（有相關公告→展開置頂於颱風卡之上／無→收起置底）→ 見下方「網站結構」；事件檔存檔層 → `TODO.md` §6。
+停班停課（各縣市政府公告、人事行政總處中央統一發布）以 CAP feed 為主：`GET https://alerts.ncdr.nat.gov.tw/RssAtomFeed.ashx?AlertType=33`（免 key）。**⚠️ feed 是滾動近期視窗、不是「目前生效中」清單**——「是否目前相關」由 `build/dgpa.py` 的 `is_current()` 判斷。**完整 feed/CAP 欄位實測結構、陷阱、發布機制 → `build/dgpa.py` 頭註**（單一事實來源；人工查證頁 `https://www.dgpa.gov.tw/typh/daily/nds.html`（注意：僅 www 可用）亦在其中）。首頁卡呈現定案（有相關公告→展開置頂於颱風卡之上／無→收起置底）→ 見下方「網站結構」；事件檔存檔層 → `design/class-halt.md`。
 
 ## Obscura 無頭瀏覽器
 
@@ -203,7 +204,7 @@
 
 ## 網站專案（已上線：Cloudflare Pages ×3 自訂域名；GitHub Pages 備用 mirror）
 
-- **文件分工**：見上方「參考索引」表（runbook → `WORKFLOW.md`；CWA 欄位 → `build/CWA_API.md`；手動路徑 → `MANUAL_UPDATE.md`；本地 cron → `LOCAL_CRON.md`；構想與待辦 → `TODO.md`）。
+- **文件分工**：見上方「參考索引」表（runbook → `WORKFLOW.md`；CWA 欄位 → `build/CWA_API.md`；手動路徑 → `MANUAL_UPDATE.md`；本地 cron → `LOCAL_CRON.md`；構想與待辦 → `TODO.md` 帳本＋`design/` 各功能設計檔）。
 - **⚠️ 更新災情前必看 `WORKFLOW.md` §8「Agent 效率規範」**：先查 repo 既有檔案／`ctx_search`／`cwa_cache.json`，只查會變的資料，同一資料一個 session 只查一次。
 - **build 入口**：`./build/build.sh`（產出 `public/`（繁中）＋ `public/ja/`（日文）、`llms.txt`（站點＋事件索引）與 `llms-full.txt`（事件全文）；CWA 資料 build 時本機抓取；另產 cbph 災防告警 `build/map.geo.json`（build 中間檔、gitignored，供 `/map/` 災防告警地圖頁消費）＋離線瓦片 `public/assets/tiles/`（z8–z11；來源與陷阱見 `build/tiles.py` 頭註：OSM 官方 server 對本機 IP 假 200 封鎖，改用 `tile.openstreetmap.de`））。
 - **颱風軌跡圖台灣輪廓**：`build/cwa.py` 的 `typhoon_svg()` 用 `build/taiwan_geo.py` 的 `ISLANDS`（本島＋澎湖／金門／馬祖／蘭嶼／綠島各自獨立 polygon）；產生器 `build/make_taiwan_geo.py`（純 Python Douglas–Peucker，無相依）重跑後會覆寫 `taiwan_geo.py`，GeoJSON 快取 `build/_geo_cache_*.json` 已 gitignore。
@@ -222,7 +223,7 @@
 
 - **首頁**：頂部「目前風險狀態列」（`build/cwa.py: current_risk_level()` 由 CWA 目前生效中之熱帶氣旋／海上颱風警報／災害天氣特報自動推導：紅/黃/綠/**中性**（無生效中項目但有 ≤48h 內解除紀錄）/未知；與事件 `severity` 無關）→ 氣象彙整（颱風軌跡/警報特報/雨量/風力；**颱風卡淘汰過時氣旋**：最新 analysis fix 超過 24h（`TYPHOON_STALE_HOURS`）即移除、有生效中海上颱風警報者豁免，`/map/` 仍用全量軌跡；警報特報卡**混排、時間倒序**，已解除項置底灰化、超過 48h（`LIFTED_TTL_HOURS`）不顯示；**卡片排序**：有 currently 相關停班停課公告（DGPA feed）時**停班停課卡頂位**（層級最高）、無時收起卡置底（抓取失敗不顯示）；有活動氣旋時颱風卡頂位、無活動氣旋且抓取正常時置底（抓取失敗仍頂位，警示不降級）；實作詳 `build/dgpa.py` 與 `build/cwa.py` 的 `cwa_section_html()`）→ 事件 Hero（中性入口卡，無 severity 色系與徽章）＋ 各縣市災情總覽（**build 時跨所有事件檔依縣聚合、時間倒序、每縣最新 8 筆；純靜態、無資料庫**）→ 過去事件封存（含 severity 徽章）。
 - **各縣市子頁（選用）**：該縣市災情按時間倒序。
-- **災防告警地圖 `/map/`（2026/9/2 上線）**：`build/map_page.py`＋自託 Leaflet 1.9.4（`build/static/leaflet/`）＋離線瓦片；cbph 4 類告警官方 polygon 分色渲染、hover/click 詳情卡、圖層開關、`<noscript>` fallback、行動版 bottom-sheet；資料全 build 時寫入（`map.geo.json` 嵌入頁面，前端零外部請求）。細節與待辦見 `TODO.md` §2。
+- **災防告警地圖 `/map/`（2026/9/2 上線）**：`build/map_page.py`＋自託 Leaflet 1.9.4（`build/static/leaflet/`）＋離線瓦片；cbph 4 類告警官方 polygon 分色渲染、hover/click 詳情卡、圖層開關、`<noscript>` fallback、行動版 bottom-sheet；資料全 build 時寫入（`map.geo.json` 嵌入頁面，前端零外部請求）。細節與待辦見 `design/map.md`。
 
 ### 部署（指令、域名與救回方式詳 `WORKFLOW.md` §6）
 

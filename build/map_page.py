@@ -1,4 +1,4 @@
-"""災防告警地圖 /map/ 獨立頁（TODO §2 執行順序 3）。
+"""災防告警地圖 /map/ 獨立頁（design/map.md 執行順序 3）。
 
 設計（2026/9/1 定案）：
 - Leaflet 只在此頁載入（自託 build/static/leaflet/、無 CDN）；首頁維持零 JS

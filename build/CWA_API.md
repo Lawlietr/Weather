@@ -188,4 +188,4 @@ cbph.cwa.gov.tw＝「預報中心資訊發布查詢系統」，即 CWA「災防�
 - **Endpoints**：`GET /api/global/`（目前生效告警，4 類分組）；`GET /api/{type}/?issuetime_after=&issuetime_before=&county=`（歷史，預設最新 50 筆）。type slugs：`cells`＝大雷雨即時訊息、`tywinds`＝颱風強風告警、`mountainstorms`＝山區暴雨警示訊息、`largesurfs`＝巨浪告警。
 - **每筆欄位**：`identifier`、`official_id`、`sent`/`onset`/`effective`/`expires`（UTC）、`is_active`、`msg_type`、`description`（告警原句）、`cmam_text`（細胞廣播原文）、`cb_enabled`、`county[]`/`town[]`（含鄉鎮）、`coastal_*`、**`polygon`**（字串 `lat,lon lat,lon ...`，多 ring 以 `;` 分開＝官方影響區域座標）、`geocode_dict`（實測空）。
 - **官方頁 deep link**：`https://cbph.cwa.gov.tw/ui/?type={type}&identifier={identifier}`
-- **陷阱（實測）**：空類型回 503（如 largesurfs）；`county=` 過濾不可靠（自行 filter）；**非 Open Data 正式目錄**（無 SLA）→ build 端容錯、失敗跳過＋warning 不中斷；時間 UTC；UI 引用註明「資料來源：中央氣象署災防告警系統」。設計與用途 → `TODO.md` §2。
+- **陷阱（實測）**：空類型回 503（如 largesurfs）；`county=` 過濾不可靠（自行 filter）；**非 Open Data 正式目錄**（無 SLA）→ build 端容錯、失敗跳過＋warning 不中斷；時間 UTC；UI 引用註明「資料來源：中央氣象署災防告警系統」。設計與用途 → `design/map.md`。

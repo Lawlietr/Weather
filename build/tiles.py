@@ -1,4 +1,4 @@
-"""離線地圖瓦片抓取（TODO §2「離線自駕」硬需求）。
+"""離線地圖瓦片抓取（design/map.md「離線自駕」硬需求）。
 
 build 時從 OSM 抓台灣 bbox 內的瓦片 → 快取 build/_tile_cache/（持久化、缺什麼補什麼，
 幾乎不變）→ 複製到 public/assets/tiles/{z}/{x}_{y}.png；Leaflet 指向本地瓦片

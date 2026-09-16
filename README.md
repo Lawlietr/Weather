@@ -49,7 +49,8 @@ weather/
 ├── AGENTS.md         # 專案規範：檔案規則、CWA API 優先級、網站設計原則
 ├── build/CWA_API.md  # CWA 逐 dataset 欄位查表（解析 CWA 資料前讀）
 ├── WORKFLOW.md       # Runbook：更新／build／驗證／部署逐步流程（接手先看）
-├── TODO.md           # 未完成待辦（RSS 抓取、地圖標註）
+├── TODO.md           # 任務帳本：要做的事＋優先級＋狀態＋設計檔連結（2026/9/16 起）
+├── design/           # 各功能設計檔（map／share-button／class-halt／rss／site，細節與定案）
 ├── README.md         # 本檔案
 ├── LICENSE           # 網站專案程式碼授權：GNU AGPLv3（僅限網站專案）
 ├── LICENSE-CONTENT   # 網站內容授權：CC BY-NC-SA 4.0（僅限網站專案發布內容）
