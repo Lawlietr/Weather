@@ -150,7 +150,7 @@
 ## Git
 
 - 預設分支：`main`（原 `master` 已更名）
-- Remotes：`origin`＝內部 Forgejo（`ssh://fg/lawliet/Weather.git`，內網，Identity `~/.ssh/id_rsa_gitea`）；`github`＝公開 repo `Lawlietr/Weather`（SSH `git@github.com:Lawlietr/Weather.git`，key `id_ed25519_github`，直推即可、**不需要 `GH_PAT`**）。commit 後**兩邊都推**：`git push origin <branch> && git push github <branch>`
+- Remotes：`origin`＝內部 Forgejo（`ssh://fg/lawliet/Weather.git`，內網，Identity `~/.ssh/id_rsa_gitea`）；`github`＝公開 repo `Lawlietr/Weather`（`https://github.com/Lawlietr/Weather.git`，直推即可、**不需要 `GH_PAT`**）；`codeberg`＝公開 repo `Lawlietr/Weather`（`ssh://git@codeberg.org/Lawlietr/Weather.git`，走 `~/.ssh/config` 的 codeberg.org 區塊、Identity `id_rsa_gitea`）。commit 後**三邊都推**：`git push origin <branch> && git push github <branch> && git push codeberg <branch>`
 - **開發流程（2026/9/16 重申：勿直接 commit/push `main`）**：所有開發在 `DEV` 分支 commit→build＋部署測試站 `wea-testing`、真瀏覽器（Playwright）驗證→**經使用者同意後**才將 `DEV` 合併進 `main` 並推 `main`（兩邊 remote 皆推）。生產自動部署（`build/deploy-cron.sh`→`deploy.sh`）**以 repo 目前 checkout 為準、無分支邏輯**：DEV 開發期間跑自動部署＝DEV 內容上生產；合併回 `main` 後切回 `main` 再部署即恢復生產為已合併狀態。
 - 無 lint/test 指令；**排程狀態（2026/8/29 起）**：GitHub Actions 僅保留 `workflow_dispatch`（排程已停用，原因：runner 到 CWA 連線不穩定、會推舊資料）；**主力自動更新通道＝本地 cron**（CWA 前置檢查 3 次重試、失敗中止）。部署指令與恢復 Actions 的條件 → `WORKFLOW.md` §7
 
