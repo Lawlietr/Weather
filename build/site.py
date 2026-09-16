@@ -65,12 +65,14 @@ GITHUB_ICON_SVG = ('<svg viewBox="0 0 16 16" width="20" height="20" fill="curren
 # 雙主題：預設黑夜；[data-theme="light"] 為琥珀色淺色主題（非純白）
 CSS = """
 :root{--red:#ef5350;--yellow:#ffb300;--green:#66bb6a;
+--red-bg:rgba(239,83,80,.12);--yellow-bg:rgba(255,179,0,.10);
 --bg:#14181c;--card:#1d242c;--line:#2f3944;--ink:#e4e8ec;--muted:#98a3af;
 --accent:#64b5f6;--chip-bg:#2a333e;--side-bg:#0f1317;--side-ink:#c9d1d9;
 --head-bg:#0c0f12;--table-head:#252e38;--ph-bg:#241f12;--ph-line:#6e5a1e;--ph-ink:#d3bd7d;
 color-scheme:dark;}
 /* 浅色主題＝琥珀：暖橙奶油調（hue 26–33）；舊版背景 hue 42–45 為純黃，視覺呈「淡黃」而非琥珀 */
 :root[data-theme="light"]{--red:#c62828;--yellow:#ef8f00;--green:#2e7d32;
+--red-bg:rgba(198,40,40,.08);--yellow-bg:rgba(239,143,0,.10);
 --bg:#f9f3eb;--card:#fcfaf7;--line:#d1b594;--ink:#3b2816;--muted:#76614c;
 --accent:#a35200;--chip-bg:#f2e4d4;--side-bg:#f5eee5;--side-ink:#5d4732;
 --head-bg:#342214;--table-head:#f1e7da;--ph-bg:#f7edde;--ph-line:#b8772e;--ph-ink:#5a3616;
@@ -145,7 +147,9 @@ a:hover{text-decoration:underline}
 .badge.sev-red{background:var(--red);color:#fff}
 .badge.sev-yellow{background:var(--yellow);color:#3e2723}
 .badge.sev-green{background:var(--green);color:#fff}
-.badge.sev-grey{background:#9e9e9e;color:#fff}
+.badge.sev-grey{background:#9e9e9e;color:#1c1c1c}
+/* 2026/9/16 徽章字色 AA 修正：深色主題白字 on 紅/綠僅 3.49/2.36:1 → 深墨字；灰徽章白字兩主題皆 2.68:1 → 深字（圓點與徽章共用底色變數，只改字色不影響圓點） */
+[data-theme="dark"] .badge.sev-red,[data-theme="dark"] .badge.sev-green{color:#10141a}
 .chips{margin:10px 0}
 .chip{display:inline-block;background:var(--chip-bg);border-radius:14px;padding:2px 12px;margin:2px 4px 2px 0;font-size:.85rem}
 .chip-link{color:var(--accent);text-decoration:none}
