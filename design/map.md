@@ -62,7 +62,7 @@
 2. `build/cbph.py`：抓 4 類→驗證→合併進 `map.geo.json` — **✅（2026/9/2）**：4 類告警抓取、polygon→GeoJSON、UTC→UTC+8、503/404 容錯；`site.py` 呼叫 `cbph.build_map_geojson()` 寫 `build/map.geo.json`（build 中間檔、gitignore）。公開 `/map/data.json` 屬步驟 6。
 3. `/map/` 骨架 — **✅（2026/9/2）**：`build/map_page.py`＋`build/tiles.py`（離線瓦片；來源陷阱——OSM 官方 server 對本機 IP 假 200 封鎖、改用 `tile.openstreetmap.de`——見 `tiles.py` 頭註）＋`build/static/leaflet/`（Leaflet 1.9.4 自託）。功能詳見上方「地圖頁 UI」；入口：首頁 nav＋llms.txt。
 4. 觀測層（2026/9/16 拆 3 小批、各批獨立上線；實作於 `cwa.py`→`map.geo.json`→`map_page.py`）：
-   - **4a 雨量站點層（2026/9/16 起）**：O-A0002-001 超閾值測站→三級點層（p1hr/p24hr ≥50/250 🔴、≥25/100 🟠、≥10/50 🟡；2026/9/16 真實資料校準：淡雨日 0/1/13 站）。座標取 **WGS84**（`GeoInfo.Coordinates[CoordinateName=WGS84]`，不可用 TWD67）；`cwa.fetch_rain_points()` 為單一事實來源。——**代碼已完成（2026/9/16）、真瀏覽器實測全點渲染正常**（obscura 無法渲染 Leaflet SVG，驗證流程見 AGENTS.md「Obscura」節）；點樣式未過關→見 4a-follow。
+   - **4a 雨量站點層（2026/9/16 起）**：O-A0002-001 超閾值測站→三級點層（p1hr/p24hr ≥50/250 🔴、≥25/100 🟠、≥10/50 🟡；2026/9/16 真實資料校準：淡雨日 0/1/13 站）。座標取 **WGS84**（`GeoInfo.Coordinates[CoordinateName=WGS84]`，不可用 TWD67）；`cwa.fetch_rain_points()` 為單一事實來源。——**代碼已完成（2026/9/16）、真瀏覽器實測全點渲染正常**（obscura 無法渲染 Leaflet SVG，驗證流程見下方「/map/ 向量層驗證（Playwright）」節）；點樣式未過關→見 4a-follow。
    - **4a-follow 雨量點樣式重做（🔥高優先、合併 4a 後先處理；2026/9/16 使用者初審未過）**：使用者實際螢幕判斷——① 圓形仍太小；② 暖橙/琥珀色系（現行 #dc2626/#ea580c/#f59e0b）仍與 OSM 底圖幹道粗橘線（含交流道/匝道交會處的橘色三角形樣小塊）混淆、干擾視覺判斷。底圖橘線是 OSM 標準 tile 自帶、不可控→點顏色必須避開色相 ~20-40° 橘系；候選方向待討論後再動手（冷藍系【注意巨浪告警 cyan 層衝突＋海水淡藍】、深色單色＋白環＋標註、加大尺寸等）。
    - **4b 颱風軌跡/風圈層**：W-C0034-005 觀測軌跡（實線）＋預報軌跡（虛線）＋最新預報點風圈圓環（空狀態＝無活動氣旋時圖層空，沿用「空＝查過」原則）。
    - **4c 特報陸地紅區層**：W-C0033-002/003 文字影響區域→**選項 A 縣界 GeoJSON 自託**（2026/9/16 定案；gazetteer 無邊界多邊形）；生效時段標籤（「今夜起」等）。
@@ -80,3 +80,11 @@
 **實測例證（2026/9/13，正式站地圖）**：largesurfs（巨浪）無生效中告警 → 503；同刻 cells／tywinds／mountainstorms 皆 200。純表面問題（其餘三層正常、build 成功），但誤示「資料源故障」。
 
 **修復（已定案並實作）**：`build/cbph.py` 一處小改（約 10 行）——`CbphFetchError` 帶 `status` 屬性；`fetch_alerts()` 對 503/404 視為該類型空清單（只打 `[info]`、不進 `warnings`）；4 類全 503/404 時記一條「可能 cbph 服務異常」全站 warning（防靜默）。單元測試 5/5（stub `_get_json`）；真實 build：largesurfs 503 → `[info]`、零 warning、地圖頁無「抓取失敗」。已部署測試站 wea-testing 驗證。2026/9/13 合併 main。
+
+## /map/ 向量層驗證（Playwright，2026/9/16 定案）
+
+**規則**：`/map/`（Leaflet 向量層）驗證一律用 Playwright 真 Chromium，**不要用 obscura 截圖判層**——obscura 引擎缺 SVG 1.1 factory API（`createSVGRect` 等）→ `L.Browser.svg === false` → 所有向量層（雨量圓點、告警 polygon）不渲染且無 console 輸出，截圖會假陽性「圖層空」。obscura 的 SVG/console 缺陷已備妥 bug 報告文本待回報。
+
+**Playwright 跑法**：`NODE_PATH=/root/opencode-stuffs/steam-deck-utilities/web/node_modules node <script>`（Chromium 在 `~/.cache/ms-playwright`，npx 預設解析路徑沒有 browser 不可用）。
+
+**驗證要點**：`.leaflet-overlay-pane path.leaflet-interactive` 的數量＋fill 顏色分佈＋實際中心座標（可用 tile src 座標反算）。
