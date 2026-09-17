@@ -53,8 +53,17 @@ header.site{background:var(--head-bg);color:#fff;padding:8px 0;position:sticky;t
 .site-bar h1{font-size:1.05rem;margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .backlink{color:#b0bec5;white-space:nowrap;flex:none}
 .updated{color:#b0bec5;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none}
-.map-wrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;height:calc(100vh - 49px)}
-#map{min-height:320px;background:var(--bg)}
+.map-wrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;flex:1 1 auto;min-height:0}
+/* isolation:isolate（2026/9/17）：把 Leaflet 內部 pane（z-index 100–1000）封進 #map 自己的
+   堆疊上下文。否則 .leaflet-container 不形成堆疊上下文、pane 直接與 root 競爭，
+   sticky header（z-40）與行動版 bottom sheet（z-50）會被地圖蓋住。 */
+#map{isolation:isolate;min-height:320px;background:var(--bg)}
+/* 桌面鎖死視口：header＋地圖（彈性）＋footer 填滿一屏、頁面不捲動
+   （取代舊的 height:calc(100vh - 49px) magic number） */
+@media(min-width:768px){
+html,body.map-page{height:100%;overflow:hidden}
+body.map-page{display:flex;flex-direction:column}
+}
 .leaflet-container{background:var(--bg);font:inherit}
 .map-panel{background:var(--card);border-left:1px solid var(--line);overflow-y:auto}
 .panel-tab{display:none}
@@ -82,7 +91,7 @@ header.site{background:var(--head-bg);color:#fff;padding:8px 0;position:sticky;t
 footer.map-foot{background:var(--head-bg);color:#90a4ae;padding:8px 14px;font-size:.78rem}
 /* 行動版（<768px）：右側欄改為 bottom sheet */
 @media(max-width:767px){
-.map-wrap{display:block;height:auto}
+.map-wrap{display:block;height:auto;flex:none}
 #map{height:62vh;min-height:320px}
 .map-panel{position:fixed;left:0;right:0;bottom:0;z-index:50;border-left:none;border-top:2px solid var(--line);
 border-radius:14px 14px 0 0;max-height:70vh;transform:translateY(calc(100% - 46px));transition:transform .25s ease;box-shadow:0 -6px 24px rgba(0,0,0,.35)}
