@@ -98,7 +98,10 @@ border-radius:14px 14px 0 0;max-height:70vh;transform:translateY(calc(100% - 46p
 .map-panel.open{transform:translateY(0)}
 .panel-tab{display:flex;align-items:center;gap:8px;width:100%;padding:11px 14px;background:none;border:none;
 color:var(--ink);font:inherit;font-weight:700;cursor:pointer}
-.panel-tab .updated{margin-left:auto}
+.panel-tab .updated{margin-left:auto;flex:0 1 auto;min-width:0;max-width:62%}
+/* 2026/9/17：左側告警數 span 不可折行（舊版被右側「產生時間」長串壓到 min-content、
+   一 CJK 字一行）；右側縮得動＋ellipsis */
+.panel-tab>span:first-child{white-space:nowrap;flex:none}
 #panel-close{display:inline-flex;background:none;border:none;color:var(--muted);font-size:1rem;cursor:pointer;padding:4px}
 .panel-body{padding-bottom:24px}
 }
