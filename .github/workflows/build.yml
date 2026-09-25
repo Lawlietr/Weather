@@ -1,15 +1,18 @@
 name: Build & Deploy
 
 # 觸發方式：
-#   - workflow_dispatch：手動點「Run workflow」（備用，2026/8/29 起停用 schedule）
+#   - schedule：每小時 00 分（UTC，台灣時間 = 每小時 :00）
+#   - workflow_dispatch：手動點「Run workflow」（備援）
 #
-# ⚠️ 排程已停用（2026/8/29）：Actions runner（westus2）到 CWA API 連線不穩定，
-#    導致 build 使用舊資料卻仍部署。已改為本地 cron 備用
-#    （bash build/cron-enable.sh 開啟，bash build/cron-disable.sh 關閉）。
+# ⚠️ 2026/8/29 曾停用排程：原因是 CWA API 回傳 MaxWindSpeed=None 導致程式崩潰
+#    （TypeError），非連線問題。該 bug 已修復，2026/9/26 恢復排程。
+#    Actions 執行約 3 分鐘（vs 本地 cron 幾秒），僅作備援。
 #
 # 註："on" 必須加引號。YAML 1.1 把未加引號的 on 解成布林 true，
 # 會導致 GitHub 無法正確註冊 schedule（排程因此永不觸發）。
 "on":
+  schedule:
+    - cron: '0 * * * *'  # UTC 每小時 00 分 = 台灣時間每小時 :00（+8h）
   workflow_dispatch: {}
 
 # 推 gh-pages 需要寫入 contents 的權限
