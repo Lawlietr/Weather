@@ -8,9 +8,8 @@ name: Build & Deploy
 #    （TypeError），非連線問題。該 bug 已修復，2026/9/26 恢復排程。
 #    Actions 執行約 3 分鐘（vs 本地 cron 幾秒），僅作備援。
 #
-# 註："on" 必須加引號。YAML 1.1 把未加引號的 on 解成布林 true，
-# 會導致 GitHub 無法正確註冊 schedule（排程因此永不觸發）。
-"on":
+# ⚠️ GitHub Actions 的 YAML parser 已把 on 當關鍵字，不需要加引號。
+on:
   schedule:
     - cron: '0 * * * *'  # UTC 每小時 00 分 = 台灣時間每小時 :00（+8h）
   workflow_dispatch: {}
