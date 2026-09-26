@@ -1,6 +1,6 @@
 # LOCAL_CRON.md：本地自動部署（主力更新通道）
 
-> **定位**：2026/9/26 起 GitHub Actions 恢復每小時自動排程（備援）；本機（Ubuntu LXC）的 cron 為**主要自動 build＋部署通道**（每 2 小時）。Actions 2026/8/29 曾暫停的真正原因：CWA API 回傳 `MaxWindSpeed=None` 導致程式崩潰（TypeError），非連線問題；該 bug 已修復，2026/9/26 恢復排程。
+> **定位**：2026/9/26 起 GitHub Actions 恢復自動排程（備援；同日起改為台北時間奇數小時 00 分，每 2 小時）；本機（Ubuntu LXC）的 cron 為**主要自動 build＋部署通道**（每 2 小時）。Actions 2026/8/29 曾暫停的真正原因：CWA API 回傳 `MaxWindSpeed=None` 導致程式崩潰（TypeError），非連線問題；該 bug 已修復，2026/9/26 恢復排程。
 > cron 工作項目預設未安裝，以 `build/cron-enable.sh` 開啟（主力通道應常開）。
 > 最後更新：2026/9/26
 
@@ -13,13 +13,13 @@
 
 與 Actions 的不同：
 
-| | GitHub Actions（每小時自動，備援） | 本地 cron（主力） |
+| | GitHub Actions（台北時間奇數小時自動，備援） | 本地 cron（主力） |
 |---|---|---|
 | 金鑰 | GitHub Secrets | `build/deploy.env`（本機，gitignore，600） |
 | git 憑證 | Actions env | 本機已設定（Forgejo SSH / GitHub 直推） |
 | 依賴 | GitHub 伺服器 | **本機需保持醒著** |
 | 執行時間 | 約 3 分鐘 | 幾秒 |
-| 排程 | 每小時 00 分（UTC）＝台灣時間每小時 :00 | 每 2 小時 |
+| 排程 | 台北時間奇數小時 00 分（01:00、03:00…23:00） | 每 2 小時 |
 | 啟用 | 自動（schedule）＋手動（workflow_dispatch） | 常開（`cron-enable.sh` 安裝） |
 | 備註 | 2026/8/29 曾暫停（MaxWindSpeed=None bug，已修復）；2026/9/26 恢復 | 主力通道，優先於 Actions |
 
@@ -84,7 +84,7 @@ source build/deploy.env
 
 ## 五、排程細節
 
-- 排程（`build/cron.txt`）：`0 */2 * * *`（台灣時間，每 2 小時；Actions 側等價 `0 */2 * * *` UTC）。
+- 排程（`build/cron.txt`）：`0 */2 * * *`（台灣時間，每 2 小時；Actions 側為 `0 17,19,21,23,1,3,5,7,9,11,13,15 * * *` UTC＝台北時間奇數小時，與本機錯開）。
 - 機器時區 `Asia/Taipei`（UTC+8），cron 直接用本地時間。
 - `deploy-cron.sh` 用 `flock`（`/tmp/weather-deploy.lock`）防止兩次重疊。
 - 日誌依天切檔：`build/logs/deploy-cron-YYYY-MM-DD.log`。
@@ -95,7 +95,7 @@ source build/deploy.env
 
 1. **本機需保持醒著**；休眠/關機期間的排程不會補跑（cron 非 systemd timer 的 missed-run 補執）。
 2. **金鑰安全**：`build/deploy.env` 權限 600、gitignore，絕不 commit。若懷疑洩漏，請到 Cloudflare/CWA 後台重設並更新此檔。
-3. GitHub Actions 每小時自動排程（備援）與 cron 不衝突，最壞情況是 Cloudflare 重複 publish（無害但浪費）。
+3. GitHub Actions 台北時間奇數小時自動排程（備援）與 cron（每 2 小時整點）不衝突，最壞情況是 Cloudflare 重複 publish（無害但浪費）。
 4. Actions 偶發失敗 99% 是 Cloudflare token 限區域或失效；用 `--selfcheck` 可先確認是 token 問題還是本機問題。
 5. cron 環境極簡（不載入 `.zshrc`），故金鑰必須在 `build/deploy.env`（由 `deploy-cron.sh` 載入），不要依賴 shell 環境變數。
 

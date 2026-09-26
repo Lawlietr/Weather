@@ -1,7 +1,7 @@
 # 手動更新指南（Manual Update）
 
 本文件記錄「改完災情／颱風 markdown → build → 部署上線」的完整手動流程。
-自動化排程與完整 runbook 見 `WORKFLOW.md`（主力為本地 cron，Actions 僅手動 dispatch；cron 細節見 `LOCAL_CRON.md`）。
+自動化排程與完整 runbook 見 `WORKFLOW.md`（主力為本地 cron，Actions 為備援自動排程（台北時間奇數小時）＋手動 dispatch；cron 細節見 `LOCAL_CRON.md`）。
 
 > 快速版：改完 markdown 後只跑一支指令即可上線：
 > ```bash
@@ -12,7 +12,7 @@
 > 金鑰存在本機環境（手動用）與 `build/deploy.env`（cron 用）。公開網站由
 > **Cloudflare Pages** 提供；GitHub Pages 為備用 mirror（目前 404）。
 > Forgejo 與 GitHub **main 同步**；**本地 cron 為主力自動更新**（每 2 小時，見
-> `LOCAL_CRON.md`），Actions 排程已停用（僅手動 dispatch）。
+> `LOCAL_CRON.md`），Actions 排程 2026/9/26 起啟用（台北時間奇數小時 00 分，備援）＋手動 dispatch。
 
 ---
 
