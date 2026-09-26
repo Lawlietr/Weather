@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>災防告警地圖｜台灣天氣與災情總覽</title>
+<script>/* 避免閃爍：先還原主題偏好再渲染 */(function(){var t=null;try{t=localStorage.getItem("wtf-theme")}catch(e){}if(t!=="light"&&t!=="dark")t="dark";document.documentElement.setAttribute("data-theme",t);})();</script>
+<style>
+:root{--red:#ef5350;--yellow:#ffb300;--green:#66bb6a;
+--bg:#14181c;--card:#1d242c;--line:#2f3944;--ink:#e4e8ec;--muted:#98a3af;
+--accent:#64b5f6;--chip-bg:#2a333e;--side-bg:#0f1317;--head-bg:#0c0f12;
+color-scheme:dark;}
+/* 與 site.py 主題變數同步（子集：本頁未用 risk-bg/table-head/ph-*）；
+   site.py 改主題色時須一併更新此處（2026/9/16 曾遺漏淡黃舊版）。 */
+:root[data-theme="light"]{--red:#c62828;--yellow:#ef8f00;--green:#2e7d32;
+--bg:#f9f3eb;--card:#fcfaf7;--line:#d1b594;--ink:#3b2816;--muted:#76614c;
+--accent:#a35200;--chip-bg:#f2e4d4;--side-bg:#f5eee5;--head-bg:#342214;
+color-scheme:light;}
+
+*{box-sizing:border-box}
+body.map-page{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Noto Sans TC","PingFang TC","Microsoft JhengHei","Hiragino Sans","Noto Sans JP","Yu Gothic","Meiryo",sans-serif;color:var(--ink);background:var(--bg);line-height:1.7;font-size:16px}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+.muted{color:var(--muted)}
+header.site{background:var(--head-bg);color:#fff;padding:8px 0;position:sticky;top:0;z-index:40}
+.site-bar{max-width:none;margin:0;padding:2px 14px;display:flex;align-items:center;gap:10px}
+.site-bar h1{font-size:1.05rem;margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.backlink{color:#b0bec5;white-space:nowrap;flex:none}
+.updated{color:#b0bec5;font-size:.78rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none}
+.map-wrap{display:grid;grid-template-columns:minmax(0,1fr) 340px;flex:1 1 auto;min-height:0}
+/* isolation:isolate（2026/9/17）：把 Leaflet 內部 pane（z-index 100–1000）封進 #map 自己的
+   堆疊上下文。否則 .leaflet-container 不形成堆疊上下文、pane 直接與 root 競爭，
+   sticky header（z-40）與行動版 bottom sheet（z-50）會被地圖蓋住。 */
+#map{isolation:isolate;min-height:320px;background:var(--bg)}
+/* 桌面鎖死視口：header＋地圖（彈性）＋footer 填滿一屏、頁面不捲動
+   （取代舊的 height:calc(100vh - 49px) magic number） */
+@media(min-width:768px){
+html,body.map-page{height:100%;overflow:hidden}
+body.map-page{display:flex;flex-direction:column}
+}
+.leaflet-container{background:var(--bg);font:inherit}
+.map-panel{background:var(--card);border-left:1px solid var(--line);overflow-y:auto}
+.panel-tab{display:none}
+.panel-body{padding:14px 16px}
+.map-updated{font-size:.85rem;color:var(--muted);margin:0 0 10px}
+.map-warn{background:var(--chip-bg);border:1px solid var(--yellow);border-radius:8px;padding:8px 12px;margin:8px 0;font-size:.85rem}
+.map-panel h3{font-size:.95rem;border-bottom:1px solid var(--line);padding-bottom:4px;margin:18px 0 8px}
+.layer{display:flex;align-items:center;gap:8px;padding:5px 2px;font-size:.9rem;cursor:pointer}
+.layer input{accent-color:var(--accent);width:16px;height:16px;margin:0}
+.swatch{width:14px;height:14px;border-radius:3px;flex:none}
+.swatch.round{border-radius:50%}
+.rain-legend{margin:2px 0 6px 24px;font-size:.8rem;color:var(--muted);line-height:1.9}
+.rain-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.layer .cnt{margin-left:auto;color:var(--muted);font-size:.85rem}
+.map-detail{font-size:.9rem}
+.map-detail .dl{margin:8px 0}
+.map-detail .dt{color:var(--muted);font-size:.8rem;margin-bottom:1px}
+.map-detail .dd{white-space:pre-wrap;word-break:break-word}
+.map-detail .dd-src{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:.85rem}
+.map-detail ul{list-style:none;padding:0;margin:4px 0}
+.map-detail li{padding:3px 0}
+.map-detail .type-head{display:flex;align-items:center;gap:8px;font-weight:700;font-size:1rem}
+.map-noscript{padding:20px;font-size:.95rem}
+.map-noscript ul{padding-left:18px}
+footer.map-foot{background:var(--head-bg);color:#90a4ae;padding:8px 14px;font-size:.78rem}
+/* 行動版（<768px）：右側欄改為 bottom sheet */
+@media(max-width:767px){
+.map-wrap{display:block;height:auto;flex:none}
+#map{height:62vh;min-height:320px}
+.map-panel{position:fixed;left:0;right:0;bottom:0;z-index:50;border-left:none;border-top:2px solid var(--line);
+border-radius:14px 14px 0 0;max-height:70vh;transform:translateY(calc(100% - 46px));transition:transform .25s ease;box-shadow:0 -6px 24px rgba(0,0,0,.35)}
+.map-panel.open{transform:translateY(0)}
+.panel-tab{display:flex;align-items:center;gap:8px;width:100%;padding:11px 14px;background:none;border:none;
+color:var(--ink);font:inherit;font-weight:700;cursor:pointer}
+.panel-tab .updated{margin-left:auto;flex:0 1 auto;min-width:0;max-width:62%}
+/* 2026/9/17：左側告警數 span 不可折行（舊版被右側「產生時間」長串壓到 min-content、
+   一 CJK 字一行）；右側縮得動＋ellipsis */
+.panel-tab>span:first-child{white-space:nowrap;flex:none}
+#panel-close{display:inline-flex;background:none;border:none;color:var(--muted);font-size:1rem;cursor:pointer;padding:4px}
+.panel-body{padding-bottom:24px}
+}
+</style>
+<link rel="stylesheet" href="../assets/leaflet/leaflet.css">
+</head>
+<body class="map-page">
+<header class="site">
+<div class="site-bar">
+<a class="backlink" href="../index.html">← 返回總覽</a>
+<h1>🗺 災防告警地圖</h1>
+<span class="updated">產生時間：2026/9/27 06:03（每 2 小時更新，非即時）</span>
+</div>
+</header>
+<div class="map-wrap">
+<div id="map">
+<noscript><div class="map-noscript"><p>JavaScript 已停用：以下為靜態告警清單；互動地圖需啟用 JS。</p><p>目前無生效中的災防告警</p><p><a href="../index.html">← ← 返回總覽</a></p></div></noscript>
+</div>
+<aside class="map-panel" id="panel">
+<button class="panel-tab" id="panel-tab" aria-expanded="false">
+<span>⚠️ 告警地圖・生效 0 筆</span>
+<span class="updated">產生時間：2026/9/27 06:03（每 2 小時更新，非即時）</span>
+<span id="panel-close" role="button" aria-label="關閉">✕</span>
+</button>
+<div class="panel-body">
+<p class="map-updated">產生時間：2026/9/27 06:03（每 2 小時更新，非即時）</p>
+<div class="map-warn">⚠️ cbph cells: 抓取失敗（curl 失敗（returncode=35））— 跳過<br>⚠️ cbph tywinds: 抓取失敗（curl 失敗（returncode=35））— 跳過<br>⚠️ cbph mountainstorms: 抓取失敗（curl 失敗（returncode=35））— 跳過<br>⚠️ cbph largesurfs: 抓取失敗（curl 失敗（returncode=35））— 跳過</div>
+<h3>圖層</h3>
+<label class="layer"><input type="checkbox" data-type="cells" checked><span class="swatch" style="background:#f59e0b"></span>大雷雨即時訊息<span class="cnt">0</span></label><label class="layer"><input type="checkbox" data-type="tywinds" checked><span class="swatch" style="background:#ef4444"></span>颱風強風告警<span class="cnt">0</span></label><label class="layer"><input type="checkbox" data-type="mountainstorms" checked><span class="swatch" style="background:#7c3aed"></span>山區暴雨警示<span class="cnt">0</span></label><label class="layer"><input type="checkbox" data-type="largesurfs" checked><span class="swatch" style="background:#0ea5e9"></span>巨浪告警<span class="cnt">0</span></label><label class="layer"><input type="checkbox" data-type="rain" checked><span class="swatch round" style="background:#dc2626"></span>雨量站（超閾值）<span class="cnt">0</span></label>
+<h3>告警詳情</h3>
+<div class="map-detail" id="detail"><p class="muted">點擊地圖上的告警區域查看詳情</p></div>
+</div>
+</aside>
+</div>
+<footer class="map-foot">資料來源：中央氣象署災防告警系統（PWS）、雨量站（O-A0002-001）　·　© OpenStreetMap contributors</footer>
+<script id="map-data" type="application/json">{"type": "FeatureCollection", "generated_at": "2026/9/27 06:03", "source": "中央氣象署災防告警系統（PWS）", "api": "cbph.cwa.gov.tw", "note": "build 時快照、每 2 小時更新、非即時", "warnings": ["cbph cells: 抓取失敗（curl 失敗（returncode=35））— 跳過", "cbph tywinds: 抓取失敗（curl 失敗（returncode=35））— 跳過", "cbph mountainstorms: 抓取失敗（curl 失敗（returncode=35））— 跳過", "cbph largesurfs: 抓取失敗（curl 失敗（returncode=35））— 跳過"], "features": []}</script>
+<script src="../assets/leaflet/leaflet.js"></script>
+<script>
+(function(){
+  var raw = document.getElementById("map-data");
+  var detail = document.getElementById("detail");
+  var panel = document.getElementById("panel");
+  var mapEl = document.getElementById("map");
+  if (!raw || typeof L === "undefined") return;
+  var DATA = JSON.parse(raw.textContent);
+  var LABELS = {"official": "官方編號", "effective": "生效時段", "county": "影響縣市", "town": "影響鄉鎮", "desc": "告警原文", "cmam": "細胞廣播", "cb_on": "細胞廣播已啟動", "cb_off": "細胞廣播未啟動", "repo": "本站相關災情紀錄", "repo_none": "無相關災情紀錄", "src": "回到 CWA 災防告警官方頁", "rain_loc": "位置", "rain_p1hr": "近 1 小時", "rain_p24hr": "近 24 小時", "rain_pday": "本日累計", "rain_obs": "觀測時間", "rain_note": "測站資料由 CWA 每 10 分鐘更新；本圖為每 2 小時刷新的快照"};
+
+  var map = L.map(mapEl, {minZoom:8, maxZoom:11});
+  map.setView([23.8, 120.95], 8);
+  map.setMaxBounds([[20.9, 118.3], [26.7, 123.6]]);
+  L.tileLayer("../assets/tiles/{z}/{x}_{y}.png",
+    {minZoom:8, maxZoom:11, attribution:"© OpenStreetMap contributors"}).addTo(map);
+
+  var byType = {};
+  DATA.features.forEach(function(f){
+    (byType[f.properties.type] = byType[f.properties.type] || []).push(f);
+  });
+  var layerByType = {};
+  Object.keys(byType).forEach(function(type){
+    var polys = [];
+    byType[type].forEach(function(f){
+      var p = f.properties;
+      if (f.geometry.type === "Point"){
+        var mk = L.circleMarker([f.geometry.coordinates[1], f.geometry.coordinates[0]],
+          {radius: p.radius, color: "#fff", weight: 2, fillColor: p.color, fillOpacity: 0.95});
+        mk.bindTooltip(p.name + " " + (p.township || "") + "　" + LABELS.rain_p1hr + " " + p.p1hr + "mm", {sticky: true});
+        mk.on("click", function(){ showRainDetail(p); });
+        polys.push(mk);
+        return;
+      }
+      var tip = p.type_name + (p.effective ? " " + p.effective + " → " + (p.expires || "") : "");
+      var counties = (p.counties || []).join("、");
+      if (counties) tip += "（" + counties + "）";
+      (f.geometry.coordinates || []).forEach(function(ring){
+        var pg = L.polygon(ring.map(function(c){ return [c[1], c[0]]; }),
+          {color: p.color, weight: 2, fillColor: p.color, fillOpacity: 0.35});
+        pg.bindTooltip(tip, {sticky: true});
+        pg.on("click", function(){ showDetail(p); });
+        polys.push(pg);
+      });
+    });
+    var lg = L.layerGroup(polys).addTo(map);
+    layerByType[type] = lg;
+  });
+
+  document.querySelectorAll(".layer input").forEach(function(cb){
+    cb.addEventListener("change", function(){
+      var lg = layerByType[cb.dataset.type];
+      if (!lg) return;
+      if (cb.checked) lg.addTo(map); else map.removeLayer(lg);
+    });
+  });
+
+  function row(label, value){
+    var d = document.createElement("div"); d.className = "dl";
+    var k = document.createElement("div"); k.className = "dt"; k.textContent = label;
+    var v = document.createElement("div"); v.className = "dd"; v.textContent = value;
+    d.appendChild(k); d.appendChild(v); detail.appendChild(d);
+  }
+  function showDetail(p){
+    detail.innerHTML = "";
+    var h = document.createElement("div"); h.className = "type-head";
+    var sw = document.createElement("span"); sw.className = "swatch"; sw.style.background = p.color;
+    var name = document.createElement("span"); name.textContent = p.type_name;
+    h.appendChild(sw); h.appendChild(name); detail.appendChild(h);
+    row(LABELS.official, p.official_id || "—");
+    row(LABELS.effective, (p.effective || "—") + " → " + (p.expires || "—"));
+    row(LABELS.county, (p.counties || []).join("、") || "—");
+    if ((p.towns || []).length) row(LABELS.town, p.towns.join("、"));
+    row(LABELS.desc, p.description || "—");
+    row(LABELS.cmam, (p.cmam_text || "—") + (p.cb_enabled ? "（" + LABELS.cb_on + "）" : "（" + LABELS.cb_off + "）"));
+    addRepo(p);
+    if (p.source_url){
+      var s = document.createElement("p");
+      var a2 = document.createElement("a");
+      a2.href = p.source_url; a2.target = "_blank"; a2.rel = "noopener";
+      a2.textContent = "↗ " + LABELS.src;
+      s.appendChild(a2); detail.appendChild(s);
+    }
+    panel.classList.add("open");
+  }
+  function addRepo(p){
+    var repo = document.createElement("div"); repo.className = "dl";
+    var rk = document.createElement("div"); rk.className = "dt"; rk.textContent = LABELS.repo;
+    repo.appendChild(rk);
+    var links = p.repo_links || [];
+    if (links.length){
+      var ul = document.createElement("ul");
+      links.forEach(function(e){
+        var li = document.createElement("li");
+        var a = document.createElement("a"); a.href = "../" + e.url; a.textContent = e.name;
+        li.appendChild(a); ul.appendChild(li);
+      });
+      repo.appendChild(ul);
+    } else {
+      var none = document.createElement("div"); none.className = "dd"; none.textContent = LABELS.repo_none;
+      repo.appendChild(none);
+    }
+    detail.appendChild(repo);
+  }
+  function showRainDetail(p){
+    detail.innerHTML = "";
+    var h = document.createElement("div"); h.className = "type-head";
+    var sw = document.createElement("span"); sw.className = "swatch round"; sw.style.background = p.color;
+    var name = document.createElement("span"); name.textContent = p.name;
+    h.appendChild(sw); h.appendChild(name); detail.appendChild(h);
+    row(LABELS.rain_loc, [p.county, p.township].filter(Boolean).join(""));
+    row(LABELS.rain_p1hr, p.p1hr + " mm");
+    row(LABELS.rain_p24hr, p.p24hr + " mm");
+    row(LABELS.rain_pday, p.pday + " mm");
+    row(LABELS.rain_obs, p.obs || "—");
+    addRepo(p);
+    var note = document.createElement("p");
+    note.className = "muted"; note.style.cssText = "font-size:.8rem;margin:10px 0 0";
+    note.textContent = LABELS.rain_note;
+    detail.appendChild(note);
+    panel.classList.add("open");
+  }
+
+  // 行動版 bottom sheet 開關
+  var tab = document.getElementById("panel-tab");
+  function toggle(){
+    var open = panel.classList.toggle("open");
+    tab.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  if (tab) tab.addEventListener("click", function(ev){
+    if (ev.target.id === "panel-close" || ev.target === tab) toggle();
+  });
+  if (!DATA.features.length){
+    detail.innerHTML = "<p class=\"muted\">目前無生效中的災防告警</p>";
+  }
+})();
+</script>
+</body>
+</html>
