@@ -1,7 +1,7 @@
 name: Build & Deploy
 
 # 觸發方式：
-#   - schedule：每 2 小時 00 分（UTC，台灣時間 = 每 2 小時 :00）
+#   - schedule：UTC+8 奇數小時 00 分（01:00、03:00…23:00）
 #   - workflow_dispatch：手動點「Run workflow」（備援）
 #
 # ⚠️ 2026/8/29 曾停用排程：原因是 CWA API 回傳 MaxWindSpeed=None 導致程式崩潰
@@ -11,7 +11,7 @@ name: Build & Deploy
 # ⚠️ GitHub Actions 的 YAML parser 已把 on 當關鍵字，不需要加引號。
 on:
   schedule:
-    - cron: '0 */2 * * *'  # UTC 每 2 小時 00 分 = 台灣時間每 2 小時 :00（+8h）
+    - cron: '0 17,19,21,23,1,3,5,7,9,11,13,15 * * *'  # UTC+8 奇數小時 :00（01:00、03:00…23:00）
   workflow_dispatch: {}
 
 # 推 gh-pages 需要寫入 contents 的權限
