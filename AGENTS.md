@@ -143,7 +143,7 @@
 - 預設分支：`main`（原 `master` 已更名）
 - Remotes：`origin`＝內部 Forgejo（`ssh://fg/lawliet/Weather.git`，內網，Identity `~/.ssh/id_rsa_gitea`）；`github`＝公開 repo `Lawlietr/Weather`（`https://github.com/Lawlietr/Weather.git`，直推即可、**不需要 `GH_PAT`**）；`codeberg`＝公開 repo `Lawlietr/Weather`（`ssh://git@codeberg.org/Lawlietr/Weather.git`，走 `~/.ssh/config` 的 codeberg.org 區塊、Identity `id_rsa_gitea`）。commit 後**三邊都推**：`git push origin <branch> && git push github <branch> && git push codeberg <branch>`
 - **開發流程（2026/9/16 重申：勿直接 commit/push `main`）**：所有開發在 `DEV` 分支 commit→build＋部署測試站 `wea-testing`、真瀏覽器（Playwright）驗證→**經使用者同意後**才將 `DEV` 合併進 `main` 並推 `main`（兩邊 remote 皆推）。生產自動部署（`build/deploy-cron.sh`→`deploy.sh`）**以 repo 目前 checkout 為準、無分支邏輯**：DEV 開發期間跑自動部署＝DEV 內容上生產；合併回 `main` 後切回 `main` 再部署即恢復生產為已合併狀態。
-- 無 lint/test 指令；**排程狀態（2026/9/26 起恢復，9/26 改為每 2 小時）**：GitHub Actions 於台北時間奇數小時 00 分（01:00、03:00…23:00）自動 build＋部署；**主力自動更新通道＝本地 cron**（每 2 小時，CWA 前置檢查 3 次重試、失敗中止）。Actions 執行約 3 分鐘（vs 本地幾秒），僅作備援。2026/8/29 曾停用排程的真正原因：CWA API 回傳 `MaxWindSpeed=None` 導致程式崩潰（TypeError），非連線問題；該 bug 已修復，2026/9/26 恢復排程。部署指令 → `WORKFLOW.md` §7
+- 無 lint/test 指令；**排程狀態（2026/9/26 起恢復，9/26 改為每 2 小時）**：GitHub Actions 於台北時間奇數小時 25 分（01:25、03:25…23:25）自動 build＋部署；**主力自動更新通道＝本地 cron**（每 2 小時，CWA 前置檢查 3 次重試、失敗中止）。Actions 執行約 3 分鐘（vs 本地幾秒），僅作備援。2026/8/29 曾停用排程的真正原因：CWA API 回傳 `MaxWindSpeed=None` 導致程式崩潰（TypeError），非連線問題；該 bug 已修復，2026/9/26 恢復排程。部署指令 → `WORKFLOW.md` §7
 
 ---
 
