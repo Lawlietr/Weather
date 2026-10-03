@@ -34,6 +34,17 @@ LOCK_FILE="/tmp/weather-deploy.lock"
 # cron 環境 PATH 極簡，需補齊（含 node 與 python）
 export PATH="/root/.local/share/pi-node/node-v22.23.2-linux-x64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
+# 從 ~/.zshrc 抽取金鑰環境變數（cron 不載入 .zshrc，但可 grep export 行）
+# 若 .zshrc 不存在或抽不到，則 fallback 到 deploy.env 硬編碼值
+if [ -r "$HOME/.zshrc" ]; then
+  for var in CWA_API_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID GH_PAT; do
+    val=$(grep -E "^export ${var}=" "$HOME/.zshrc" 2>/dev/null | tail -1 | sed "s/^export ${var}=//;s/^['\"]//;s/['\"]$//")
+    if [ -n "$val" ]; then
+      export "$var"="$val"
+    fi
+  done
+fi
+
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') [cron] $*" >> "$LOG_FILE"; }
 
 # ---- 日誌清理（最多保留 5 天） ----
