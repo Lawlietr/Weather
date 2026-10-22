@@ -76,7 +76,7 @@ def _fetch_nds(now=None):
     """備援：解析人事總處人工查證頁 nds.html 的停班停課表格（<TR>/<TD>/<FONT> 舊式結構）。
 
     當 CAP feed（FEED_URL）抓不到有效 entry（如回傳『請先登入會員』或滾動視窗無當前公告）時改用此源。
-    回傳 (entries, ok, ts_str)；entries 只收『停止上班、停止上課』的縣市，『照常』者跳過。
+    回傳 (entries, ok, ts_str)；收錄全數縣市（含『照常』如金門「今天照常上班、照常上課」），以符合「DGPA 查詢頁顯示什麼就顯示什麼」。
     impact 日設 effective=該日 00:00、expires=次日 00:00（全日停班的語意區間），
     使 is_current() 在影響日當天為 True、隔日自動消失。
     """
@@ -108,8 +108,7 @@ def _fetch_nds(now=None):
         status = cell_text(2) if len(cells) == 3 else cell_text(1)
         if not city or not status:
             continue
-        if "停止上班" not in status:
-            continue  # 純「照常」縣市（如金門「明天照常上班、照常上課」）不收；縣府停班、部分學校照常者仍保留
+        # 2026/10/23 使用者定案：DGPA 查詢頁顯示什麼就顯示什麼——全數縣市（含純「照常」如金門「今天照常上班、照常上課」）都收錄並標示其結果
         text = f"{city}：{status}"
         base = (now or datetime.now(_TZ)).date()  # impact 日：依縣府主體決定（『今天／明天』），預設明天
         if status.startswith("今天"):
@@ -175,6 +174,22 @@ def fetch(now=None):
                 return nds_entries, True, nds_ts
         except Exception as exc:
             print(f"warning: DGPA nds.html 備援抓取失敗：{exc}")
+    if entries:
+        # feed 只有『停班』公告（無純常縣市如金門「照常」）；補上查詢頁的純常縣市，符合「顯示什麼就顯示什麼」
+        try:
+            nds_all, _, _ = _fetch_nds(now)
+            seen = {e["text"].split("：", 1)[0] for e in entries}
+            added = 0
+            for ne in nds_all:
+                city = ne["text"].split("：", 1)[0]
+                if city not in seen:
+                    entries.append(ne)
+                    seen.add(city)
+                    added += 1
+            if added:
+                print(f"INFO: DGPA 補進純常縣市（如金門）{added} 個（nds 查詢頁）")
+        except Exception as exc:
+            print(f"warning: DGPA 補進純常縣市失敗：{exc}")
     return entries, True, ts_str
 
 
