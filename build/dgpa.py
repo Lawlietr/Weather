@@ -121,7 +121,7 @@ def _fetch_nds(now=None):
         effective = datetime(int(impact.year), int(impact.month), int(impact.day), tzinfo=_TZ)
         expires = effective  # 影響日 00:00（全日停班）：is_current 以 exp>=今日 0 時判定，隔日自動消失
         entries.append({
-            "id": f"nds-{city}", "sent": page_dt,
+            "id": f"nds-{city}", "from_nds": True, "sent": page_dt,
             "effective": effective, "expires": expires,
             "area": region, "text": text, "cap_url": QUERY_URL,
         })
@@ -221,11 +221,16 @@ def render_card(lang, susp, now=None):
 </div>"""
     lis = []
     for e in cur:
+        if e.get("from_nds"):
+            # nds 備援：文字已自足（含縣市＋日期＋結果），不重複顯示影響時段/公告於/CAP 連結
+            lis.append(f"<li>{e['text']}</li>")
+            continue
         when = t(lang, "susp_window", a=_fmt(e.get("effective")), b=_fmt(e.get("expires")))
         sent = t(lang, "susp_sent", ts=_fmt(e.get("sent"))) if e.get("sent") else ""
+        cap = f'　<a href="{e["cap_url"]}" target="_blank" rel="noopener">{t(lang, "susp_cap")}</a>' if e.get("cap_url") else ""
         lis.append(f"""<li>
 <p style="margin:2px 0">{e['text']}</p>
-<p class="meta">{when}　{sent}　<a href="{e['cap_url']}" target="_blank" rel="noopener">{t(lang, "susp_cap")}</a></p>
+<p class="meta">{when}　{sent}{cap}</p>
 </li>""")
     return f"""
 <div class="card cwa-card susp-card">
