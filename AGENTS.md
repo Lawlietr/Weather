@@ -175,7 +175,7 @@
 
 ## DGPA 停班停課 feed（2026/9/15 實測）
 
-停班停課（各縣市政府公告、人事行政總處中央統一發布）以 CAP feed 為主：`GET https://alerts.ncdr.nat.gov.tw/RssAtomFeed.ashx?AlertType=33`（免 key）。**⚠️ feed 是滾動近期視窗、不是「目前生效中」清單**——「是否目前相關」由 `build/dgpa.py` 的 `is_current()` 判斷。**完整 feed/CAP 欄位實測結構、陷阱、發布機制 → `build/dgpa.py` 頭註**（單一事實來源；人工查證頁 `https://www.dgpa.gov.tw/typh/daily/nds.html`（注意：僅 www 可用）亦在其中）。首頁卡呈現定案（有相關公告→展開置頂於颱風卡之上／無→收起置底）→ 見下方「網站結構」；事件檔存檔層 → `design/class-halt.md`。
+停班停課（各縣市政府公告、人事行政總處中央統一發布）以 CAP feed 為主：`GET https://alerts.ncdr.nat.gov.tw/RssAtomFeed.ashx?AlertType=33`（免 key）。**⚠️ feed 是滾動近期視窗、不是「目前生效中」清單**——「是否目前相關」由 `build/dgpa.py` 的 `is_current()` 判斷。**完整 feed/CAP 欄位實測結構、陷阱、發布機制 → `build/dgpa.py` 頭註**（單一事實來源；人工查證頁 `https://www.dgpa.gov.tw/typh/daily/nds.html`（注意：僅 www 可用）亦在其中）。首頁卡呈現定案（有相關公告→展開置頂於颱風卡之上／無→收起置底）→ 見下方「網站結構」；事件檔存檔層 → `design/class-halt.md`。**卡面收錄範圍：2026/10/23 定案收全數縣市（含金門等『照常』者，與 DGPA 查詢頁一致；舊版只收停班縣市、已改）**。
 
 ## Obscura 無頭瀏覽器
 
