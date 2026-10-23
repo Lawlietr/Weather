@@ -28,7 +28,7 @@
 
 - 三邊 `origin/DEV`＝`github/DEV`＝`codeberg/DEV`＝`bca1b0d`（2026-09-26 11:08）
 - **開發機上 `DEV` 沒有未 push 的 commit**（`origin/main..DEV` 內容與 remote 完全一致：4 個排程 commit）、工作區乾淨（0 個未 commit 檔案）、無 stash
-- `DEV` 落後 `main` **23** commits；`DEV` 上没有任何 `main` 沒有的檔案（`--diff-filter=A` 為空）
+- `DEV` 落後 `main` **23** commits；`DEV` 上沒有任何 `main` 沒有的檔案（`--diff-filter=A` 為空）
 - 部署機本機 `DEV` 指標原停在 `dcf10d7`（2026-08-30，落後 77）→ 已 `git branch -f DEV origin/DEV` 對齊並設定 track `origin/DEV`
 
 **查「DEV 現在到底在做什麼」的正確方法（在開發機上跑，或從部署機 SSH 過去唯讀探測）：**
@@ -52,7 +52,7 @@ ssh -o BatchMode=yes 192.168.100.15 'cd /root/opencode-stuffs/Weather && \
 3. **部署機的 HEAD 是生產內容的唯一來源**：`build/deploy-cron.sh` 與 `build/deploy.sh` 不做 `git pull`/`fetch`/`checkout` → 「已 push 到 remote」≠「已上線」。開發機 merge 回 `main` 後，**務必**在部署機 `git checkout main && git pull --ff-only origin main`（`WORKFLOW.md` §0.1）。
 4. **Python 版本**：兩機實測皆 3.12.3，cron build 每小時正常 → `WORKFLOW.md` §0 的「Python ≥ 3.14」已更正為 3.12（實測可用），不要照舊文去裝新 Python。
 
-## 四、待辦（本檔related，尚未做）
+## 四、待辦（本檔相關，尚未做）
 
 - [ ] 決定測試站部署落點：開發機裝 node／`bun x wrangler`／固定在部署機（建議固定部署機，理由見上節 1）
 - [ ] 開發機 `build/deploy.env` 內容與時效待使用者確認（8/27 建立，可能已過期；**不要**把值貼進任何輸出或 commit）
