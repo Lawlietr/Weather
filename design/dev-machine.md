@@ -55,6 +55,6 @@ ssh -o BatchMode=yes 192.168.100.15 'cd /root/opencode-stuffs/Weather && \
 ## 四、待辦（本檔related，尚未做）
 
 - [ ] 決定測試站部署落點：開發機裝 node／`bun x wrangler`／固定在部署機（建議固定部署機，理由見上節 1）
-- [ ] 開發機 `build/deploy.env` 內容與時效待 herself 確認（8/27 建立，可能已過期；**不要**把值貼進任何輸出或 commit）
+- [ ] 開發機 `build/deploy.env` 內容與時效待使用者確認（8/27 建立，可能已過期；**不要**把值貼進任何輸出或 commit）
 - [ ] `DEV` 落後 `main` 23 commits：開發新功能**前**先在開發機 `git merge origin/main`（五條鐵則第 5 條），重疊檔是 `build/dgpa.py`、`site.py`、`i18n.py`、`deploy-cron.sh`
 - [ ] 若日後要完全捨棄長期 `DEV`：改從 `main` 切 `feat/<名稱>` 短支，本檔改寫為「分支模型」記錄
