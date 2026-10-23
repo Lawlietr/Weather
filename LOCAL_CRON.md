@@ -1,6 +1,6 @@
 # LOCAL_CRON.md：本地自動部署（主力更新通道）
 
-> **定位**：**本地 cron 是唯一自動 build＋部署通道**（本機／Ubuntu LXC，2026-10-23 起改為**每小時**）。同日起 GitHub Actions 的 `schedule:` 已**完全移除**，僅留 `workflow_dispatch` 手動按鈕——因為 GitHub scheduler 實測不可靠（近 2 天 24 期只跑 10 期、間隔 185–424 分），詳 `.github/workflows/build.yml` 頭註與 `design/cf-cron.md`。
+> **定位**：**本地 cron 是唯一自動 build＋部署通道**（本機＝**部署機 `192.168.100.14`**、Ubuntu LXC（hostname `hermes`）；2026-10-23 起改為**每小時**）。**本機 HEAD 常駐 `main`**：開發在另一台 `192.168.100.15` 的 `DEV` 分支，而 `build/deploy-cron.sh`/`deploy.sh` **不做 `git pull`**→ 開發機 merge 回 `main` 後，本機須 `git pull --ff-only origin main` 才會真正上線 → `WORKFLOW.md` §0.1。同日起 GitHub Actions 的 `schedule:` 已**完全移除**，僅留 `workflow_dispatch` 手動按鈕——因為 GitHub scheduler 實測不可靠（近 2 天 24 期只跑 10 期、間隔 185–424 分），詳 `.github/workflows/build.yml` 頭註與 `design/cf-cron.md`。
 > 歷史：2026/8/29 Actions 曾因 CWA 回傳 `MaxWindSpeed=None` 崩潰而暫停（已修復）、2026/9/26 恢復；2026-10-23 因排程可靠度問题彻底停用。
 > cron 工作項目以 `build/cron-enable.sh` 安裝（主力通道應常開）。
 > 最後更新：2026-10-23

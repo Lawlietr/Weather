@@ -27,6 +27,30 @@
    # 預期輸出：build 完成：N 個事件（active X / ended Y）｜CWA live｜…｜map.geo.json：N 筆生效告警
    ```
 
+## 0.1 兩台機器分工（2026-10-23 定案）
+
+| 角色 | IP | 用途 |
+|---|---|---|
+| **開發機** | `192.168.100.15` | 功能開發（`DEV` 分支）、部署測試站 `wea-testing`、Playwright 驗證 |
+| **部署機** | `192.168.100.14`（hostname `hermes`、Ubuntu LXC；另有 `192.168.1.14`） | 本地 cron 每小時 build＋部署生產三站；只做災情/颱風 markdown 與 ops，**不做功能開發** |
+
+守則（理由詳 AGENTS.md「兩台機器分工」五條鐵則）：
+
+```bash
+# 開發機：開發前先把 main 的修正同步進 DEV（不是事後才同步）
+git fetch --all --prune && git checkout DEV && git merge origin/main
+
+# 開發機：功能完成、驗證過、經使用者同意後 merge 回 main 並推三邊
+git checkout main && git merge DEV && git push origin main && git push github main && git push codeberg main
+
+# 部署機（.14）：merge 後必須 pull，否則 cron 繼續部署舊 main
+cd /root/opencode-stuffs/Weather && git checkout main && git pull --ff-only origin main
+```
+
+- ⚠ `build/deploy-cron.sh` 與 `build/deploy.sh` **不做 `git pull`/`fetch`/`checkout`** → 只部署本機工作區 HEAD；**「已 push 到 remote」≠「已上線」**，部署機的 HEAD 才是生產內容。
+- ⚠ 判斷 `DEV` 狀態要看 `origin/DEV`（`git ls-remote`／`git fetch` 後），本機分支指標可能過時。
+- ⚠ 不要在部署機 `git checkout DEV`（會把落後 main 的內容自動推上生產）；需暫時停 cron：`bash build/cron-disable.sh`，測完 `bash build/cron-enable.sh`。
+
 ## 1. 例行更新流程（每次都要做）
 
 ```
@@ -229,6 +253,7 @@ cd public && python3 -m http.server 8080
 
 ## 7. 排程與自動更新
 
+- **兩台機器**：開發＝`192.168.100.15`（`DEV`），部署＝`192.168.100.14`（本機、cron 每小時）。開發機的 `DEV` 不會進生產；但 merge 回 `main` 後要到部署機 `git pull --ff-only origin main` 才會上線 → 見 §0.1。
 - **手動**：`MANUAL_UPDATE.md`（改 markdown → `./build/deploy.sh` → 上線）。
 - **本地 cron（唯一自動通道，每小時整點）**：本機或 Ubuntu LXC/VM 排 `build/deploy-cron.sh`（CWA 前置檢查 3 次重試、失敗中止、不推舊資料）。安裝/停用/自檢、金鑰（`build/deploy.env`）、日誌等細節見 `LOCAL_CRON.md`。2026-10-23 由每 2 小時提高為每小時（颱風期間加頻；`build/cron.txt` 行 `0 * * * *`）。
 - **GitHub Actions：2026-10-23 起無自動排程**（`schedule:` 已從 `.github/workflows/build.yml` 移除，只保留 `workflow_dispatch` 手動按鈕）。原因與實測數據 → `build.yml` 頭註、`LOCAL_CRON.md`、`design/cf-cron.md`。要重新利用 Actions compute 的首選修法是用 CF Worker Cron 打 dispatch（**僅評估、未實作**，含變體 A/B/C 與待驗證項 → `design/cf-cron.md`）。
