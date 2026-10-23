@@ -16,9 +16,10 @@
 #   --help        顯示說明
 #
 # 部署範圍：
-#   若 deploy.env 設了 GH_PAT → 完整部署（Cloudflare + GitHub Pages）
-#   若未設 GH_PAT            → 僅 Cloudflare（--no-gh）
-#         （GitHub Pages 為公開 mirror 但已 404、非必需，以 Cloudflare 為主）
+#   預設＝完整部署（Cloudflare Pages ＋ GitHub Pages 的 gh-pages 分支）。
+#   GitHub 推送不需要 GH_PAT：本機走 github remote（SSH）；若設了 GH_PAT 則改走 token HTTPS。
+#   2026-10-23 起不再自動加 --no-gh：Actions 排程已停用，gh-pages 只能由本地 cron 推。
+#   （只要 Cloudflare 時，手動執行加 --no-gh 即可。）
 # ============================================================
 set -uo pipefail
 
@@ -161,14 +162,11 @@ else
   log "⚠️  CWA_API_KEY 未設定，跳過 CWA 檢查"
 fi
 
-# ---- 決定部署範圍 ----
-if [ -n "${GH_PAT:-}" ]; then
-  ./build/deploy.sh >> "$LOG_FILE" 2>&1
-  rc=$?
-else
-  ./build/deploy.sh --no-gh >> "$LOG_FILE" 2>&1
-  rc=$?
-fi
+# ---- 執行部署（2026-10-23 起一律完整部署：CF ＋ gh-pages）----
+# GitHub Pages mirror 需由本地 cron 自己推（Actions 排程已停用，不再顺手推）。
+# 注：gh-pages 推送失败会让 rc 非 0（CF 已先部署完成、站台不受影响），下趟即重试。
+./build/deploy.sh >> "$LOG_FILE" 2>&1
+rc=$?
 
 if [ "$rc" -eq 0 ]; then
   log "END 成功 (rc=0)"

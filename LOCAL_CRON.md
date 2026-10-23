@@ -75,11 +75,12 @@ source build/deploy.env
 
 ---
 
-## 四、部署範圍預設
+## 四、部署範圍預設（2026-10-23 起）
 
-- **未設 `GH_PAT`** → cron 只推 **Cloudflare Pages**（`--no-gh`）。
-  Cloudflare 是主要公開通道；GitHub Pages 為備用 mirror（目前 404，非必需）。
-- **設了 `GH_PAT`** → cron 完整部署（Cloudflare ＋ GitHub Pages）。
+- **cron 一律完整部署**：Cloudflare Pages ＋ GitHub Pages（orphan `gh-pages`）。
+  以往 `GH_PAT` 未設就自動加 `--no-gh`，gh-pages 是靠 Actions 順手推的；**Actions 排程已停用，所以 gh-pages 必須由本地 cron 自己推**（否則 mirror 會開始變舊）。
+- **推送憑證優先序**（`build/deploy.sh`）：`GH_PAT`（token HTTPS）→ 本機 `git remote github`（**SSH，現行 cron 就是靠這個，已實測 push 成功**）→ https 預設（credential helper）。repo 公開，不需要 `GH_PAT`。
+- 只要 Cloudflare 時：手動跑 `./build/deploy.sh --no-gh`（cron 不再自動加此參數）。
 
 ---
 
