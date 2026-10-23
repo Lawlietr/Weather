@@ -176,8 +176,8 @@ cd public && python3 -m http.server 8080
    快取值為 `null`/缺失時 `cwa.py` 會跳過該來源，屬預期行為。
 4. 公開 GitHub repo 只應收到 `public/` 靜態產物，**不收 markdown 原文與 build 腳本**
    （金鑰不進輸出已驗證，但流程上仍分開）。
-5. **Actions 排程 2026/8/29 曾暫停、2026/9/26 恢復**：2026/8/29 的失敗原因是 CWA API 回傳 `MaxWindSpeed=None` 導致程式崩潰（`TypeError`），**非連線不穩定**。該 bug 已修復，排程已恢復；2026/9/26 改為台北時間偶數小時 53 分（00:53、02:53…22:53，每 2 小時）。
-   注意：Actions `schedule` 只讀 **default branch（`main`）**——排程改動必須合併進 `main` 才生效；另 GitHub scheduler 官方聲明可能延遲或跳過 run，偶發缺一期屬已知行為。`build/build.sh` 的 CWA 前置檢查（3 次重試、失敗 `exit 1`）仍保留。主力自動更新通道＝本地 cron（見 §7）。
+5. **Actions 排程已于 2026-10-23 彻底停用（`schedule:` 已從 `build.yml` 移除，僅留 `workflow_dispatch`）**：直接原因是 **GitHub scheduler 不可靠**——2026-10-23 實測近 2 天 24 期排程只觸發 10 期、實際間隔 185–424 分（應為 120 分），每次 run 2.5–3.4 分鐘；同期本地 cron 10/10 準時、历時 33–58 秒。GitHub 側亦有延遲 5–7 小時／整期漏跑的公開回報（orgs/community discussion #201472）。
+   歷史：2026/8/29 曾因 CWA 回傳 `MaxWindSpeed=None` 導致崩潰（`TypeError`）而暫停，2026/9/26 恢復——該 bug 已修復（`cwa.py` 加 `if ws is not None`），但排程可靠度問題非本 repo 可解。Actions `schedule` 只讀 default branch（`main`）°`build/build.sh` 的 CWA 前置檢查（3 次重試、失敗 `exit 1`）仍保留。唯一自動更新通道＝本地 cron（每小時，見 §7）。
 6. **Cloudflare token 限區域或失效**：code 9109。去 CF 後台重開 token 並更新 GitHub Secret 即可；
    或改用本地 cron 備用（`build/cron-enable.sh`）。
 7. **「產生時間」時區陷阱**：`build/site.py` 必須保持
@@ -230,11 +230,11 @@ cd public && python3 -m http.server 8080
 ## 7. 排程與自動更新
 
 - **手動**：`MANUAL_UPDATE.md`（改 markdown → `./build/deploy.sh` → 上線）。
-- **本地 cron（主力，每 2 小時）**：本機或 Ubuntu LXC/VM 排 `build/deploy-cron.sh`（CWA 前置檢查 3 次重試、失敗中止、不推舊資料）。安裝/停用/自檢、金鑰（`build/deploy.env`）、日誌等細節見 `LOCAL_CRON.md`。
-- **GitHub Actions（台北時間偶數小時自動，備援）**：`schedule: '53 0,2,4,6,8,10,12,14,16,18,20,22 * * *'`（UTC＝台北時間 00:53、02:53…22:53，每 2 小時；2026/9/26 由每小時改為此間隔，避開 scheduler 跳期與與本地 cron 重疊）；`workflow_dispatch` 仍保留手動備援。Actions 只讀 `main` 分支的 workflow——排程改動合併進 `main` 後才生效。2026/8/29 曾停用排程的真正原因：CWA API 回傳 `MaxWindSpeed=None` 導致程式崩潰（`TypeError: unsupported format string passed to NoneType.__format__`），**非連線問題**。該 bug 已修復（`cwa.py` 加 `if ws is not None` 檢查），2026/9/26 恢復排程。Actions 執行約 3 分鐘（vs 本地 cron 幾秒），僅作備援。
+- **本地 cron（唯一自動通道，每小時整點）**：本機或 Ubuntu LXC/VM 排 `build/deploy-cron.sh`（CWA 前置檢查 3 次重試、失敗中止、不推舊資料）。安裝/停用/自檢、金鑰（`build/deploy.env`）、日誌等細節見 `LOCAL_CRON.md`。2026-10-23 由每 2 小時提高為每小時（颱風期間加頻；`build/cron.txt` 行 `0 * * * *`）。
+- **GitHub Actions：2026-10-23 起無自動排程**（`schedule:` 已從 `.github/workflows/build.yml` 移除，只保留 `workflow_dispatch` 手動按鈕）。原因與實測數據 → `build.yml` 頭註、`LOCAL_CRON.md`、`design/cf-cron.md`。要重新利用 Actions compute 的首選修法是用 CF Worker Cron 打 dispatch（**僅評估、未實作**，含變體 A/B/C 與待驗證項 → `design/cf-cron.md`）。
 - **更新 agent**：負責「查 CWA API/新聞 → 更新 markdown → build → push」。
   輸入就是本文件 §1～§3；agent 不需懂解析細節，照 check 清單驗收即可。
-- **地圖紅警層（CWA，2026/8/28 定案、2026/9/1 補 cbph API 實測；gazetteer（9/1）＋cbph→`build/map.geo.json`（9/2）＋`/map/` 骨架（9/2，DEV）均已完成；步驟 4 觀測層拆 3 小批（9/16 定案：4a 雨量站點層實作中、4b 颱風軌跡/風圈、4c 特報陸地紅區用**自託縣界 GeoJSON**——gazetteer 只有中心點座標、無邊界多邊形））**：全自動——build 時抓 CWA（**cbph 災防告警 polygon**（`cbph.cwa.gov.tw/api/`，免 key、官方座標、免 gazetteer；`build/cbph.py` 已掛 `site.py` 流水線，任何類型失敗只 warning、不中斷 build）＋特報/雨量站/氣旋）合成 `map.geo.json`（build 中間檔、gitignore）與 `/map/` 頁（`build/map_page.py`＋自託 Leaflet 1.9.4＋離線瓦片 `build/tiles.py`；瓦片來源 `tile.openstreetmap.de`——OSM 官方 server 對本機 IP 假 200 封鎖，見 `tiles.py` 頭註），掛在**現有每 2 小時排程**上，不新增排程/agent/金鑰；陸地特報紅區仍靠 gazetteer（`build/gazetteer.json`，存 repo）轉換文字。細節見 `design/map.md`；災情新聞點層（§2b）維持人工把關。
+- **地圖紅警層（CWA，2026/8/28 定案、2026/9/1 補 cbph API 實測；gazetteer（9/1）＋cbph→`build/map.geo.json`（9/2）＋`/map/` 骨架（9/2，DEV）均已完成；步驟 4 觀測層拆 3 小批（9/16 定案：4a 雨量站點層實作中、4b 颱風軌跡/風圈、4c 特報陸地紅區用**自託縣界 GeoJSON**——gazetteer 只有中心點座標、無邊界多邊形））**：全自動——build 時抓 CWA（**cbph 災防告警 polygon**（`cbph.cwa.gov.tw/api/`，免 key、官方座標、免 gazetteer；`build/cbph.py` 已掛 `site.py` 流水線，任何類型失敗只 warning、不中斷 build）＋特報/雨量站/氣旋）合成 `map.geo.json`（build 中間檔、gitignore）與 `/map/` 頁（`build/map_page.py`＋自託 Leaflet 1.9.4＋離線瓦片 `build/tiles.py`；瓦片來源 `tile.openstreetmap.de`——OSM 官方 server 對本機 IP 假 200 封鎖，見 `tiles.py` 頭註），掛在**現有每小時排程**上，不新增排程/agent/金鑰；陸地特報紅區仍靠 gazetteer（`build/gazetteer.json`，存 repo）轉換文字。細節見 `design/map.md`；災情新聞點層（§2b）維持人工把關。
 
 ---
 

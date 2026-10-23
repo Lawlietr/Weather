@@ -135,6 +135,8 @@
 | 停班停課 feed（端點、實測結構、發布機制） | `build/dgpa.py` 頭註（單一事實來源） |
 | RSS 來源清單與抓取守則 | `build/rss_sources.json`（`usage_notes`） |
 | 例行更新 / 新事件 / 零星災情範本 / 驗證 / 部署 / 排程 | `WORKFLOW.md`（零星災情範本 §2.3） |
+| 排程重設／本地 cron 細節（每小時、selfcheck、金鑰） | `LOCAL_CRON.md` |
+| 排程／部署改到 Cloudflare 的評估（**未實作**；Actions 停用原因與實測數據） | `design/cf-cron.md` |
 | Obscura 工具用法 | Skill `/root/.pi/agent/skills/obscura/SKILL.md` |
 | 構想與待辦（任務帳本） | `TODO.md`（只做/優先級/狀態；細節 → `design/<功能>.md`） |
 
@@ -143,7 +145,7 @@
 - 預設分支：`main`（原 `master` 已更名）
 - Remotes：`origin`＝內部 Forgejo（`ssh://fg/lawliet/Weather.git`，內網，Identity `~/.ssh/id_rsa_gitea`）；`github`＝公開 repo `Lawlietr/Weather`（`https://github.com/Lawlietr/Weather.git`，直推即可、**不需要 `GH_PAT`**）；`codeberg`＝公開 repo `Lawlietr/Weather`（`ssh://git@codeberg.org/Lawlietr/Weather.git`，走 `~/.ssh/config` 的 codeberg.org 區塊、Identity `id_rsa_gitea`）。commit 後**三邊都推**：`git push origin <branch> && git push github <branch> && git push codeberg <branch>`
 - **開發流程（2026/9/16 重申：勿直接 commit/push `main`）**：所有開發在 `DEV` 分支 commit→build＋部署測試站 `wea-testing`、真瀏覽器（Playwright）驗證→**經使用者同意後**才將 `DEV` 合併進 `main` 並推 `main`（兩邊 remote 皆推）。生產自動部署（`build/deploy-cron.sh`→`deploy.sh`）**以 repo 目前 checkout 為準、無分支邏輯**：DEV 開發期間跑自動部署＝DEV 內容上生產；合併回 `main` 後切回 `main` 再部署即恢復生產為已合併狀態。
-- 無 lint/test 指令；**排程狀態（2026/9/26 起恢復，9/26 改為每 2 小時）**：GitHub Actions 於台北時間偶數小時 53 分（00:53、02:53…22:53）自動 build＋部署；**主力自動更新通道＝本地 cron**（每 2 小時，CWA 前置檢查 3 次重試、失敗中止）。Actions 執行約 3 分鐘（vs 本地幾秒），僅作備援。2026/8/29 曾停用排程的真正原因：CWA API 回傳 `MaxWindSpeed=None` 導致程式崩潰（TypeError），非連線問題；該 bug 已修復，2026/9/26 恢復排程。部署指令 → `WORKFLOW.md` §7
+- 無 lint/test 指令；**排程狀態（2026-10-23 定案）**：**唯一自動 build＋部署通道＝本地 cron，每小時整點**（`0 * * * *`，Asia/Taipei；CWA 前置檢查 3 次重試、失敗中止）。**GitHub Actions 的 `schedule:` 已彻底停用並從 `build.yml` 移除**，只留 `workflow_dispatch` 手動按鈕——2026-10-23 實測近 2 天 24 期排程只觸發 10 期、間隔 185–424 分（應 120 分），而本地 cron 10/10 準時、约 40 秒完成（GitHub scheduler 延遲為上游已知問題）。歷史：2026/8/29 曾因 CWA 回傳 `MaxWindSpeed=None` 崩潰（TypeError，已修復）而暫停，2026/9/26 恢復，2026-10-23 因排程可靠度彻底停用。CF 側替代方案（Worker Cron／git-backed Pages build／Containers）僅評估、**未實作** → `design/cf-cron.md`。部署指令 → `WORKFLOW.md` §7
 
 ---
 
@@ -198,7 +200,7 @@
 
 ### 不變項（改動前先確認）
 
-- **更新模式**：本地 cron 自動 build＋部署為主力、Actions 手動 dispatch 為備援（排程狀態與恢復條件 → `WORKFLOW.md` §7）；**災情新聞人工把關、不自動推 RSS**（→ `WORKFLOW.md` §1、`MANUAL_UPDATE.md`）。
+- **更新模式**：本地 cron（**每小時整點**）為**唯一**自動 build＋部署通道；Actions 自 2026-10-23 起無自動排程，僅手動 dispatch（排程狀態與 CF 替代方案評估 → `WORKFLOW.md` §7、`design/cf-cron.md`）；**災情新聞人工把關、不自動推 RSS**（→ `WORKFLOW.md` §1、`MANUAL_UPDATE.md`）。
 - **金鑰**：CWA Key、Cloudflare 憑證分散在 (1) 本機 `~/.zshrc`（手動）、(2) GitHub Secrets（dispatch）、(3) `build/deploy.env`（cron 用，600）；**不寫進任何輸出檔案、不進 `public/`、不進網站**。
 - **非即時**：首頁顯示「**產生時間**」（i18n key `updated`），由 `build/site.py` 以**固定 UTC+8** 產生（`datetime.now(timezone(timedelta(hours=8)))`）；**不可改回不帶時區的 `datetime.now()`**（Actions runner 是 UTC、會慢 8 小時）。「產生時間」＝網頁何時生成，**不等於氣象／災情資料已更新**。
 - **CWA 不支援 CORS**：氣象資料全部 build 時本機抓取寫入靜態 HTML；前端零外部請求、首頁零 JS。
