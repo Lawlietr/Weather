@@ -134,6 +134,7 @@
 | cbph 災防告警（endpoints、polygon、陷阱） | `build/CWA_API.md`「CWA cbph」節 |
 | 停班停課 feed（端點、實測結構、發布機制） | `build/dgpa.py` 頭註（單一事實來源） |
 | RSS 來源清單與抓取守則 | `build/rss_sources.json`（`usage_notes`） |
+| 兩台機器分工（開發機 `192.168.100.15`／部署機 `192.168.100.14`）、環境細節與缺口 | `design/dev-machine.md`＋`WORKFLOW.md` §0.1 |
 | 例行更新 / 新事件 / 零星災情範本 / 驗證 / 部署 / 排程 | `WORKFLOW.md`（零星災情範本 §2.3） |
 | 排程重設／本地 cron 細節（每小時、selfcheck、金鑰） | `LOCAL_CRON.md` |
 | 排程／部署改到 Cloudflare 的評估（**未實作**；Actions 停用原因與實測數據） | `design/cf-cron.md` |
@@ -151,7 +152,7 @@
   | **開發機** | `192.168.100.15` | 功能開發在 `DEV` 分支；完成後才 merge 回 `main` |
   | **部署機**＝本機 | `192.168.100.14`（另有 `192.168.1.14`、`172.17.0.1`；hostname `hermes`、Ubuntu LXC） | HEAD 常駐 `main`；本地 cron 每小時 build＋部署；**不做功能開發** |
 
-  由此推出的五條鐵則：
+  由此推出的五條鐵則（開發機環境細節、工具缺口（node 缺失、金鑰未載入）、SSH 探測指令 → `design/dev-machine.md`）：
   1. **本機看不到開發機未 push 的工作**——判斷「`DEV` 上有無進行中的功能」一律以遠端為準（`git ls-remote origin`、`git fetch --all --prune` 後看 `origin/DEV`），**只看本機分支會得出錯誤結論**（2026-10-23 實際踩過：本機 `DEV` 指標停在 8/30，遠端已到 9/26）。
   2. **`build/deploy-cron.sh` 與 `build/deploy.sh` 不做任何 `git pull`/`fetch`/`checkout`**（實測 grep 無命中）→ cron 只部署**本機工作區 HEAD**。所以開發機在 `DEV` 上怎麼折騰（甚至把 `DEV` push 到三邊 remote）都**不會**影響生產。
   3. **但反向不成立**：開發機把 `DEV` merge 進 `main` 並 push 後，本機 `main` 仍是舊的 → **必須到本機 `git checkout main && git pull --ff-only origin main`**，否則每小時 cron 會持續部署 merge 前的舊 `main`（「改完沒上線」通常是忘記這一步）。

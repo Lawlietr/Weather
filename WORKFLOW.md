@@ -20,7 +20,7 @@
    若 MISSING：請使用者寫入 `~/.zshrc`（`export ...="..."`）或專案 `.env`（需在 `cwa.py` 加載入邏輯）。
    **手動路徑金鑰絕不可 commit。** 排程/CI 路徑的金鑰則存於 **GitHub Actions Secrets**
    （`gh secret list --repo Lawlietr/Weather` 檢視），不寫進程式碼。
-2. Python ≥ 3.14 環境即可；`build/build.sh` 會自動建 venv 並安裝唯一相依 `markdown`。
+2. Python 3.12 即可（2026-10-23 實測更正：舊寫「≥ 3.14」不正確，兩台機皆 3.12.3、每小時 cron build 正常）；`build/build.sh` 會自動建 repo 內 `.venv` 並安裝唯一相依 `markdown`。
 3. 試跑一次確認 pipeline 通：
    ```bash
    ./build/build.sh
@@ -34,7 +34,7 @@
 | **開發機** | `192.168.100.15` | 功能開發（`DEV` 分支）、部署測試站 `wea-testing`、Playwright 驗證 |
 | **部署機** | `192.168.100.14`（hostname `hermes`、Ubuntu LXC；另有 `192.168.1.14`） | 本地 cron 每小時 build＋部署生產三站；只做災情/颱風 markdown 與 ops，**不做功能開發** |
 
-守則（理由詳 AGENTS.md「兩台機器分工」五條鐵則）：
+守則（理由詳 AGENTS.md「兩台機器分工」五條鐵則；兩台機器的**環境細節、工具缺口與探測指令** → `design/dev-machine.md`）：
 
 ```bash
 # 開發機：開發前先把 main 的修正同步進 DEV（不是事後才同步）
