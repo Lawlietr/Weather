@@ -136,7 +136,7 @@
 | RSS 來源清單與抓取守則 | `build/rss_sources.json`（`usage_notes`） |
 | 兩台機器分工（開發機 `192.168.100.15`／部署機 `192.168.100.14`）、環境細節與缺口 | `design/dev-machine.md`＋`WORKFLOW.md` §0.1 |
 | 例行更新 / 新事件 / 零星災情範本 / 驗證 / 部署 / 排程 | `WORKFLOW.md`（零星災情範本 §2.3） |
-| 排程重設／本地 cron 細節（每小時、selfcheck、金鑰） | `LOCAL_CRON.md` |
+| 排程重設／本地 cron 細節（每 2 小時、selfcheck、金鑰） | `LOCAL_CRON.md` |
 | 排程／部署改到 Cloudflare 的評估（**未實作**；Actions 停用原因與實測數據） | `design/cf-cron.md` |
 | Obscura 工具用法 | Skill `/root/.pi/agent/skills/obscura/SKILL.md` |
 | 構想與待辦（任務帳本） | `TODO.md`（只做/優先級/狀態；細節 → `design/<功能>.md`） |
@@ -150,16 +150,16 @@
   | 角色 | 機器 | 分支與行為 |
   |---|---|---|
   | **開發機** | `192.168.100.15` | 功能開發在 `DEV` 分支；完成後才 merge 回 `main` |
-  | **部署機**＝本機 | `192.168.100.14`（另有 `192.168.1.14`、`172.17.0.1`；hostname `hermes`、Ubuntu LXC） | HEAD 常駐 `main`；本地 cron 每小時 build＋部署；**不做功能開發** |
+  | **部署機**＝本機 | `192.168.100.14`（另有 `192.168.1.14`、`172.17.0.1`；hostname `hermes`、Ubuntu LXC） | HEAD 常駐 `main`；本地 cron 每 2 小時 build＋部署；**不做功能開發** |
 
   由此推出的五條鐵則（開發機環境細節、工具缺口（node 缺失、金鑰未載入）、SSH 探測指令 → `design/dev-machine.md`）：
   1. **本機看不到開發機未 push 的工作**——判斷「`DEV` 上有無進行中的功能」一律以遠端為準（`git ls-remote origin`、`git fetch --all --prune` 後看 `origin/DEV`），**只看本機分支會得出錯誤結論**（2026-10-23 實際踩過：本機 `DEV` 指標停在 8/30，遠端已到 9/26）。
   2. **`build/deploy-cron.sh` 與 `build/deploy.sh` 不做任何 `git pull`/`fetch`/`checkout`**（實測 grep 無命中）→ cron 只部署**本機工作區 HEAD**。所以開發機在 `DEV` 上怎麼折騰（甚至把 `DEV` push 到三邊 remote）都**不會**影響生產。
-  3. **但反向不成立**：開發機把 `DEV` merge 進 `main` 並 push 後，本機 `main` 仍是舊的 → **必須到本機 `git checkout main && git pull --ff-only origin main`**，否則每小時 cron 會持續部署 merge 前的舊 `main`（「改完沒上線」通常是忘記這一步）。
+  3. **但反向不成立**：開發機把 `DEV` merge 進 `main` 並 push 後，本機 `main` 仍是舊的 → **必須到本機 `git checkout main && git pull --ff-only origin main`**，否則每 2 小時 cron 會持續部署 merge 前的舊 `main`（「改完沒上線」通常是忘記這一步）。
   4. **本機 `DEV` 只是 `origin/DEV` 的追蹤快照**（2026-10-23 已 `git branch -f DEV origin/DEV` 對齊至 `bca1b0d`），**不得在本機 checkout `DEV` 開發**：`DEV` 落後 `main` 22 commits（含 `build/dgpa.py` 87 行、`site.py`、`i18n.py`、`cron.txt` 等生產修正與薔琵事件檔），一旦本機 HEAD 切到 `DEV`，cron 就把倒退內容推上三個生產站。真需在本機驗證功能：先確認 `DEV` 已 merge 最新 `main`，並暫時 `bash build/cron-disable.sh`，測完 `cron-enable.sh`。
   5. **開發機上開發前先將 `origin/main` merge 進 `DEV`**（不是事後才同步）：`main` 持續有 `build/` 修正落地，越晚同步重疊衝突越大（現行重疊檔正是 `dgpa.py`/`site.py`/`i18n.py`/`deploy-cron.sh`），事後解衝突很容易把生產修正解回舊版、再 merge 回 `main` 造成永久倒退。
 - **開發流程（2026/9/16 重申：勿直接 commit/push `main`；2026-10-23 補：開發在開發機 `192.168.100.15`，不在本機）**：所有開發在 `DEV` 分支 commit→build＋部署測試站 `wea-testing`、真瀏覽器（Playwright）驗證→**經使用者同意後**才將 `DEV` 合併進 `main` 並推 `main`（三邊 remote 皆推，見上「Remotes」條）。生產自動部署（`build/deploy-cron.sh`→`deploy.sh`）**以 repo 目前 checkout 為準、無分支邏輯**：開發機上的 `DEV` 工作因物理分離不會進生產（見上條 2），**但本機 HEAD 切到 `DEV` 就會**（見上條 4）；合併回 `main` 後需到本機 `git pull --ff-only origin main` 才恢復生產為已合併狀態（見上條 3）。
-- 無 lint/test 指令；**排程狀態（2026-10-23 定案）**：**唯一自動 build＋部署通道＝本地 cron，每小時整點**（`0 * * * *`，Asia/Taipei；CWA 前置檢查 3 次重試、失敗中止）。**GitHub Actions 的 `schedule:` 已彻底停用並從 `build.yml` 移除**，只留 `workflow_dispatch` 手動按鈕——2026-10-23 實測近 2 天 24 期排程只觸發 10 期、間隔 185–424 分（應 120 分），而本地 cron 10/10 準時、约 40 秒完成（GitHub scheduler 延遲為上游已知問題）。歷史：2026/8/29 曾因 CWA 回傳 `MaxWindSpeed=None` 崩潰（TypeError，已修復）而暫停，2026/9/26 恢復，2026-10-23 因排程可靠度彻底停用。CF 側替代方案（Worker Cron／git-backed Pages build／Containers）僅評估、**未實作** → `design/cf-cron.md`。部署指令 → `WORKFLOW.md` §7
+- 無 lint/test 指令；**排程狀態（2026-10-23 定案、2026-10-24 降頻）**：**唯一自動 build＋部署通道＝本地 cron，每 2 小時整點**（`0 */2 * * *`，Asia/Taipei；CWA 前置檢查 3 次重試、失敗中止；薔琵颱風期間 10/23 曾升為每小時 `0 * * * *`，10/24 薔琵遠離後降回每 2 小時）。**GitHub Actions 的 `schedule:` 已彻底停用並從 `build.yml` 移除**，只留 `workflow_dispatch` 手動按鈕——2026-10-23 實測近 2 天 24 期排程只觸發 10 期、間隔 185–424 分（應 120 分），而本地 cron 10/10 準時、约 40 秒完成（GitHub scheduler 延遲為上游已知問題）。歷史：2026/8/29 曾因 CWA 回傳 `MaxWindSpeed=None` 崩潰（TypeError，已修復）而暫停，2026/9/26 恢復，2026-10-23 因排程可靠度彻底停用。CF 側替代方案（Worker Cron／git-backed Pages build／Containers）僅評估、**未實作** → `design/cf-cron.md`。部署指令 → `WORKFLOW.md` §7
 
 ---
 
@@ -214,7 +214,7 @@
 
 ### 不變項（改動前先確認）
 
-- **更新模式**：本地 cron（**每小時整點**）為**唯一**自動 build＋部署通道；Actions 自 2026-10-23 起無自動排程，僅手動 dispatch（排程狀態與 CF 替代方案評估 → `WORKFLOW.md` §7、`design/cf-cron.md`）；**災情新聞人工把關、不自動推 RSS**（→ `WORKFLOW.md` §1、`MANUAL_UPDATE.md`）。
+- **更新模式**：本地 cron（**每 2 小時整點**）為**唯一**自動 build＋部署通道；Actions 自 2026-10-23 起無自動排程，僅手動 dispatch（排程狀態與 CF 替代方案評估 → `WORKFLOW.md` §7、`design/cf-cron.md`）；**災情新聞人工把關、不自動推 RSS**（→ `WORKFLOW.md` §1、`MANUAL_UPDATE.md`）。
 - **金鑰**：CWA Key、Cloudflare 憑證分散在 (1) 本機 `~/.zshrc`（手動）、(2) GitHub Secrets（dispatch）、(3) `build/deploy.env`（cron 用，600）；**不寫進任何輸出檔案、不進 `public/`、不進網站**。
 - **非即時**：首頁顯示「**產生時間**」（i18n key `updated`），由 `build/site.py` 以**固定 UTC+8** 產生（`datetime.now(timezone(timedelta(hours=8)))`）；**不可改回不帶時區的 `datetime.now()`**（Actions runner 是 UTC、會慢 8 小時）。「產生時間」＝網頁何時生成，**不等於氣象／災情資料已更新**。
 - **CWA 不支援 CORS**：氣象資料全部 build 時本機抓取寫入靜態 HTML；前端零外部請求、首頁零 JS。

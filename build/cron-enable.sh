@@ -16,7 +16,7 @@ START="# >>> Weather cron managed >>>"
 TAG="# weather-deploy-cron"
 
 echo "===================================================="
-echo " 安裝 Weather cron 自動部署（每小時）  $(date +%Y/%m/%d\ %H:%M)"
+echo " 安裝 Weather cron 自動部署（每 2 小時）  $(date +%Y/%m/%d\ %H:%M)"
 echo "===================================================="
 
 # 1. 檢查金鑰檔
@@ -43,7 +43,7 @@ crontab -l > "$REPO_ROOT/build/logs/crontab.backup.$(date +%Y%m%d-%H%M%S).txt" 2
 cleaned="$(crontab -l 2>/dev/null | sed "/$START/,/$TAG/d" || true)"
 { printf '%s\n' "$cleaned"
   echo "$START"
-  echo "# Weather 自動部署（每小時；build/cron-enable.sh / cron-disable.sh 管理）"
+  echo "# Weather 自動部署（每 2 小時；build/cron-enable.sh / cron-disable.sh 管理）"
   cat "$DEPLOY_DIR/cron.txt"
 } | grep -v '^$' | crontab -
 
