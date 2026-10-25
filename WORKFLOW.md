@@ -276,6 +276,7 @@ cd public && python3 -m http.server 8080
 4. **災情新聞用 `build/rss_candidates.json`**：build 已自動抓 RSS（候選清單：關鍵詞 flag 在前、48h 窗口、跨來源去重）；**不要**再手動 curl feed 或 web 搜尋逐家掃（除非候選清單過舊、不足，或無 active 事件需要補充）。手動 web 搜尋仍限一次，命中 0~2 條即停。
 5. **寫檔一次成型**：長內容分段寫或先存 `/tmp` 再 `cp`，避免 write 工具 output token 截斷重來（8/28 實測發生）。
 6. **完成定義**：git status 乾淨（或 diff 已確認）＋ build ＋ deploy ＋ 推 `origin` 與 `github`。deploy 之後不要再做「驗證」式查詢。
+7. **事件檔不得整檔覆寫（10/25 事故）**：改 `颱風/**`、`災情/**` 前先 `read` 現檔＋`git log --oneline -5 -- <該檔>`；只用 `edit` 附加／原地改，`write` 僅用於新建。commit 前自查上一版與現行的行數・不重複連結數（應只增不減），並用 `git show HEAD:"$f" | while IFS= read -r l; do grep -qF -- "$l" "$f" || echo "LOST: ${l:0:60}"; done` 確認零遺失。**发现行數/連結變少 → 不得 commit**，先用 `git show HEAD~1:"$f"` 還原舊內容再重新附加（参 `AGENTS.md`「事件檔防呆」）。
 
 ## 附：快速指令參考
 
