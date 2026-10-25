@@ -469,17 +469,73 @@ def typhoon_svg(lang, cyclone):
     return "".join(parts)
 
 
+
+# 「解除」判定：CWA 的 W-C0033-002 只有「大雨特報」這種名稱，**解除與否寫在內文**
+# （例：「由於降雨趨於緩和…故解除大雨特報。」），且解除報**不附 hazardConditions**
+# （phenomena 空）。2026-10-25 03:25 那筆就是名稱無「解除」但內文明載解除，
+# 舊碼只查名稱 → 把解除當生效，風險列被推成黃/紅。
+LIFT_RE = re.compile(r"解除[^\n。]{0,12}(?:特報|警報)")
+
+
+def is_lifted_report(r):
+    """特報是否已解除。名稱含「解除」，或（phenomena 為空且內文寫明解除…特報/警報）。
+    要求 phenomena 為空是必要的：生效中的特報一定有 hazard/phenomena（2026-10-25 實測：
+    陸上強風特報有 phenomena=['陸上強風']，解除的大雨特報 phenomena=[]）。"""
+    if "解除" in (r.get("name") or ""):
+        return True
+    return not r.get("phenomena") and bool(LIFT_RE.search(r.get("content") or ""))
+
+
+def alert_typhoon_names(m):
+    """從海上颱風警報（CAP）一筆記錄抽出它指的是哪個颱風。
+    實測（2026-10-24 20:30 解除報）：parameter/typhoon-info 的「颱風名稱」欄是空的，
+    但 description 的「命名與位置」內文寫「輕度颱風 薔琵（國際命名 CHAMPI）」→ 從內文補。"""
+    names = set()
+    n = (m.get("typhoon_name") or "").strip()
+    if n:
+        names.add(n)
+    for mm in re.finditer(r"([\u4e00-\u9fff]{2,4})（國際命名", m.get("content") or ""):
+        names.add(mm.group(1))
+    return names
+
+
+def typhoon_alert_state(c, marine):
+    """這個熱帶氣旋目前與「颱風警報」的關係：active / lifted / none。
+
+    - active：有**未解除**的海上（或陸上）颱風警報指名它
+    - lifted：只有「解除颱風警報／END」那筆指名它（警報已解除，但 CWA 仍持續發布定位）
+    - none：從沒為它發過警報（例如外海僅有分析資料的煙花）
+    注意：CWA 的 W-C0034-001 只留「最新一筆」CAP，所以 lifted 的判斷依據就是那筆 END；
+    若同時有 active 筆（多颱風）则以 active 為準。
+    """
+    name = (c.get("name") or "").strip()
+    if not name:
+        return "none"
+    state = "none"
+    for m in marine or []:
+        if not m.get("title"):
+            continue
+        if name not in alert_typhoon_names(m) and name not in (m.get("title") or ""):
+            continue
+        if "解除" in (m.get("title") or "") or m.get("category") == "END":
+            state = "lifted" if state == "none" else state
+        else:
+            return "active"
+    return state
+
+
 # ---------------------------------------------------------------- 目前風險狀態
 
 def current_risk_level(lang, data, stale, mode):
     """由 CWA 現況資料推導「目前風險狀態」（首頁頂部狀態列用）。
 
     與事件的歷史分級（severity）完全獨立：severity 是事件最終量級（固定），
-    這裡只回答「現在有沒有危險」。依據：
-    - 生效中熱帶氣旋（有分析資料）：max wind >= 24.5 m/s → red，否則 yellow
+    這裡只回答「現在有沒有危險」。依据：
+    - 生效中熱帶氣旋（**僅計入警報未解除的**，見 typhoon_alert_state）：
+      max wind >= 24.5 m/s → red，否則 yellow
       （過時氣旋依 TYPHOON_STALE_HOURS 淘汰，與首頁颱風卡同規則，避免已消散氣旋推高狀態列）
     - 海上颱風警報（未解除）→ red
-    - 災害性天氣特報（未解除）：沿用 _sev_color 分級（紅/黃），綠色級別不計入
+    - 災害性天氣特報（未解除，見 is_lifted_report）：沿用 _sev_color 分級（紅/黃），綠色級別不計入
     雨量觀測值不計入：那是「過去累計」，不是當前危險信號。
 
     回傳 (level, items)：level ∈ red/yellow/green/neutral/unknown（mode=none → unknown）；
@@ -497,6 +553,16 @@ def current_risk_level(lang, data, stale, mode):
     for c in filter_typhoon_stale(d.get("typhoons", []), d.get("marine_alert", []), now=now):
         fixes = c.get("analysis") or []
         if not fixes:
+            continue
+        # 只有「警報生效中」的氣旋才是危險信號。CWA 對已解除警報的氣旋（薔琵 25日08時
+        # 仍在定位）與純外海追蹤的氣旋（煙花，從未發警報）都持續給分析資料，
+        # 但那不是危險信號——舊碼把兩支都算進去，造成解警後風險列仍顯示「生效中」。
+        state = typhoon_alert_state(c, d.get("marine_alert", []))
+        if state != "active":
+            if state == "lifted":
+                ts = _ts_parse((fixes[-1] or {}).get("DateTime"))
+                if ts is not None and (now - ts) <= timedelta(hours=LIFTED_TTL_HOURS):
+                    lifted_recent.append(f'{(c.get("name") or "")} 颱風警報（已解除）')
             continue
         wind = _num((fixes[-1] or {}).get("MaxWindSpeed"))
         level = "red" if (wind is not None and wind >= 24.5) else "yellow"
@@ -518,7 +584,7 @@ def current_risk_level(lang, data, stale, mode):
     for r in d.get("reports", []):
         if not r.get("name"):
             continue
-        if "解除" in r["name"]:
+        if is_lifted_report(r):
             ts = _ts_parse(r.get("issue"))
             if ts is not None and (now - ts) <= timedelta(hours=LIFTED_TTL_HOURS):
                 lifted_recent.append(f'{r["name"]}（發布 {_t(r["issue"])}）')
@@ -571,8 +637,14 @@ def filter_typhoon_stale(typhoons, marine, now=None):
     return kept
 
 
-def render_typhoon_card(lang, typhoons, stale_at=None):
-    """颱風卡永遠顯示：無資料時顯示「無活動中熱帶氣旋」。"""
+def render_typhoon_card(lang, typhoons, stale_at=None, marine=None):
+    """颱風卡永遠顯示：無資料時顯示「無活動中熱帶氣旋」。
+
+    marine（W-C0034-001 警報列）用於推導每支氣旋的**警報狀態**（見 typhoon_alert_state）：
+    CWA 對已解除警報的氣旋與從未發警報的外海氣旋都持續發布分析資料，
+    不標狀態會被當成「生效中」（2026-10-25 實測：薔琵 24日20:30 已解警、煙花從未發警報，
+    兩者都被列為生效中）。
+    """
     tag = f'　<span class="muted">{t(lang, "stale_tag", ts=stale_at)}</span>' if stale_at else ""
     if not typhoons:
         return f"""
@@ -608,11 +680,17 @@ def render_typhoon_card(lang, typhoons, stale_at=None):
         no = t(lang, "typhoon_no", year=c.get("year", ""), no=c.get("no", "")) if c.get("no") else ""
         no = f'　<span class="muted">{no}</span>' if no else ""
         cat = t(lang, _classify(wind)) if _classify(wind) else "—"
+        # 警報狀態 badge：active=警報生效中、lifted=警報已解除、none=未發警報（仍持續定位）
+        st = typhoon_alert_state(c, marine or [])
+        badge_cls, badge_key = {"active": ("sev-red", "state_active"),
+                                "lifted": ("sev-grey", "state_lifted"),
+                                "none": ("sev-grey", "state_watch")}[st]
+        state_tag = f'<span class="badge {badge_cls}">{t(lang, badge_key)}</span>'
         blocks.append(f"""
 <div class="typhoon-row">
 <div class="map">{typhoon_svg(lang, c)}</div>
 <div class="typhoon-info">
-<h4 style="margin:0 0 6px">{c['name']}{no}　<span class="muted">{c.get('intl','')}</span></h4>
+<h4 style="margin:0 0 6px">{c['name']}{no}　<span class="muted">{c.get('intl','')}</span>　{state_tag}</h4>
 <p style="margin:4px 0">{t(lang, "obs_line", ts=_t(last.get('DateTime')), pos=_pos(last), cat=cat, w=f"{wind:.1f}" if wind is not None else "—", g=gust if gust is not None else '—', p=pressure, move=move)}</p>
 <h4 style="margin:10px 0 4px">{t(lang, "future_fc")}</h4>
 <table><tr><th>{t(lang, "th_time")}</th><th>{t(lang, "th_pos")}</th><th>{t(lang, "th_wind")}</th><th>{t(lang, "th_pressure")}</th></tr>{rows}</table>
@@ -670,7 +748,7 @@ def render_alert_card(lang, marine, reports, stale_at=None, now=None):
     for r in reports:
         if not r.get("name"):
             continue
-        lifted = "解除" in r["name"]
+        lifted = is_lifted_report(r)
         ts = _ts_parse(r.get("issue"))
         if lifted and ts is not None and (now - ts) > timedelta(hours=LIFTED_TTL_HOURS):
             continue
@@ -747,7 +825,8 @@ def cwa_section_html(lang, data, errors, stale, mode, has_active_event, susp=Non
     # 排序（2026/9/13 定案、方案 A）：有活動氣旋 → 颱風卡頂位；無活動氣旋且資料抓取正常 → 置底
     #（警報／特報卡承接當下風險訊號）；抓取失敗（stale）仍維持頂位——警示狀態不降級。
     typhoons_live = filter_typhoon_stale(data.get("typhoons", []), data.get("marine_alert", []))
-    typhoon_card = render_typhoon_card(lang, typhoons_live, stale.get("typhoons"))
+    typhoon_card = render_typhoon_card(lang, typhoons_live, stale.get("typhoons"),
+                                       data.get("marine_alert", []))
     typhoon_first = bool(typhoons_live) or bool(stale.get("typhoons"))  # 只有「空＋抓取正常」才置底
     # 停班停課卡置位（2026/9/15 定案）：有 currently 相關公告 → 頂位（高於颱風卡）；
     # 無 → 收起卡置底；susp=None（抓取失敗）→ 不顯示。dgpa 為獨立法令來源，不在 CWA stale 體系內。
