@@ -192,7 +192,7 @@ def build_map_geojson(path, only_active=True):
         "generated_at": datetime.now(TZ_TW).strftime("%Y/%-m/%-d %H:%M"),
         "source": "中央氣象署災防告警系統（PWS）",
         "api": "cbph.cwa.gov.tw",
-        "note": "build 時快照、每 2 小時更新、非即時",
+        "note": "build 時快照、每小時更新、非即時",
         "warnings": warnings,
         "features": features,
     }

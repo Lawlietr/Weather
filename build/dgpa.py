@@ -72,6 +72,61 @@ def _cn_time(s):
     return datetime(int(y), int(mo), int(d), hh, int(mm), int(ss or 0), tzinfo=_TZ)
 
 
+def _fetch_nds(now=None):
+    """備援：解析人事總處人工查證頁 nds.html 的停班停課表格（<TR>/<TD>/<FONT> 舊式結構）。
+
+    當 CAP feed（FEED_URL）抓不到有效 entry（如回傳『請先登入會員』或滾動視窗無當前公告）時改用此源。
+    回傳 (entries, ok, ts_str)；收錄全數縣市（含『照常』如金門「今天照常上班、照常上課」），以符合「DGPA 查詢頁顯示什麼就顯示什麼」。
+    impact 日設 effective=該日 00:00、expires=次日 00:00（全日停班的語意區間），
+    使 is_current() 在影響日當天為 True、隔日自動消失。
+    """
+    body = _get(QUERY_URL)
+    m = re.search(r"更新時間[：:]\s*(\d{4}/\d{1,2}/\d{1,2} \d{1,2}:\d{2}:\d{2})", body)
+    page_dt = datetime.strptime(m.group(1), "%Y/%m/%d %H:%M:%S").replace(tzinfo=_TZ) if m else (now or datetime.now(_TZ))
+    ts_str = page_dt.strftime("%Y/%-m/%-d %H:%M")
+    rows = re.findall(r"<TR[^>]*>(.*?)</TR>", body, re.S)
+    entries = []
+    region = ""
+    for r in rows:
+        cells = re.findall(r"<TD[^>]*>(.*?)</TD>", r, re.S)
+        headers = re.findall(r"<TD[^>]*headers=\"([^\"]*)\"", r, re.S)
+        if len(cells) < 2:
+            continue
+        def cell_text(i):
+            return re.sub(r"<[^>]+>", "", cells[i] or "").strip()
+        # region cell：headers 含 city_Region（通常 rowSpan，每組第一行才有）；city：city_Name
+        for i, h in enumerate(headers):
+            if "city_Region" in h:
+                region = cell_text(i)
+                break
+        city = ""
+        for i, h in enumerate(headers):
+            if "city_Name" in h:
+                city = cell_text(i)
+                break
+        # 3 儲存格＝region＋city＋status；2 儲存格（rowSpan 後）＝city＋status
+        status = cell_text(2) if len(cells) == 3 else cell_text(1)
+        if not city or not status:
+            continue
+        # 2026/10/23 使用者定案：DGPA 查詢頁顯示什麼就顯示什麼——全數縣市（含純「照常」如金門「今天照常上班、照常上課」）都收錄並標示其結果
+        text = f"{city}：{status}"
+        base = (now or datetime.now(_TZ)).date()  # impact 日：依縣府主體決定（『今天／明天』），預設明天
+        if status.startswith("今天"):
+            impact = base
+        elif status.startswith("明天"):
+            impact = base + timedelta(days=1)
+        else:  # 如臺東（離島今日、縣府明日）以縣府主體「明日」為準
+            impact = base + timedelta(days=1)
+        effective = datetime(int(impact.year), int(impact.month), int(impact.day), tzinfo=_TZ)
+        expires = effective  # 影響日 00:00（全日停班）：is_current 以 exp>=今日 0 時判定，隔日自動消失
+        entries.append({
+            "id": f"nds-{city}", "from_nds": True, "sent": page_dt,
+            "effective": effective, "expires": expires,
+            "area": region, "text": text, "cap_url": QUERY_URL,
+        })
+    return entries, True, ts_str
+
+
 def fetch(now=None):
     """抓 feed＋每筆完整 CAP，回傳 (entries, ok, ts_str)。
 
@@ -110,6 +165,31 @@ def fetch(now=None):
         except Exception as exc:  # 單筆 CAP 失敗：保留 feed 解析值（同為官方資料）
             print(f"warning: DGPA CAP 抓取失敗（{cap_id}）：{exc}")
         entries.append(entry)
+    if not entries:
+        # feed 空（如『請先登入會員』／滾動視窗無當前公告）→ 備援解析人工查頁
+        try:
+            nds_entries, _, nds_ts = _fetch_nds(now)
+            if nds_entries:
+                print(f"INFO: DGPA feed 無有效 entry，改用 nds.html 備援（{len(nds_entries)} 縣市）")
+                return nds_entries, True, nds_ts
+        except Exception as exc:
+            print(f"warning: DGPA nds.html 備援抓取失敗：{exc}")
+    if entries:
+        # feed 只有『停班』公告（無純常縣市如金門「照常」）；補上查詢頁的純常縣市，符合「顯示什麼就顯示什麼」
+        try:
+            nds_all, _, _ = _fetch_nds(now)
+            seen = {e["text"].split("：", 1)[0] for e in entries}
+            added = 0
+            for ne in nds_all:
+                city = ne["text"].split("：", 1)[0]
+                if city not in seen:
+                    entries.append(ne)
+                    seen.add(city)
+                    added += 1
+            if added:
+                print(f"INFO: DGPA 補進純常縣市（如金門）{added} 個（nds 查詢頁）")
+        except Exception as exc:
+            print(f"warning: DGPA 補進純常縣市失敗：{exc}")
     return entries, True, ts_str
 
 
@@ -156,11 +236,16 @@ def render_card(lang, susp, now=None):
 </div>"""
     lis = []
     for e in cur:
+        if e.get("from_nds"):
+            # nds 備援：文字已自足（含縣市＋日期＋結果），不重複顯示影響時段/公告於/CAP 連結
+            lis.append(f"<li>{e['text']}</li>")
+            continue
         when = t(lang, "susp_window", a=_fmt(e.get("effective")), b=_fmt(e.get("expires")))
         sent = t(lang, "susp_sent", ts=_fmt(e.get("sent"))) if e.get("sent") else ""
+        cap = f'　<a href="{e["cap_url"]}" target="_blank" rel="noopener">{t(lang, "susp_cap")}</a>' if e.get("cap_url") else ""
         lis.append(f"""<li>
 <p style="margin:2px 0">{e['text']}</p>
-<p class="meta">{when}　{sent}　<a href="{e['cap_url']}" target="_blank" rel="noopener">{t(lang, "susp_cap")}</a></p>
+<p class="meta">{when}　{sent}{cap}</p>
 </li>""")
     return f"""
 <div class="card cwa-card susp-card">

@@ -2,7 +2,7 @@
 # ============================================================
 # Weather 本地自動部署 — cron 進入點
 # ------------------------------------------------------------
-# 用途：GitHub Actions 異常時的本地備用排程執行腳本。
+# 用途：唯一自動 build＋部署通道（台灣時間每小時整點，2026-10-23 起）。
 #       由 cron 呼叫（見 cron.txt / cron-enable.sh）。
 #
 # 功能：
@@ -16,9 +16,10 @@
 #   --help        顯示說明
 #
 # 部署範圍：
-#   若 deploy.env 設了 GH_PAT → 完整部署（Cloudflare + GitHub Pages）
-#   若未設 GH_PAT            → 僅 Cloudflare（--no-gh）
-#         （GitHub Pages 為公開 mirror 但已 404、非必需，以 Cloudflare 為主）
+#   預設＝完整部署（Cloudflare Pages ＋ GitHub Pages 的 gh-pages 分支）。
+#   GitHub 推送不需要 GH_PAT：本機走 github remote（SSH）；若設了 GH_PAT 則改走 token HTTPS。
+#   2026-10-23 起不再自動加 --no-gh：Actions 排程已停用，gh-pages 只能由本地 cron 推。
+#   （只要 Cloudflare 時，手動執行加 --no-gh 即可。）
 # ============================================================
 set -uo pipefail
 
@@ -33,6 +34,17 @@ LOCK_FILE="/tmp/weather-deploy.lock"
 
 # cron 環境 PATH 極簡，需補齊（含 node 與 python）
 export PATH="/root/.local/share/pi-node/node-v22.23.2-linux-x64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+
+# 從 ~/.zshrc 抽取金鑰環境變數（cron 不載入 .zshrc，但可 grep export 行）
+# 若 .zshrc 不存在或抽不到，則 fallback 到 deploy.env 硬編碼值
+if [ -r "$HOME/.zshrc" ]; then
+  for var in CWA_API_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID GH_PAT; do
+    val=$(grep -E "^export ${var}=" "$HOME/.zshrc" 2>/dev/null | tail -1 | sed "s/^export ${var}=//;s/^['\"]//;s/['\"]$//")
+    if [ -n "$val" ]; then
+      export "$var"="$val"
+    fi
+  done
+fi
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') [cron] $*" >> "$LOG_FILE"; }
 
@@ -150,14 +162,11 @@ else
   log "⚠️  CWA_API_KEY 未設定，跳過 CWA 檢查"
 fi
 
-# ---- 決定部署範圍 ----
-if [ -n "${GH_PAT:-}" ]; then
-  ./build/deploy.sh >> "$LOG_FILE" 2>&1
-  rc=$?
-else
-  ./build/deploy.sh --no-gh >> "$LOG_FILE" 2>&1
-  rc=$?
-fi
+# ---- 執行部署（2026-10-23 起一律完整部署：CF ＋ gh-pages）----
+# GitHub Pages mirror 需由本地 cron 自己推（Actions 排程已停用，不再顺手推）。
+# 注：gh-pages 推送失败会让 rc 非 0（CF 已先部署完成、站台不受影响），下趟即重试。
+./build/deploy.sh >> "$LOG_FILE" 2>&1
+rc=$?
 
 if [ "$rc" -eq 0 ]; then
   log "END 成功 (rc=0)"

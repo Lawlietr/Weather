@@ -96,6 +96,30 @@
 - 時間戳須含年與時間，如 `2026/7/10 05:30`
 - 災害分級標籤：`🔴重大` `🟡警戒` `🟢一般`——事件的**歷史**分級，手動指派，事件結束後**不降級**；首頁頂部「目前風險狀態列」另行由 CWA 目前警報/特報自動推導，兩者獨立（見 `WORKFLOW.md` §2.2）
 - 新進展**附加**在檔尾，不覆寫；僅在結構錯誤時修改既有內容
+
+### ⚠️ 事件檔防呆：禁止整檔覆寫（2026-10-25 定案，極重要）
+
+> 事故記錄：10/25 一次收尾用 `write` 整檔覆寫事件檔，把 10/22 20:26–10/24 18:03 共 **11 次 commit** 累積的內容（492 行、66 條新聞連結，含「24日新增災情報導連結」42 筆表格）蓋掉，只剩 313 行／15 條連結。原因＝改檔前沒讀現檔、沒 `git fetch`，用舊快照蓋掉別人（其他 session／排程）的新 commit。
+
+**改任何事件檔（`颱風/**`、`災情/**`）前的三道必作檢查**：
+
+1. **先讀現檔、再動手**：`read` 整個檔案（或至少所有章節標題與檔尾），**不得憑記憶或憑上次的內容改寫**；同一 session 內改過同一檔，下一次改前仍要重讀（排程可能已改）。
+2. **先確認有無人的新 commit**：`git fetch --all --prune && git log --oneline -5 -- <該檔>`；`git status` 髒檔先處理。**改檔只用 `edit`（附加/原地改），不用 `write` 重寫整檔**；`write` 只允許用於**新建**事件檔。
+3. **commit 前後自查行數與連結數**（不得低於上一版）：
+
+   ```bash
+   f="<事件檔>"
+   git show HEAD:"$f" | wc -l                                  # 上一版行數
+   wc -l "$f"                                                  # 現行行數（應 ≥ 上一版）
+   git show HEAD:"$f" | grep -o 'https\?://[^ )|]*' | sort -u | wc -l   # 上一版不重複連結
+   grep -o 'https\?://[^ )|]*' "$f" | sort -u | wc -l           # 現行（應 ≥ 上一版）
+   # 零遺失驗證：舊版每一行都應仍在現檔
+   git show HEAD:"$f" | while IFS= read -r l; do grep -qF -- "$l" "$f" || echo "LOST: ${l:0:60}"; done
+   ```
+
+   **行數或連結數變少 → 立刻停止 commit**，改用 `git show HEAD:"$f"` 還原再附加（見 `WORKFLOW.md` §8 第 7 條）。
+
+**新連結必附查證**：寫入前用 HTTP 狀態碼確認 200（不可憑推測拼 URL／不可把搜尋結果標題直接当作連結）；遇 404 則換來源或刪除該筆。
 - 颱風基本資料表（強度、風速、半徑等）置於檔首，使用表格
 - **檔首只保留一筆** `最後修改：YYYY/M/D HH:mm`（置於基本資料表上方）：每次修改時**原地更新該行**，**不要新增行**（舊慣例已廢，事件頁會把所有堆疊行都渲染出來）；歷史時間戳由 git history 保存。重要變更可在同一行以括號註記，例如 `最後修改：2026/7/11 18:30（status 改為 ended）`
 
@@ -134,7 +158,10 @@
 | cbph 災防告警（endpoints、polygon、陷阱） | `build/CWA_API.md`「CWA cbph」節 |
 | 停班停課 feed（端點、實測結構、發布機制） | `build/dgpa.py` 頭註（單一事實來源） |
 | RSS 來源清單與抓取守則 | `build/rss_sources.json`（`usage_notes`） |
+| 兩台機器分工（開發機 `192.168.100.15`／部署機 `192.168.100.14`）、環境細節與缺口 | `design/dev-machine.md`＋`WORKFLOW.md` §0.1 |
 | 例行更新 / 新事件 / 零星災情範本 / 驗證 / 部署 / 排程 | `WORKFLOW.md`（零星災情範本 §2.3） |
+| 排程重設／本地 cron 細節（每 2 小時、selfcheck、金鑰） | `LOCAL_CRON.md` |
+| 排程／部署改到 Cloudflare 的評估（**未實作**；Actions 停用原因與實測數據） | `design/cf-cron.md` |
 | Obscura 工具用法 | Skill `/root/.pi/agent/skills/obscura/SKILL.md` |
 | 構想與待辦（任務帳本） | `TODO.md`（只做/優先級/狀態；細節 → `design/<功能>.md`） |
 
@@ -142,8 +169,21 @@
 
 - 預設分支：`main`（原 `master` 已更名）
 - Remotes：`origin`＝內部 Forgejo（`ssh://fg/lawliet/Weather.git`，內網，Identity `~/.ssh/id_rsa_gitea`）；`github`＝公開 repo `Lawlietr/Weather`（`https://github.com/Lawlietr/Weather.git`，直推即可、**不需要 `GH_PAT`**）；`codeberg`＝公開 repo `Lawlietr/Weather`（`ssh://git@codeberg.org/Lawlietr/Weather.git`，走 `~/.ssh/config` 的 codeberg.org 區塊、Identity `id_rsa_gitea`）。commit 後**三邊都推**：`git push origin <branch> && git push github <branch> && git push codeberg <branch>`
-- **開發流程（2026/9/16 重申：勿直接 commit/push `main`）**：所有開發在 `DEV` 分支 commit→build＋部署測試站 `wea-testing`、真瀏覽器（Playwright）驗證→**經使用者同意後**才將 `DEV` 合併進 `main` 並推 `main`（兩邊 remote 皆推）。生產自動部署（`build/deploy-cron.sh`→`deploy.sh`）**以 repo 目前 checkout 為準、無分支邏輯**：DEV 開發期間跑自動部署＝DEV 內容上生產；合併回 `main` 後切回 `main` 再部署即恢復生產為已合併狀態。
-- 無 lint/test 指令；**排程狀態（2026/9/26 起恢復）**：GitHub Actions 每小時 00 分（UTC）自動 build＋部署；**主力自動更新通道＝本地 cron**（每 2 小時，CWA 前置檢查 3 次重試、失敗中止）。Actions 執行約 3 分鐘（vs 本地幾秒），僅作備援。2026/8/29 曾停用排程的真正原因：CWA API 回傳 `MaxWindSpeed=None` 導致程式崩潰（TypeError），非連線問題；該 bug 已修復，2026/9/26 恢復排程。部署指令 → `WORKFLOW.md` §7
+- **兩台機器分工（2026-10-23 定案，極重要）**：
+
+  | 角色 | 機器 | 分支與行為 |
+  |---|---|---|
+  | **開發機** | `192.168.100.15` | 功能開發在 `DEV` 分支；完成後才 merge 回 `main` |
+  | **部署機**＝本機 | `192.168.100.14`（另有 `192.168.1.14`、`172.17.0.1`；hostname `hermes`、Ubuntu LXC） | HEAD 常駐 `main`；本地 cron 每 2 小時 build＋部署；**不做功能開發** |
+
+  由此推出的五條鐵則（開發機環境細節、工具缺口（node 缺失、金鑰未載入）、SSH 探測指令 → `design/dev-machine.md`）：
+  1. **本機看不到開發機未 push 的工作**——判斷「`DEV` 上有無進行中的功能」一律以遠端為準（`git ls-remote origin`、`git fetch --all --prune` 後看 `origin/DEV`），**只看本機分支會得出錯誤結論**（2026-10-23 實際踩過：本機 `DEV` 指標停在 8/30，遠端已到 9/26）。
+  2. **`build/deploy-cron.sh` 與 `build/deploy.sh` 不做任何 `git pull`/`fetch`/`checkout`**（實測 grep 無命中）→ cron 只部署**本機工作區 HEAD**。所以開發機在 `DEV` 上怎麼折騰（甚至把 `DEV` push 到三邊 remote）都**不會**影響生產。
+  3. **但反向不成立**：開發機把 `DEV` merge 進 `main` 並 push 後，本機 `main` 仍是舊的 → **必須到本機 `git checkout main && git pull --ff-only origin main`**，否則每 2 小時 cron 會持續部署 merge 前的舊 `main`（「改完沒上線」通常是忘記這一步）。
+  4. **本機 `DEV` 只是 `origin/DEV` 的追蹤快照**（2026-10-23 已 `git branch -f DEV origin/DEV` 對齊至 `bca1b0d`），**不得在本機 checkout `DEV` 開發**：`DEV` 落後 `main` 22 commits（含 `build/dgpa.py` 87 行、`site.py`、`i18n.py`、`cron.txt` 等生產修正與薔琵事件檔），一旦本機 HEAD 切到 `DEV`，cron 就把倒退內容推上三個生產站。真需在本機驗證功能：先確認 `DEV` 已 merge 最新 `main`，並暫時 `bash build/cron-disable.sh`，測完 `cron-enable.sh`。
+  5. **開發機上開發前先將 `origin/main` merge 進 `DEV`**（不是事後才同步）：`main` 持續有 `build/` 修正落地，越晚同步重疊衝突越大（現行重疊檔正是 `dgpa.py`/`site.py`/`i18n.py`/`deploy-cron.sh`），事後解衝突很容易把生產修正解回舊版、再 merge 回 `main` 造成永久倒退。
+- **開發流程（2026/9/16 重申：勿直接 commit/push `main`；2026-10-23 補：開發在開發機 `192.168.100.15`，不在本機）**：所有開發在 `DEV` 分支 commit→build＋部署測試站 `wea-testing`、真瀏覽器（Playwright）驗證→**經使用者同意後**才將 `DEV` 合併進 `main` 並推 `main`（三邊 remote 皆推，見上「Remotes」條）。生產自動部署（`build/deploy-cron.sh`→`deploy.sh`）**以 repo 目前 checkout 為準、無分支邏輯**：開發機上的 `DEV` 工作因物理分離不會進生產（見上條 2），**但本機 HEAD 切到 `DEV` 就會**（見上條 4）；合併回 `main` 後需到本機 `git pull --ff-only origin main` 才恢復生產為已合併狀態（見上條 3）。
+- 無 lint/test 指令；**排程狀態（2026-10-23 定案、2026-10-24 降頻）**：**唯一自動 build＋部署通道＝本地 cron，每 2 小時整點**（`0 */2 * * *`，Asia/Taipei；CWA 前置檢查 3 次重試、失敗中止；薔琵颱風期間 10/23 曾升為每小時 `0 * * * *`，10/24 薔琵遠離後降回每 2 小時）。**GitHub Actions 的 `schedule:` 已彻底停用並從 `build.yml` 移除**，只留 `workflow_dispatch` 手動按鈕——2026-10-23 實測近 2 天 24 期排程只觸發 10 期、間隔 185–424 分（應 120 分），而本地 cron 10/10 準時、约 40 秒完成（GitHub scheduler 延遲為上游已知問題）。歷史：2026/8/29 曾因 CWA 回傳 `MaxWindSpeed=None` 崩潰（TypeError，已修復）而暫停，2026/9/26 恢復，2026-10-23 因排程可靠度彻底停用。CF 側替代方案（Worker Cron／git-backed Pages build／Containers）僅評估、**未實作** → `design/cf-cron.md`。部署指令 → `WORKFLOW.md` §7
 
 ---
 
@@ -175,7 +215,7 @@
 
 ## DGPA 停班停課 feed（2026/9/15 實測）
 
-停班停課（各縣市政府公告、人事行政總處中央統一發布）以 CAP feed 為主：`GET https://alerts.ncdr.nat.gov.tw/RssAtomFeed.ashx?AlertType=33`（免 key）。**⚠️ feed 是滾動近期視窗、不是「目前生效中」清單**——「是否目前相關」由 `build/dgpa.py` 的 `is_current()` 判斷。**完整 feed/CAP 欄位實測結構、陷阱、發布機制 → `build/dgpa.py` 頭註**（單一事實來源；人工查證頁 `https://www.dgpa.gov.tw/typh/daily/nds.html`（注意：僅 www 可用）亦在其中）。首頁卡呈現定案（有相關公告→展開置頂於颱風卡之上／無→收起置底）→ 見下方「網站結構」；事件檔存檔層 → `design/class-halt.md`。
+停班停課（各縣市政府公告、人事行政總處中央統一發布）以 CAP feed 為主：`GET https://alerts.ncdr.nat.gov.tw/RssAtomFeed.ashx?AlertType=33`（免 key）。**⚠️ feed 是滾動近期視窗、不是「目前生效中」清單**——「是否目前相關」由 `build/dgpa.py` 的 `is_current()` 判斷。**完整 feed/CAP 欄位實測結構、陷阱、發布機制 → `build/dgpa.py` 頭註**（單一事實來源；人工查證頁 `https://www.dgpa.gov.tw/typh/daily/nds.html`（注意：僅 www 可用）亦在其中）。首頁卡呈現定案（有相關公告→展開置頂於颱風卡之上／無→收起置底）→ 見下方「網站結構」；事件檔存檔層 → `design/class-halt.md`。**卡面收錄範圍：2026/10/23 定案收全數縣市（含金門等『照常』者，與 DGPA 查詢頁一致；舊版只收停班縣市、已改）**。
 
 ## Obscura 無頭瀏覽器
 
@@ -198,7 +238,7 @@
 
 ### 不變項（改動前先確認）
 
-- **更新模式**：本地 cron 自動 build＋部署為主力、Actions 手動 dispatch 為備援（排程狀態與恢復條件 → `WORKFLOW.md` §7）；**災情新聞人工把關、不自動推 RSS**（→ `WORKFLOW.md` §1、`MANUAL_UPDATE.md`）。
+- **更新模式**：本地 cron（**每 2 小時整點**）為**唯一**自動 build＋部署通道；Actions 自 2026-10-23 起無自動排程，僅手動 dispatch（排程狀態與 CF 替代方案評估 → `WORKFLOW.md` §7、`design/cf-cron.md`）；**災情新聞人工把關、不自動推 RSS**（→ `WORKFLOW.md` §1、`MANUAL_UPDATE.md`）。
 - **金鑰**：CWA Key、Cloudflare 憑證分散在 (1) 本機 `~/.zshrc`（手動）、(2) GitHub Secrets（dispatch）、(3) `build/deploy.env`（cron 用，600）；**不寫進任何輸出檔案、不進 `public/`、不進網站**。
 - **非即時**：首頁顯示「**產生時間**」（i18n key `updated`），由 `build/site.py` 以**固定 UTC+8** 產生（`datetime.now(timezone(timedelta(hours=8)))`）；**不可改回不帶時區的 `datetime.now()`**（Actions runner 是 UTC、會慢 8 小時）。「產生時間」＝網頁何時生成，**不等於氣象／災情資料已更新**。
 - **CWA 不支援 CORS**：氣象資料全部 build 時本機抓取寫入靜態 HTML；前端零外部請求、首頁零 JS。

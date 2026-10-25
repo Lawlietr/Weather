@@ -1,8 +1,8 @@
 #!/bin/bash
 # ============================================================
-# 安裝 Weather 本地部署 cron（對 Actions 的備用）
+# 安裝 Weather 本地部署 cron（**主力、唯一自動 build＋部署通道**）
 # ------------------------------------------------------------
-# 預設「不啟用」。僅在 Actions 異常時執行此支來開啟排程。
+# 主力通道應常開（Actions `schedule:` 已於 2026-10-23 停用，不再是備援）。
 # 重複執行會自動覆蓋既有 Weather 工作項目（冪等，不累積）。
 #
 # 前置：build/deploy.env 需存在（金鑰）。建議先跑：
@@ -16,7 +16,7 @@ START="# >>> Weather cron managed >>>"
 TAG="# weather-deploy-cron"
 
 echo "===================================================="
-echo " 安裝 Weather cron 備用排程  $(date +%Y/%m/%d\ %H:%M)"
+echo " 安裝 Weather cron 自動部署（每 2 小時）  $(date +%Y/%m/%d\ %H:%M)"
 echo "===================================================="
 
 # 1. 檢查金鑰檔
@@ -43,7 +43,7 @@ crontab -l > "$REPO_ROOT/build/logs/crontab.backup.$(date +%Y%m%d-%H%M%S).txt" 2
 cleaned="$(crontab -l 2>/dev/null | sed "/$START/,/$TAG/d" || true)"
 { printf '%s\n' "$cleaned"
   echo "$START"
-  echo "# Weather 本地部署備用（build/cron-enable.sh / cron-disable.sh 管理）"
+  echo "# Weather 自動部署（每 2 小時；build/cron-enable.sh / cron-disable.sh 管理）"
   cat "$DEPLOY_DIR/cron.txt"
 } | grep -v '^$' | crontab -
 
