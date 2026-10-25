@@ -61,6 +61,40 @@
 
 **剩餘（非待辦，構想）**：「某縣市歷年全量災情」獨立彙整頁——需要時才改 `site.py` 新增彙整頁。
 
+## 風險狀態列／颱風卡的「警報狀態」推導（✅ 2026-10-25 定案並實作、DEV）
+
+**問題**（薔琵解警後的首页實測）：
+1. 已解除的災害性天氣特報被當成生效中 → CWA `W-C0033-002` 的 `datasetInfo.datasetDescription`
+   只寫「大雨特報」，**解除與否寫在 `contents.content`**（「…故解除大雨特報。」）；
+   舊碼只查名稱（`"解除" in r["name"]`）。
+2. 已解除警報的氣旋（薔琵：24日20:30 第24報 END，CWA 之後仍每 6 小時發布定位）與
+   **從未發警報**的外海氣旋（煙花 CWA 34）都被列為「生效中」，把風險列推成 🔴。
+
+**定案**：風險列只計入「CWA 目前對台有生效中（未解除）警報/特報」的項目，與事件 `severity` 仍完全獨立。
+
+**實作**（`build/cwa.py`）：
+- `LIFT_RE`＋`is_lifted_report(r)`：名稱含「解除」，**或**（`phenomena` 為空 **且** 內文符合
+  `解除…特報/警報`）。`phenomena` 為空是必要條件：生效特報一定附 `hazardConditions`
+  （實測 陸上強風特報 phenomena=`陸上強風`、解除的大雨特報 phenomena=`[]`），
+  這樣才不會把內文順帶寫到「解除大雨特報，改發豪雨特報」的生效特報誤判。
+  同時套用於 `current_risk_level()` 與 `render_alert_card()`（解除報轉 `sev-grey`、置底）。
+- `alert_typhoon_names(m)`＋`typhoon_alert_state(c, marine)` → `active`/`lifted`/`none`。
+  ⚠️ 解除報的 `typhoon-info`「颱風名稱」欄**實測是空的**（2026-10-24 20:30 第24報），
+  名稱要從 `description` 的「命名與位置」內文抓（「輕度颱風 薔琵（國際命名 CHAMPI）」）。
+- `current_risk_level()`：`active` 才計入紅/黃；`lifted` 進 `lifted_recent`（⚪ 中性列的「最近已解除」註記）；
+  `none` 完全不計入。
+- `render_typhoon_card(lang, …, marine)` 加狀態 badge，i18n 新 key `state_active`／`state_lifted`／
+  `state_watch`（zh＋ja）：警報生效中（紅）／警報已解除（灰）／未發布警報（外海追蹤）（灰）。
+
+**驗證**：
+- 快取即時資料：解除大雨特報→灰且不計入；生效陸上強風特報→計入（黃）；薔琵→lifted、煙花→none。
+- 合成回歸 4 案：生效海上陸上警報→`active`＋🔴＋badge 警報生效中；END＋解除特報混合→紅/黃只由生效特報決定；
+  帶 phenomena 的「解除大雨特報，改發豪雨特報」→不誤判；全空→🟢。
+- 真實 build＋測試站 `wea-testing`（真瀏覽器）：風險列由 🔴（誤）→ 🟡「陸上強風特報（有效至 10/26）」（正）；
+  zh/ja 氣旋列顯示「警報已解除／未發布警報（外海追蹤）」與「警報解除済み／警報未発表（海上追跡中）」；
+  各縣市災情聚合與事件頁連結不受影響。
+- 注意：`/map/` 的地圖層仍走原始 `fetch_typhoons()` 全量軌跡（見上節 TTL 定案），本修正只影響首頁卡片與風險列。
+
 ## AI bot 可偵測性強化（✅ 2026/9/15 完成並上線；背景：is-agentic.com 掃描 52/100）
 
 **已實作（2026/9/15）**：首頁 JSON-LD（WebSite＋Organization）與事件頁 Article JSON-LD；全頁 meta description／Open Graph（含 `assets/og.png`，`build/make_og_image.py` 純 stdlib 產生）／canonical；`<meta name="is-agentic-site-type" content="content">`；信任頁 `/about/`、`/contact/`、`/privacy/`（zh＋ja，各 ≥500 字）；404 頁加 agent 指引（llms.txt／sitemap.xml 連結）；llms.txt 加「使用指引」段；footer 加關於／聯絡／隱私＋llms.txt／sitemap 連結。實作於 `build/site.py`（`render_page` 加 `page_url`/`jsonld` 參、`build_trust_pages()`）＋`build/i18n.py`。
