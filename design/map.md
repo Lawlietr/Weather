@@ -131,6 +131,7 @@
 
 **規則**：`/map/`（Leaflet 向量層）驗證一律用 Playwright 真 Chromium，**不要用 obscura 截圖判層**——obscura 引擎缺 SVG 1.1 factory API（`createSVGRect` 等）→ `L.Browser.svg === false` → 所有向量層（雨量圓點、告警 polygon）不渲染且無 console 輸出，截圖會假陽性「圖層空」。obscura 的 SVG/console 缺陷已備妥 bug 報告文本待回報。
 
-**Playwright 跑法**：`NODE_PATH=/root/opencode-stuffs/steam-deck-utilities/web/node_modules node <script>`（Chromium 在 `~/.cache/ms-playwright`，npx 預設解析路徑沒有 browser 不可用）。
+**Playwright 跑法（2026-10-26 實測更正）**：用 `NODE_PATH=/root/opencode-stuffs/translate-cloud/node_modules node <script>`（playwright **1.64.0**，對應本機快取 `~/.cache/ms-playwright/chromium-1248`）。
+⚠️ 舊指引寫的 `steam-deck-utilities/web/node_modules` **目前跑不起來**：那組是 playwright **1.62.1**，要 `chromium_headless_shell-1234`，本機快取只有 1248 → `browserType.launch: Executable doesn't exist`（2026-10-26 實測踩到）。
 
 **驗證要點**：`.leaflet-overlay-pane path.leaflet-interactive` 的數量＋fill 顏色分佈＋實際中心座標（可用 tile src 座標反算）。
