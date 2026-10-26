@@ -156,10 +156,16 @@ grep -rc "Authorization=" public/ | grep -v ":0" || echo "OK: 無 Authorization"
 grep -rc "$CWA_API_KEY" public/ build/cwa_cache.json | grep -v ":0" || echo "OK: 無金鑰值"
 # ④ 雙語言輸出確認（兩套根頁都存在、語言切換連結正確）
 ls public/index.html public/ja/index.html
-# ⑤ 地圖頁＋瓦片確認（/map/ 兩語言存在；瓦片數應為 967；大小應有分佈而非單一值——
-#    單一值＝疑似整批被擋（2026/9/2 實測 OSM 官方 server 回假 200＋6987B 封鎖頁、967 張全中））
+# ⑤ 地圖頁＋瓦片確認（/map/ 兩語言存在；瓦片應有兩類檔案：各層瓦片＋1 張 `_ocean.png`
+#    缺瓦片佔位底（§2-7，`tiles.OCEAN_TILE_NAME`）。瓦片數不是寫死的常數——per-zoom bbox 由
+#    `tiles.zoom_bbox()` 從 `MAP_MAX_BOUNDS` 推導，改 bounds/VIEWPORT 會跟著變，所以先查現值再對數。
+#    大小應有分佈而非單一值——單一值＝疑似整批被擋（2026/9/2 實測 OSM 官方 server 回假 200＋6987B 封鎖頁））
 ls public/map/index.html public/ja/map/index.html
-find public/assets/tiles -name '*.png' | wc -l   # 預期 967
+build/.venv/bin/python -c "import sys;sys.path.insert(0,'build');import tiles;print('瓦片計畫:',len(tiles.tile_list()),'+1 張 _ocean.png')"
+find public/assets/tiles -name '*.png' | wc -l   # 預期＝上行數＋1（2026/10/26 現值 2,201）
+ls -l public/assets/tiles/_ocean.png             # 應存在、約 570 bytes
+grep -c 'errorTileUrl' public/map/index.html     # 應為 1
+grep -o 'background:var(--sea)' public/map/index.html | head -1   # 應有（缺瓦片處＝海色，不是紙色）
 find public/assets/tiles -name '*.png' -exec stat -c '%s' {} \; | sort -u | wc -l   # 預期 >50
 # ⑤ 風險狀態列（由 CWA 自動推導；應與 build 日誌「目前風險：xxx」一致）
 grep -o 'risk-bar risk-[a-z]*' public/index.html | head -1

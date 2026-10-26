@@ -87,15 +87,33 @@
 2. **b 視野＋瓦片往東/南擴**：
    - `MAP_CENTER` `[23.8, 120.95]` → **`[23.7, 121.3]`**（往東 0.35°，台灣在畫面偏左、右側留太平洋）
    - `MAP_MAX_BOUNDS` → **`[[20.7, 118.3], [26.7, 124.3]]`**（6.0°×6.0°，**中心恰＝新 `MAP_CENTER`**）
-   - `tiles.py`：單一 `BBOX` 改為 **`ZOOM_BBOX = {z: (lon_min, lat_min, lon_max, lat_max)}`**：z8 `(115.5, 19.6, 127.2, 28.4)`、z9 `(116.5, 20.0, 126.5, 27.8)`、z10 `(117.6, 20.4, 125.8, 27.2)`、z11 `(118.6, 21.4, 124.2, 26.2)`
-   - 原理（**不變項**）：⚠️ 每一 zoom 層的 bbox 必須涵蓋 `MAP_MAX_BOUNDS` **± 該層桌面視口溢出量**（z8 1920px＝10.6° 經度、z11 1920px＝1.3°）。低 zoom 需要更寬瓦片帶、高 zoom 蓋 maxBounds 即可——這是 per-zoom 的理論基礎。`MAP_MAX_BOUNDS` 中心恆等於 `MAP_CENTER` 的不變項繼續成立。
-   - **成本（實測推算）**：1,818 張（現 967）、≈ 9 MB（現 8.3 MB）——新增區多為海域空瓦片（<1 KB）所以大小幾乎不變；首次 build 多抓 ~850 張（8 workers、幾分鐘，之後 cache 命中）；遠低於 CF Pages 25k 檔案上限。
-   - ⚠️ `WORKFLOW.md` §3 檢查清單 ⑤「瓦片數應為 967」需同步更新。
+   - `tiles.py`：單一 `BBOX` 常數拿掉，改由 `zoom_bbox(z)` **推導**每一層 bbox＝`MAP_MAX_BOUNDS` ⊕ 該層桌面視口溢出量 ⊕ `ELASTIC_DEG`（0.3°）。實測產出：z8 `(115.73,20.10,126.87,27.30)` 63 張、z9/z10/z11 `(118.00,20.40,124.60,27.00)` 121/420/1,596 張。
+     **`MAP_CENTER`/`MAP_ZOOM`/`MAP_MAX_BOUNDS` 的單一事實來源改放 `build/tiles.py`**，`map_page.py` 由此 import（舊版兩處各寫一份、就是漂移的溫床）。
+   - 原理（**不變項**）：⚠️ 每一 zoom 層的瓦片 bbox 必須涵蓋「視口可能到的範圍」，否則該處只剩海色底——低 zoom 時桌面視口比 maxBounds 寬（z8 1920px＝10.6° 經度 > bounds 6.0°）需要更寬瓦片帶，高 zoom（z11 1920px＝1.3°）視口比 bounds 窄、蓋 maxBounds 即可；`MAP_MAX_BOUNDS` 中心恆等於 `MAP_CENTER` 的不變項繼續成立。
+   - **成本（2026/10/26 實測）**：**2,200 張**（舊 967）、`public/assets/tiles` 由 15 MB → **25 MB**（先前估 1,818 張≈ 9 MB 偏樂觀——OSM.de 的海域瓦片帶等深線/離島標註，單張仍有數 KB）。本次新抓 1,233 張、8 workers、build 總時 1 分 54 秒、失敗 0。仍遠低於 CF Pages 檔案/檔案大小上限。⚠️ `WORKFLOW.md` §3 ⑤ 已改為「先跑 `tiles.tile_list()` 查現值再對數」（瓦片數不再寫死）。
 3. **c 陸地輪廓兜底（未做、待辦）**：海色＋陸地輪廓最底層（獨立 pane、zIndex 低於 tilePane），`taiwan_geo.py` `ISLANDS`（現 6 條：本島/澎湖/金門/蘭嶼/綠島/馬祖）擴到菲律賓北（巴丹）、與那國、宮古。⚠️ 擴充要改**產生器** `make_taiwan_geo.py`，手改 `taiwan_geo.py` 會被覆寫（AGENTS.md 已警示）。也順帶服務 §2-4b（風圈畫到瓦片外仍有地理參照）。
 
 **為什麼不只是美觀**：cbph **巨浪告警 polygon** 與待辦 **§2-4b 颱風軌跡/風圈**都在台灣**以東**海域——現行底圖在那邊是空白，預報路徑與 70% 暴風半徑會畫在「沒有地圖」的白區上，直接傷害本專案核心用途。
 
 **與 4a-follow 的順序**：§2-7 先做。4a-follow 卡在「冷藍系與海水淡藍衝突」的判斷，而海洋面積一旦擴大 2.3°，點/海對比的前提就變了——先定視野與海色再定點色，才不會返工。
+
+### a＋b 實作完成與實測（2026/10/26，DEV）
+
+**改動**：`build/tiles.py`（視野常數＋`zoom_bbox()` 推導＋`ocean_png()` 手寫 stdlib PNG、不依赖 Pillow）、`build/map_page.py`（import 視野常數、`--sea:#aad3df`、`#map`/`.leaflet-container` 改用海色、tileLayer 加 `errorTileUrl`）、`WORKFLOW.md` §3 ⑤。
+
+**本機 build**：`map tiles：2200 張（本次抓 1233、快取 967、失敗 0）`、零 warning；`_ocean.png` 570 bytes、實色 rgb(170,211,223)；舊快取 967 張全在新計畫內（無孤兒瓦片）。
+
+**真 Chromium 驗證**（依本檔「/map/ 向量層驗證」規則，不用 obscura；`NODE_PATH=/root/opencode-stuffs/translate-cloud/node_modules`，playwright 1.64 對應 `chromium-1248`）：
+
+| 視窗 | 可見經度 | 瓦片實際 covered 東界 | 右側缺口 | 404 |
+|---|---|---|---|---|
+| 1920×1080 | 116.03→126.57 | 126.56 | **0.01°** | 0 |
+| 1440×900 | 117.34→125.26 | 125.16 | **0.10°** | 0 |
+| 390×844（手機） | 120.23→122.37 | 123.75 | **0.00°** | 0 |
+
+另外測 z11 拖到 maxBounds 四邊（東/西/南/北各拖到底）：全部零 404、海色佔位瓦片 0 張 → **可拖範圍內瓦片完整**。`.leaflet-container` 與 `#map` 實測 `rgb(170,211,223)`＝海色 ✓。截圖目視：右側出現石垣市/西表石垣國立公園（z8）與與那國町、沖繩縣界（z11）——不再是一片空白。
+
+⚠️ 副作用：`public/assets/tiles` 25 MB（部署變大，CF Pages／gh-pages 同步時留意上傳時間）。2560px 以上 ultrawide 在 z8 最外側會露海色（刻意取捨，避免 z8 瓦片再倍增）。
 
 ## 中心偏移修正（✅ 2026/9/16）
 

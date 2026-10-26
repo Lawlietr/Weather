@@ -18,27 +18,28 @@ from pathlib import Path
 
 from i18n import t, LANGS, is_default
 from cbph import TYPES  # slug → (中文名, 配色)，與 cbph UI 一致
+# ⚠️ 地圖視野常數的單一事實來源在 `build/tiles.py`（離線瓦片的 per-zoom bbox 由 maxBounds
+# 推導，兩邊必須同步）——不在本檔重建座標，否則又會出現「maxBounds 比瓦片寬」的漂移
+# （§2-7 的成因：舊 maxBounds 東界 123.6°E 超出舊瓦片東界 122°E → 右側 2.9° 無底圖）。
+from tiles import MAP_CENTER, MAP_ZOOM, MAP_MAX_BOUNDS, OCEAN_TILE_NAME
 
-# 預設全台視角中心（本島＋離島折衷）
-MAP_CENTER = [23.8, 120.95]
-MAP_ZOOM = 8
-# 瓦片範圍稍寬於抓取 bbox，允許用戶稍微平移
-# ⚠️ 本範圍的**中心點必須與 MAP_CENTER 一致**：z8 下桌面 viewport（>965px 寬）比本範圍更寬，
-# Leaflet _limitCenter 會把 viewport 重新對到範圍中心（2026/9/16 實測：舊的對稱範圍
-# [[21.2,117.4],[27.0,122.7]] 中心在 (24.1,120.05)，導致初始視圖偏西 0.9°、福建海岸偏中間）。
-# 範圍總跨維持 5.8°×5.3°，離線瓦片覆蓋 118–122°E／21.9–26.4°N（tiles.py BBOX）仍在內。
-MAP_MAX_BOUNDS = [[20.9, 118.3], [26.7, 123.6]]
+# 地圖視野：MAP_CENTER [23.7,121.3]、MAP_ZOOM 8、MAP_MAX_BOUNDS [[20.7,118.3],[26.7,124.3]]
+# ——皆由 tiles.py import（不在此定義；§2-7）。不變項：MAP_MAX_BOUNDS 中心恆等於 MAP_CENTER
+#（Leaflet 1.9.4 setView 對 maxBounds clamp：視口寬於 bounds 經度跨度時會把整個視口對齊
+#  bounds 中心；2026/9/16 實測舊 bounds 中心 120.05 曾導致開圖偏西 0.9°）。
 
 THEME_VARS = """
 :root{--red:#ef5350;--yellow:#ffb300;--green:#66bb6a;
 --bg:#14181c;--card:#1d242c;--line:#2f3944;--ink:#e4e8ec;--muted:#98a3af;
 --accent:#64b5f6;--chip-bg:#2a333e;--side-bg:#0f1317;--head-bg:#0c0f12;
+--sea:#aad3df;  /* §2-7：缺瓦片處的底＝OSM standard 海洋色（OSM 瓦片不隨主題變色→dark 同色） */
 color-scheme:dark;}
 /* 與 site.py 主題變數同步（子集：本頁未用 risk-bg/table-head/ph-*）；
    site.py 改主題色時須一併更新此處（2026/9/16 曾遺漏淡黃舊版）。 */
 :root[data-theme="light"]{--red:#c62828;--yellow:#ef8f00;--green:#2e7d32;
 --bg:#f9f3eb;--card:#fcfaf7;--line:#d1b594;--ink:#3b2816;--muted:#76614c;
 --accent:#a35200;--chip-bg:#f2e4d4;--side-bg:#f5eee5;--head-bg:#342214;
+--sea:#aad3df;
 color-scheme:light;}
 """
 
@@ -57,14 +58,14 @@ header.site{background:var(--head-bg);color:#fff;padding:8px 0;position:sticky;t
 /* isolation:isolate（2026/9/17）：把 Leaflet 內部 pane（z-index 100–1000）封進 #map 自己的
    堆疊上下文。否則 .leaflet-container 不形成堆疊上下文、pane 直接與 root 競爭，
    sticky header（z-40）與行動版 bottom sheet（z-50）會被地圖蓋住。 */
-#map{isolation:isolate;min-height:320px;background:var(--bg)}
+#map{isolation:isolate;min-height:320px;background:var(--sea)}  /* §2-7：海色底，缺瓦片處不再是紙色 */
 /* 桌面鎖死視口：header＋地圖（彈性）＋footer 填滿一屏、頁面不捲動
    （取代舊的 height:calc(100vh - 49px) magic number） */
 @media(min-width:768px){
 html,body.map-page{height:100%;overflow:hidden}
 body.map-page{display:flex;flex-direction:column}
 }
-.leaflet-container{background:var(--bg);font:inherit}
+.leaflet-container{background:var(--sea);font:inherit}
 .map-panel{background:var(--card);border-left:1px solid var(--line);overflow-y:auto}
 .panel-tab{display:none}
 .panel-body{padding:14px 16px}
@@ -272,7 +273,8 @@ def build(OUT, fc, events, warnings=None):
   map.setView({json.dumps(MAP_CENTER)}, {MAP_ZOOM});
   map.setMaxBounds({json.dumps(MAP_MAX_BOUNDS)});
   L.tileLayer("{assets}tiles/{{z}}/{{x}}_{{y}}.png",
-    {{minZoom:{MAP_ZOOM}, maxZoom:11, attribution:"© OpenStreetMap contributors"}}).addTo(map);
+    {{minZoom:{MAP_ZOOM}, maxZoom:11, errorTileUrl:"{assets}tiles/{OCEAN_TILE_NAME}",
+      attribution:"© OpenStreetMap contributors"}}).addTo(map);
 
   var byType = {{}};
   DATA.features.forEach(function(f){{

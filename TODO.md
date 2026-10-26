@@ -8,7 +8,8 @@
 
 | # | 任務 | 優先級 | 狀態 | 設計檔 |
 |---|------|--------|------|--------|
-| **§2-7** | **底圖視野擴展**：瓦片東界 122°E＝台灣東岸→右側 2.9°（佔桌面視窗 37%）無底圖且畫成紙色。定案＝海色底＋`errorTileUrl`＋`MAP_CENTER` 往東＋`tiles.py` per-zoom bbox（1,818 張 ≈ 9MB） | 🔥 高 | 待辦（**排在 4a-follow 前**：先定視野/海色再定點色，免返工） | [design/map.md](design/map.md) |
+| **§2-7** | **底圖視野擴展**：瓦片東界 122°E＝台灣東岸→右側 2.9°（佔桌面視窗 37%）無底圖且畫成紙色。a 海色底＋`errorTileUrl`、b `MAP_CENTER` 往東＋`tiles.py` per-zoom bbox | 🔥 高 | **a＋b 已實作（2026/10/26，DEV，真瀏覽器實測全 PASS）**、待合併 main；**c 陸地輪廓兜底仍待辦** | [design/map.md](design/map.md) |
+| §2-7c | 陸地輪廓兜底（海色＋陸地最底層；`taiwan_geo.py` 擴到菲北/與那國/宮古——**要改產生器 `make_taiwan_geo.py`**） | 中 | 待辦 | [design/map.md](design/map.md) |
 | §2-4a-follow | 雨量點樣式重做（4a 合併後**先處理**；現行尺寸/色碼未過關） | 🔥 高 | 待辦（候選方向待討論；⚠️ 色碼判斷前提＝§2-7 的海域面積先定案） | [design/map.md](design/map.md) |
 | §2-4b | 颱風軌跡/風圈層（實線觀測＋虛線預報＋最新預報點風圈） | 高 | 待辦 | [design/map.md](design/map.md) |
 | §2-4c | 特報陸地紅區層（選項 A：自託縣界 GeoJSON；**動工前需確認縣界資料源**） | 高 | 待辦 | [design/map.md](design/map.md) |
@@ -16,6 +17,7 @@
 | §2-6 | /map/ v2（data.json 公開＋deep link＋時間線快照；**快照需先定案**存哪裡、留幾份） | 中 | 待辦 | [design/map.md](design/map.md) |
 | §6 | 停班停課事件檔存檔層（**事件期間才做**、非待辦；新事件時從 feed/查詢頁/新聞撈入事件檔「停班停課」章節） | 中高 | 事件期間進行 | [design/class-halt.md](design/class-halt.md) |
 | §5 | 事件分享按鈕：A Web Share＋複製連結 → B Line 一鍵 → C OG 分享圖卡 | 低 | 待辦 | [design/share-button.md](design/share-button.md) |
+| §12 | **站內 nav 斷鏈**（與本次改動無關的既有問題）：about/contact/privacy 頁的地圖連結缺 `{base}` → 404（zh＋ja 共 ~98 條；`site.py:692` 寫死 `href="map/index.html"`）；ja 事件頁殘留 `.md` 連結（~32 條） | 中 | 待辦（2026/10/26 實測 130 條斷鏈） | [design/site.md](design/site.md) |
 | §1 | RSS 關鍵詞微調（`rss.py` `KEYWORDS`；隨事件期間 flag 假陽性/假陰性實戰資料，非獨立待辦） | 隨事件 | 隨事件維護 | [design/rss.md](design/rss.md) |
 
 ## 已完成（非待辦；細節在設計檔與 git history）
