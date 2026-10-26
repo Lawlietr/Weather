@@ -95,6 +95,24 @@
   各縣市災情聚合與事件頁連結不受影響。
 - 注意：`/map/` 的地圖層仍走原始 `fetch_typhoons()` 全量軌跡（見上節 TTL 定案），本修正只影響首頁卡片與風險列。
 
+## 站內連結的深度前綴（§12，✅ 2026-10-26 修復；測試站實測 129 條斷鏈 → 0）
+
+**根因一類化**：`public/` 是三層樹——網站根（zh 首頁、`llms.txt`／`sitemap.xml`／`robots.txt`／`AGENTS.md` 只在這裡）、`ja/`（ja 首頁＋ja 事件＋ja `/map/`）、`events/**` 與信任頁 `about|contact|privacy/`（zh 深度 1、ja 深度 2）。**同一個 `base` 字串同時要指「語言根」和「網站根」就會錯**。定案規則：
+
+| 變數 | 指哪裡 | 用於 |
+|---|---|---|
+| `base`（由 `home_link` 推） | **目前語言**的根（zh＝網站根、ja＝`/ja/`） | 側欄事件、about/contact/privacy（ja 樹有鏡像頁）、返回首頁 |
+| `root_base`（`render_page` 新參數） | **網站根** | 只有站層產物：`llms.txt`、`sitemap.xml`（ja 樹要再多上一層） |
+| `lang_switch_html(lang, root_base)` | 語言首頁固定是 `<root>/index.html`（預設語）與 `<root>/<lang>/index.html` | 語言切換按鈕。**舊版拿 home_link 推語言根再 `+"../index.html"`** → 在 `/ja/about/`、`/ja/events/**` 會跳出網站根之外 |
+
+**其他兩處**：
+- 信任頁 `build_trust_pages` 舊版傳 `base=""`（根目錄深度），但頁在 `/about/index.html`（深度 1；ja 深度 2）→ 側欄 map／事件／llms.txt 連結全 404（zh＋ja 共 ~98 條）。現由 `prefix` 的層數推深度，不寫死。
+- 事件正文內的 `.md` 互連（來源 md 用**倉儲內**相對路徑，例 `../08/0828_….md`）由 `build_md_link_index()`＋`fix_md_links()` 改寫成事件頁 URL：先以「來源 md 所在目錄」解析、再以倉儲根解析，都不中則用 **basename 唯一比對**兜底（印 `[note] …層級不對`，因為那是來源 md 少寫一層 `../`，例：`颱風/2026/08` → `災情/2026/08` 需要三層 `../`，現行檔內寫兩層）；解析不到才拆成純文字（印 `[warning]`，絕不留斷鏈）。**不改事件正文**（AGENTS.md：僅結構錯誤可改既有內容）。
+
+**驗證**：`build/.venv/bin/python build/check_links.py`（WORKFLOW §3 ②；exit 0＝無斷鏈）。已知限制：`404.html` 的相對連結另計不計入 exit——CF Pages 對任何深度的未匹配路徑都送同一份 top-level `404.html`，瀏覽器以被請求的 URL 為基準解析相對連結；改絕對 URL 又會讓 GitHub Pages mirror（`/Weather/` 前綴）跳回 CF 域名，故刻意保留。
+
+**順帶**：更新頻率文案不再寫死「每小時」——`i18n._cron_interval_hours()` 解析 `build/cron.txt`（排程的單一事實來源）→ zh「每 2 小時」／ja「2時間ごと」，套用於 `updated`、`map_updated`、`map_rain_note`、`footer`、`meta_desc`、about 正文，以及 `site.py` 的 llms.txt／llms-full.txt／站對外 AGENTS.md 與 `cbph` 的 GeoJSON note（文案內用 `%IV%` 佔位，因那些長段落本身就是 `.format` 模板、`{}` 會打架）。改排程只改 `build/cron.txt`＋部署機 crontab。
+
 ## AI bot 可偵測性強化（✅ 2026/9/15 完成並上線；背景：is-agentic.com 掃描 52/100）
 
 **已實作（2026/9/15）**：首頁 JSON-LD（WebSite＋Organization）與事件頁 Article JSON-LD；全頁 meta description／Open Graph（含 `assets/og.png`，`build/make_og_image.py` 純 stdlib 產生）／canonical；`<meta name="is-agentic-site-type" content="content">`；信任頁 `/about/`、`/contact/`、`/privacy/`（zh＋ja，各 ≥500 字）；404 頁加 agent 指引（llms.txt／sitemap.xml 連結）；llms.txt 加「使用指引」段；footer 加關於／聯絡／隱私＋llms.txt／sitemap 連結。實作於 `build/site.py`（`render_page` 加 `page_url`/`jsonld` 參、`build_trust_pages()`）＋`build/i18n.py`。

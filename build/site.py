@@ -13,6 +13,7 @@ import re
 import sys
 import json
 import shutil
+import posixpath
 import datetime
 from pathlib import Path
 
@@ -21,7 +22,7 @@ import cbph
 import dgpa
 import tiles as tiles_mod
 import map_page
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 import i18n
 from i18n import t, LANGS, DEFAULT_LANG
@@ -449,22 +450,22 @@ def github_icon_html(lang):
     return f'<span class="icon-btn" title="{t(lang, "github_pending")}" aria-label="GitHub">{GITHUB_ICON_SVG}</span>'
 
 
-def lang_switch_html(lang, home_link):
-    """語言切換：目前語言顯示實心標籤，其餘為連結（跳回該語言首頁）。"""
-    # home_link = 目前頁 → 目前語言根頁；base_root = 目前語言根目錄前綴
-    base_root = home_link[: -len("index.html")] if home_link.endswith("index.html") else home_link
+def lang_switch_html(lang, root_base):
+    """語言切換：目前語言顯示實心標籤，其餘為連結（跳回該語言首頁）。
+
+    ⚠️ 參數是 **root_base＝目前頁 → 網站根目錄**的前綴（不是 home_link）：舊版拿 home_link
+    推「語言根」、再對非預設語言多上一層，在 ja 的非根頁（/ja/about/、/ja/events/…）會多上一層
+    跳到網站根之外 → 斷鏈（§12 實測）。語言首頁位置固定是 `<root>/<lang>/index.html`
+    （預設語言就在 `<root>/index.html`），所以用 root_base 組裝最直覺、對任何深度都正確。
+    """
     items = []
     for l in LANGS:
         label = t(l, "lang_self")
         if l == lang:
             items.append(f'<span class="on">{label}</span>')
-        elif l == DEFAULT_LANG:
-            # 預設語言在根目錄；非預設語言頁需多上一層（ja/ 是根目錄子目錄）
-            href = base_root + ("index.html" if i18n.is_default(lang) else "../index.html")
-        else:
-            href = base_root + f"{l}/index.html"
-        if l != lang:
-            items.append(f'<a href="{href}">{label}</a>')
+            continue
+        href = root_base + ("index.html" if i18n.is_default(l) else f"{l}/index.html")
+        items.append(f'<a href="{href}">{label}</a>')
     return "".join(items)
 
 
@@ -515,9 +516,14 @@ def build_nav(lang, events, home_link, base, current_url, groups):
 
 
 def render_page(lang, title, ts, home_link, nav_html, content,
-                page_url=None, jsonld=None, og_type="website"):
+                page_url=None, jsonld=None, og_type="website", root_base=None):
     """page_url：本页的絕對 URL（SITE_BASE 前綴）；有值時才產出 meta description /
-    Open Graph / canonical / is-agentic site-type / JSON-LD（404 頁傳 None 不出）。"""
+    Open Graph / canonical / is-agentic site-type / JSON-LD（404 頁傳 None 不出）。
+
+    ⚠️ `home_link`/`base` 指向**目前語言**的根（zh＝網站根、ja＝/ja/）；站層產物
+    （llms.txt、sitemap.xml、robots.txt）只存在於網站根，ja 樹需多上一層 → 由 `root_base`
+    傳入（§12：ja 首頁與 ja 事件頁的 llms.txt/sitemap.xml 各 404）。未傳時退回 base（zh 正確）。
+    """
     seo = []
     if page_url:
         desc = t(lang, "meta_desc")
@@ -533,17 +539,18 @@ def render_page(lang, title, ts, home_link, nav_html, content,
             seo.append('<script type="application/ld+json">'
                        + json.dumps(jsonld, ensure_ascii=False) + '</script>')
     base = home_link[:-len("index.html")] if home_link.endswith("index.html") else home_link
+    rb = base if root_base is None else root_base   # rb = 到網站根（llms.txt／sitemap.xml 所在）
     footer = (f'<p>{t(lang, "footer")}</p>'
               f'<p class="footer-links">'
               f'<a href="{base}about/index.html">{t(lang, "footer_about")}</a>・'
               f'<a href="{base}contact/index.html">{t(lang, "footer_contact")}</a>・'
               f'<a href="{base}privacy/index.html">{t(lang, "footer_privacy")}</a>'
-              f'｜<a href="{base}llms.txt">llms.txt</a>・<a href="{base}sitemap.xml">sitemap.xml</a>'
+              f'｜<a href="{rb}llms.txt">llms.txt</a>・<a href="{rb}sitemap.xml">sitemap.xml</a>'
               f'</p>')
     page = PAGE_TMPL
     for k, v in (("__LANG__", lang), ("__TITLE__", title), ("__HOME_LINK__", home_link),
                  ("__UPDATED__", t(lang, "updated", ts=ts)),
-                 ("__LANG_SWITCH__", lang_switch_html(lang, home_link)),
+                 ("__LANG_SWITCH__", lang_switch_html(lang, rb)),
                  ("__GITHUB__", github_icon_html(lang)), ("__NAV__", nav_html),
                  ("__FOOTER__", footer), ("__SEO__", "\n".join(seo)),
                  ("__CSS__", CSS), ("__JS__", JS), ("__CONTENT__", content)):
@@ -758,9 +765,67 @@ def build_home(lang, events, ts, groups, cwa_ctx, susp=None):
     return "".join(parts)
 
 
-def build_event_page(lang, ev, ts, depth):
+def build_md_link_index(events):
+    """§12 斷鏈修法 a：事件正文內的「來源 md 相對 .md 連結」→ 站內事件頁 URL。
+
+    事件 md 互相引用用的是**倉儲內**的相對路徑（例：`../08/0828_西南風_南台灣後續淹水.md`、
+    `../../颱風/2026/08/0818_18_沙德爾_SAUDEL.md`），build 後 public/ 只有 `events/…​.html`
+    → 那些 .md 路徑不存在（實測 6 頁、各 1 條 404）。這裡建立「正規化來源路徑 → 事件頁 url」
+    對照表，另有 basename 索引（撞名者標記不可用，不猜）。
+    """
+    by_path, by_name = {}, {}
+    for e in events:
+        src = "/".join(e["rel"][1:])                 # 不含 'events' 前綴，副檔名 .html
+        for key in (src, src[: -len(".html")] + ".md"):
+            by_path[key] = e["url"]
+        name = src.rsplit("/", 1)[-1]
+        for alt in (name, name[: -len(".html")] + ".md"):
+            by_name[alt] = None if alt in by_name else e["url"]
+    return by_path, by_name
+
+
+MD_LINK_RE = re.compile(r'<a href="([^"]+?\.md)(?:#[^"]*)?">(.*?)</a>', re.S)
+
+
+def fix_md_links(html, ev, base, index):
+    """把 body 裡的 .md 連結改寫成站內事件頁；解析不到→拆成純文字（不留斷鏈）。
+
+    候選解析順序：(1) 以來源 md 所在目錄為基準 (2) 以倉儲根為基準（兩慣例都接）。
+    回傳 (html, 修正數, 無法解析數)。"""
+    by_path, by_name = index
+    cur_dir = "/".join(ev["rel"][1:-1])            # 目前事件的來源 md 目錄（不含 'events'）
+    fixed = broken = 0
+
+    def repl(m):
+        nonlocal fixed, broken
+        link = unquote(m.group(1))
+        cands = {posixpath.normpath(posixpath.join(cur_dir, link)),
+                 posixpath.normpath(link.lstrip("/"))}
+        target = next((by_path[c] for c in cands if c in by_path), None)
+        if target is None:
+            name_hit = True
+            target = by_name.get(link.rsplit("/", 1)[-1])
+        else:
+            name_hit = False
+        if target is None:
+            broken += 1
+            print(f"[warning] 事件 {ev['name']} 正文內的 .md 連結無法對應事件頁，改純文字：{link}")
+            return m.group(2)
+        fixed += 1
+        if name_hit:
+            # 路徑候選都没中、靠檔名才對應到 → 來源 md 的相對層級寫錯了（例：少寫一層 ../），
+            # 仍能上線但印出來提醒（不改事件正文，AGENTS.md：僅結構錯誤可改既有內容）。
+            print(f"[note] 事件 {ev['name']} 的 .md 連結層級不對（靠檔名兜底）：{link}")
+        return f'<a href="{base}{"/".join(target)}">{m.group(2)}</a>'
+
+    return MD_LINK_RE.sub(repl, html), fixed, broken
+
+
+def build_event_page(lang, ev, ts, depth, md_index=None):
     home_link = "../" * depth + "index.html"
     body_html = markdown.markdown(ev["body"], extensions=["tables", "sane_lists"])
+    if md_index is not None:
+        body_html, _, _ = fix_md_links(body_html, ev, "../" * depth, md_index)
     chips = "".join(f'<span class="chip">{c}</span>' for c in ev["counties"])
     status = t(lang, "status_active" if ev["status"] == "active" else "status_ended")
     note = f'<p class="meta">{t(lang, "content_note")}</p>' if not i18n.is_default(lang) else ""
@@ -822,19 +887,24 @@ def build_trust_pages(events, ts, groups):
     for lang in LANGS:
         outdir = OUT if i18n.is_default(lang) else OUT / lang
         prefix = "" if i18n.is_default(lang) else lang + "/"
+        # ⚠️ 信任頁在 <prefix>/<slug>/index.html（深度 1／ja 深度 2）→ 側欄與 footer 需同深度的
+        # 前綴。舊版傳 base="" 使其變成根目錄深度 → /about/ 頁上的 map、事件、llms.txt 連結全 404
+        # （§12 實測：zh＋ja 共 ~98 條）。深度從 outdir/prefix 推，不寫死。
+        base = "../" * (len(Path(prefix).parts) + 1)
         for slug, key, schema_type in TRUST_PAGES:
-            nav = build_nav(lang, events, "index.html", "", f"__{slug}__", groups)
+            nav = build_nav(lang, events, base + "index.html", base, f"__{slug}__", groups)
             content = (f'<article>'
                        f'<h1>{t(lang, key + "_title")}</h1>'
                        + _paras(t(lang, key + "_body"))
-                       + f'<a class="backlink" href="index.html">{t(lang, "back_home")}</a>'
+                       + f'<a class="backlink" href="{base}index.html">{t(lang, "back_home")}</a>'
                        '</article>')
             page_url = SITE_BASE + "/" + prefix + slug + "/"
             page = render_page(
-                lang, t(lang, key + "_title"), ts, "index.html", nav, content,
+                lang, t(lang, key + "_title"), ts, base + "index.html", nav, content,
                 page_url=page_url,
                 jsonld={"@context": "https://schema.org", "@type": schema_type,
-                        "name": t(lang, key + "_title"), "url": page_url})
+                        "name": t(lang, key + "_title"), "url": page_url},
+                root_base=base)
             p = outdir / slug / "index.html"
             p.parent.mkdir(parents=True, exist_ok=True)
             p.write_text(page, encoding="utf-8")
@@ -854,7 +924,7 @@ def agents_md_text():
 - 颱風警報／海上警報時程與 CWA 災害天氣特報
 
 ## 資料來源與即時性
-- 本站為每小時自動 build 的快照，**非即時**。氣象資料（颱風軌跡、警報特報、雨量、風力）build 時取自 CWA Open Data API；颱風警報期間約每 3～6 小時更新一次。
+- 本站為{i18n.interval_phrase()}自動 build 的快照，**非即時**。氣象資料（颱風軌跡、警報特報、雨量、風力）build 時取自 CWA Open Data API；颱風警報期間約每 3～6 小時更新一次。
 - 引用時請註明頁首「產生時間」與該筆紀錄的時戳。緊急資訊（警報發布、停班停課、避難）請直接以 CWA 與各縣市政府最新公告為準。
 - 內容為繁體中文；日文介面在 /ja/（事件正文仍為繁中原文）。
 
@@ -900,7 +970,8 @@ def build_misc_files(events, ts, groups):
                    f'<p class="agent-note">{t(lang, "notfound_agent")}</p>'
                    f'<pre class="agent-md">{agent_md}</pre>'
                    f'<a class="backlink" href="{base}index.html">{t(lang, "back_home")}</a>')
-        page = render_page(lang, t(lang, "notfound_title"), ts, base + "index.html", nav, content)
+        page = render_page(lang, t(lang, "notfound_title"), ts, base + "index.html", nav, content,
+                           root_base=base)
         (outdir / "404.html").write_text(page, encoding="utf-8")
 
     # --- robots.txt（沒有 404.html 時它會被 SPA fallback 吃掉，故與 404 一同產出）---
@@ -971,7 +1042,7 @@ def build_llms_files(events, ts, cwa_ctx):
              "## 網站結構",
              "",
              f"- [首頁（氣象彙整＋各縣市災情總覽）]({base}/index.html)",
-             f"- [災防告警地圖（目前生效 CWA 災防告警區域；離線 Leaflet 地圖，每小時更新）]({base}/map/index.html)",
+             f"- [災防告警地圖（目前生效 CWA 災防告警區域；離線 Leaflet 地圖，{i18n.interval_phrase()}更新）]({base}/map/index.html)",
              f"- [日文介面（UI 為日文，事件正文為繁中原文）]({base}/ja/index.html)",
              "",
              "- 所有事件列表（含已結束）見首頁側邊欄，本檔下方亦分列進行中／已結束。",
@@ -999,7 +1070,7 @@ def build_llms_files(events, ts, cwa_ctx):
               "## 使用指引（供 AI agent／自動化工具）",
               "",
               "- 何時使用：查詢「台灣目前或近期正在發生的天氣事件」（颱風、豪雨、低壓帶等）與各縣市災情、停班停課、交通影響時，以本站為彙整入口。",
-              "- 即時性：本站為每小時自動 build 的快照，**非即時**；引用時請註明頁首「產生時間」與該筆紀錄的時戳。",
+              f"- 即時性：本站為{i18n.interval_phrase()}自動 build 的快照，**非即時**；引用時請註明頁首「產生時間」與該筆紀錄的時戳。",
               "- 引用方式：引用災情請保留該筆的新聞來源連結；氣象數值請註明資料來源為 CWA Open Data API 及資料產生時間。",
               "- 內容範圍：本檔為索引；全部事件全文見 `llms-full.txt`；事件頁含警報時程、災情紀錄、交通影響、防災作為等完整章節。",
               "- 官方資訊：停班停課、警報發布、避難等官方決定，以 CWA 與各縣市政府公告為準，本站僅為彙整。",
@@ -1040,6 +1111,7 @@ def main():
     if not events:
         sys.exit("找不到任何含 front matter 的事件檔案")
     groups = compute_groups(events)
+    md_index = build_md_link_index(events)   # §12：事件正文互連的 .md → 事件頁
     cwa_ctx = cwa.load_snapshot()
     # 停班停課（DGPA CAP feed）：best-effort——feed 抓不到 → susp=None（卡不顯示）
     # 不中斷 build（同 cbph/RSS 慣例；單筆 CAP 失敗在 dgpa.fetch 內部已跳過）。
@@ -1056,17 +1128,21 @@ def main():
         home = render_page(lang, t(lang, "site_title"), ts, "index.html",
                            build_nav(lang, events, "index.html", "", "__home__", groups),
                            build_home(lang, events, ts, groups, cwa_ctx, susp),
-                           page_url=SITE_BASE + "/", jsonld=home_jsonld())
+                           page_url=SITE_BASE + "/", jsonld=home_jsonld(),
+                           root_base="" if i18n.is_default(lang) else "../")
         (outdir / "index.html").write_text(home, encoding="utf-8")
 
         for e in events:
-            depth = len(e["rel"]) - 1  # 檔案所在目錄層數
+            depth = len(e["rel"]) - 1  # 檔案所在目錄層數（對**本語言根**）
             base = "../" * depth
+            # 到網站根：ja 樹多一層（llms.txt／sitemap.xml 只在網站根）
+            root_base = "../" * (depth + (0 if i18n.is_default(lang) else 1))
             page = render_page(lang, e["name"], ts, base + "index.html",
                                build_nav(lang, events, base + "index.html", base, "/".join(e["url"]), groups),
-                               build_event_page(lang, e, ts, depth),
+                               build_event_page(lang, e, ts, depth, md_index),
                                page_url=SITE_BASE + "/" + "/".join(e["url"]),
-                               jsonld=event_jsonld(e), og_type="article")
+                               jsonld=event_jsonld(e), og_type="article",
+                               root_base=root_base)
             out_path = outdir.joinpath(*e["rel"])
             out_path.parent.mkdir(parents=True, exist_ok=True)
             out_path.write_text(page, encoding="utf-8")

@@ -2,7 +2,7 @@
 
 > 本檔只記**要做的事＋優先級＋狀態＋設計檔連結**；問題背景、定案細節、規格與陷阱在 `design/<功能>.md`（每功能領域一份）；流程 runbook（更新／build／驗證／部署）在 `WORKFLOW.md`。已完成項目的歷史細節看 git history。
 > 編號為傳統編號（§N），供既有引用對照；細節一律跟連結進 design/。
-> 最後更新：2026/10/26（新增 §2-7 底圖視野擴展；拆檔歷史見 2026/9/16：§2→`design/map.md`、§5→`design/share-button.md`、§6→`design/class-halt.md`、§1→`design/rss.md`、§3/§4/§7/§9/§10/§11→`design/site.md`；本檔瘦身為帳本）
+> 最後更新：2026-10-26（§2-7 a+b 已實作並上線生產；§12 斷鏈修復完成 129→0；拆檔歷史見 2026-09-16：§2→`design/map.md`、§5→`design/share-button.md`、§6→`design/class-halt.md`、§1→`design/rss.md`、§3/§4/§7/§9/§10/§11→`design/site.md`；本檔瘦身為帳本）
 
 ## 待辦（依優先級排序）
 
@@ -17,7 +17,6 @@
 | §2-6 | /map/ v2（data.json 公開＋deep link＋時間線快照；**快照需先定案**存哪裡、留幾份） | 中 | 待辦 | [design/map.md](design/map.md) |
 | §6 | 停班停課事件檔存檔層（**事件期間才做**、非待辦；新事件時從 feed/查詢頁/新聞撈入事件檔「停班停課」章節） | 中高 | 事件期間進行 | [design/class-halt.md](design/class-halt.md) |
 | §5 | 事件分享按鈕：A Web Share＋複製連結 → B Line 一鍵 → C OG 分享圖卡 | 低 | 待辦 | [design/share-button.md](design/share-button.md) |
-| §12 | **站內 nav 斷鏈**（與本次改動無關的既有問題）：about/contact/privacy 頁的地圖連結缺 `{base}` → 404（zh＋ja 共 ~98 條；`site.py:692` 寫死 `href="map/index.html"`）；ja 事件頁殘留 `.md` 連結（~32 條） | 中 | 待辦（2026/10/26 實測 130 條斷鏈） | [design/site.md](design/site.md) |
 | §1 | RSS 關鍵詞微調（`rss.py` `KEYWORDS`；隨事件期間 flag 假陽性/假陰性實戰資料，非獨立待辦） | 隨事件 | 隨事件維護 | [design/rss.md](design/rss.md) |
 
 ## 已完成（非待辦；細節在設計檔與 git history）
@@ -26,6 +25,7 @@
 |---|------|------|--------|
 | §2-1~3 | 地圖紅警基礎（gazetteer、cbph 抓取→map.geo.json、/map/ 骨架＋離線瓦片＋自託 Leaflet） | 2026/9/2 | [design/map.md](design/map.md) |
 | §2-4a | 雨量站點層初版（三級點層＋側欄圖例＋詳情卡；樣式待 4a-follow 重做） | 2026/9/16 | [design/map.md](design/map.md) |
+| §12 | **站內斷鏈修復**：信任頁缺深度前綴、ja 樹的站根產物（llms.txt／sitemap）與語言切換按鈕差一層、事件正文的 `.md` 互連未改寫為事件頁；新增 `build/check_links.py` 當 build 後驗證工具（WORKFLOW §3 ②）。實測 **129 條 → 0 條**、build 零 warning | 2026-10-26 | [design/site.md](design/site.md) |
 | §6-自動層 | 停班停課 DGPA CAP feed 首頁卡（is_current 判斷、置頂/置底、容錯） | 2026/9/15 | [design/class-halt.md](design/class-halt.md) |
 | §1 | RSS 災情抓取（半自動：build 產候選清單、人工審查後入事件檔） | 2026/8/30 | [design/rss.md](design/rss.md) |
 | §7 | 颱風動態區塊淘汰機制（TYPHOON_STALE_HOURS 24h、海上警報豁免） | 2026/9/13 | [design/site.md](design/site.md) |

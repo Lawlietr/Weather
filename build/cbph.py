@@ -22,6 +22,8 @@ import urllib.parse
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import i18n  # 只取 interval_phrase()：更新頻率文案的單一來源＝build/cron.txt
+
 TZ_TW = timezone(timedelta(hours=8))
 BASE = "https://cbph.cwa.gov.tw/api"
 TIMEOUT = 30
@@ -192,7 +194,7 @@ def build_map_geojson(path, only_active=True):
         "generated_at": datetime.now(TZ_TW).strftime("%Y/%-m/%-d %H:%M"),
         "source": "中央氣象署災防告警系統（PWS）",
         "api": "cbph.cwa.gov.tw",
-        "note": "build 時快照、每小時更新、非即時",
+        "note": f"build 時快照、{i18n.interval_phrase()}更新、非即時",
         "warnings": warnings,
         "features": features,
     }

@@ -12,6 +12,50 @@
 DEFAULT_LANG = "zh-Hant"
 LANGS = ["zh-Hant", "ja"]
 
+
+# ── 更新頻率：文案的單一事實來源＝`build/cron.txt`（不是本檔）──────────
+def _cron_interval_hours():
+    """從 `build/cron.txt` 解析自動 build＋部署的間隔（小時）。
+
+    cron.txt 進 git、是排程的單一事實來源（`cron-enable.sh` 用它裝 crontab）→
+    網站文案（zh／ja）、llms.txt／llms-full.txt、站對外 AGENTS.md 都由它衍生，
+    避免「網頁寫每小時、實際每 2 小時」的漂移。
+    只認整點排程：分鐘欄為「星號斜線 N」（每 N 分鐘）或「0」（整點，再看小時欄）。
+    現行 cron.txt 是 `0 */2 * * *` → 2。解析失敗回 2。
+    """
+    import re as _re
+    from pathlib import Path as _P
+    try:
+        for line in (_P(__file__).resolve().parent / "cron.txt").read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "weather-deploy-cron" not in line:
+                continue
+            fields = line.split()
+            minute, hour = fields[0], fields[1]
+            m = _re.fullmatch(r"\*\/(\d+)", minute)
+            if m:                       # 每 N 分鐘（少於 1 小時 → 計為 1 小時）
+                return max(1, int(m.group(1)) // 60)
+            if minute == "0":
+                hm = _re.fullmatch(r"\*\/(\d+)", hour)
+                if hm:                  # 0 */2 * * * → 每 2 小時
+                    return max(1, int(hm.group(1)))
+                if hour == "*":         # 0 * * * * → 每小時
+                    return 1
+    except OSError:
+        pass
+    return 2
+
+
+UPDATE_INTERVAL_HOURS = _cron_interval_hours()
+# 文案內用 %IV% 佔位，不用 {…}：那些長段落本身就是 t(...).format 的模板，braces 會打架
+_INTERVAL_PHRASE = {DEFAULT_LANG: f"每 {UPDATE_INTERVAL_HOURS} 小時",
+                    "ja": f"{UPDATE_INTERVAL_HOURS}時間ごと"}
+
+
+def interval_phrase(lang=DEFAULT_LANG):
+    """給不走 STRINGS 的 site（cbph note、llms.txt、站 AGENTS.md）用。"""
+    return _INTERVAL_PHRASE.get(lang, _INTERVAL_PHRASE[DEFAULT_LANG])
+
 STRINGS = {
 "zh-Hant": {
     # --- 站體 / 導覽 ---
@@ -20,10 +64,10 @@ STRINGS = {
     "nav_active": "目前事件",
     "nav_ended": "過去事件",
     "nav_no_county": "目前無該縣市的災情紀錄",
-    "updated": "產生時間：{ts}（每小時自動更新，非即時）",
+    "updated": "產生時間：{ts}（%IV%自動更新，非即時）",
     "aria_menu": "開啟事件清單",
     "aria_theme": "切換日夜主題",
-    "footer": "本頁內容彙整自中央氣象署公開資料與新聞媒體公開報導，每筆災情請點入來源連結查證原文；官方資訊以中央氣象署與各縣市政府公告為準。本站每小時自動更新，資訊可能落後。",
+    "footer": "本頁內容彙整自中央氣象署公開資料與新聞媒體公開報導，每筆災情請點入來源連結查證原文；官方資訊以中央氣象署與各縣市政府公告為準。本站%IV%自動更新，資訊可能落後。",
     "github_pending": "GitHub（網址待提供）",
     "lang_self": "繁體中文",
     # --- 首頁 ---
@@ -128,7 +172,7 @@ STRINGS = {
     "risk_marine": "{title}（生效中）",
     "risk_report": "{name}（有效至 {valid}）",
     # --- 站體 meta（SEO／agent） ---
-    "meta_desc": "記錄台灣目前與歷史上發生的颱風、豪雨等天氣事件與各縣市災情的純靜態網站；氣象資料來源中央氣象署（CWA），每小時自動 build，非即時。",
+    "meta_desc": "記錄台灣目前與歷史上發生的颱風、豪雨等天氣事件與各縣市災情的純靜態網站；氣象資料來源中央氣象署（CWA），%IV%自動 build，非即時。",
     "footer_about": "關於本站",
     "footer_contact": "聯絡",
     "footer_privacy": "隱私",
@@ -138,7 +182,7 @@ STRINGS = {
 
 資料來源：颱風軌跡、警報與特報、雨量觀測站、風力等氣象資料取自中央氣象署（CWA）Open Data API，build 時於本機抓取；災防告警區取自 CWA 災防告警系統（PWS）；災情紀錄彙整自各縣市政府公告與新聞媒體公開報導，每筆均標注來源。
 
-更新方式：本站採人工維護，每小時自動執行 build 與部署；頁面顯示的氣象資料是 build 時的快照，非即時。颱風警報期間氣象資料約每 3～6 小時更新一次；緊急資訊請直接查中央氣象署官方網站與各縣市政府公告。
+更新方式：本站採人工維護，%IV%自動執行 build 與部署；頁面顯示的氣象資料是 build 時的快照，非即時。颱風警報期間氣象資料約每 3～6 小時更新一次；緊急資訊請直接查中央氣象署官方網站與各縣市政府公告。
 
 網站結構：首頁含氣象彙整與各縣市災情總覽；各事件頁記錄事件完整過程（警報時程、災情紀錄、交通影響、防災作為）；/map/ 為災防告警地圖；/ja/ 為日文介面（事件正文仍為繁中原文）。
 
@@ -186,7 +230,7 @@ AI agent 與自動化工具：請以 /llms.txt 讀取本站內容索引、/llms-
     "map_enter": "🗺 告警地圖",
     "map_title": "災防告警地圖｜台灣天氣與災情總覽",
     "map_title_short": "🗺 災防告警地圖",
-    "map_updated": "產生時間：{ts}（每小時更新，非即時）",
+    "map_updated": "產生時間：{ts}（%IV%更新，非即時）",
     "map_alert_count": "告警地圖・生效 {n} 筆",
     "map_close": "關閉",
     "map_layers": "圖層",
@@ -217,7 +261,7 @@ AI agent 與自動化工具：請以 /llms.txt 讀取本站內容索引、/llms-
     "map_rain_pday": "本日累計",
     "map_rain_obs": "觀測時間",
     "map_rain_loc": "位置",
-    "map_rain_note": "測站資料由 CWA 每 10 分鐘更新；本圖為每小時刷新的快照",
+    "map_rain_note": "測站資料由 CWA 每 10 分鐘更新；本圖為%IV%刷新的快照",
 },
 
 "ja": {
@@ -227,10 +271,10 @@ AI agent 與自動化工具：請以 /llms.txt 讀取本站內容索引、/llms-
     "nav_active": "現在進行中のイベント",
     "nav_ended": "過去のイベント",
     "nav_no_county": "その地域の災害記録はありません",
-    "updated": "生成時刻：{ts}（1時間ごとに自動更新・リアルタイムではありません）",
+    "updated": "生成時刻：{ts}（%IV%に自動更新・リアルタイムではありません）",
     "aria_menu": "イベント一覧を開く",
     "aria_theme": "テーマ切替（夜間/日間）",
-    "footer": "本ページの情報は中央気象局（CWA）の公開データと各ニュースメディアの公開報道をまとめたものです。個別の災害については出典リンクから原文を確認してください。公式情報は中央気象局および各市県政府の発表を基準とします。本サイトは1時間ごとに自動更新されますが、情報が遅れている可能性があります。",
+    "footer": "本ページの情報は中央気象局（CWA）の公開データと各ニュースメディアの公開報道をまとめたものです。個別の災害については出典リンクから原文を確認してください。公式情報は中央気象局および各市県政府の発表を基準とします。本サイトは%IV%に自動更新されますが、情報が遅れている可能性があります。",
     "github_pending": "GitHub（URL 未設定）",
     "lang_self": "日本語",
     # --- ホーム ---
@@ -335,7 +379,7 @@ AI agent 與自動化工具：請以 /llms.txt 讀取本站內容索引、/llms-
     "risk_marine": "{title}（発効中）",
     "risk_report": "{name}（有効 {valid}）",
     # --- サイトメタ情報（SEO／エージェント） ---
-    "meta_desc": "台湾で現在発生中・過去に発生した台風・大雨などの気象イベントと各地域の災害を記録する純静的サイト。気象データは中央気象局（CWA）から取得、1 時間ごとに自動ビルド（リアルタイムではありません）。",
+    "meta_desc": "台湾で現在発生中・過去に発生した台風・大雨などの気象イベントと各地域の災害を記録する純静的サイト。気象データは中央気象局（CWA）から取得、%IV%に自動ビルド（リアルタイムではありません）。",
     "footer_about": "このサイトについて",
     "footer_contact": "連絡先",
     "footer_privacy": "プライバシー",
@@ -345,7 +389,7 @@ AI agent 與自動化工具：請以 /llms.txt 讀取本站內容索引、/llms-
 
 データソース：台風の経路、警報・特別警報、雨量観測局、風速などの気象データは中央気象局（CWA）Open Data API からビルド時にローカルで取得します。災害防警報領域は CWA 災害防警報システム（PWS）から取得。災害記録は各市県政府の発表とニュースメディアの公開報道をまとめたもので、すべて出典を明記しています。
 
-更新方法：当サイトは人間による保守のもと、1 時間ごとに自動でビルドとデプロイを実行します。ページに表示される気象データはビルド時点のスナップショットであり、リアルタイムではありません。台風警報中は気象データが約 3〜6 時間ごとに更新されます。緊急情報は中央気象局の公式サイトと各市県政府の発表を直接ご確認ください。
+更新方法：当サイトは人間による保守のもと、%IV%に自動でビルドとデプロイを実行します。ページに表示される気象データはビルド時点のスナップショットであり、リアルタイムではありません。台風警報中は気象データが約 3〜6 時間ごとに更新されます。緊急情報は中央気象局の公式サイトと各市県政府の発表を直接ご確認ください。
 
 サイト構成：トップページに気象総覧と地域別災害情報総覧を掲載。各イベントページにはイベントの経緯（警報の推移、災害記録、交通影響、防災対応）を記録。/map/ は災害防警報マップ、/ja/ は日本語 UI（イベント本文は中国語原文のまま）です。
 
@@ -393,7 +437,7 @@ AI エージェント・自動化ツール向け：/llms.txt でサイト内容�
     "map_enter": "🗺 警戒マップ",
     "map_title": "災害警戒マップ｜台湾の天気と災害情報",
     "map_title_short": "🗺 災害警戒マップ",
-    "map_updated": "生成時間：{ts}（1時間ごとに更新・リアルタイムではありません）",
+    "map_updated": "生成時間：{ts}（%IV%に更新・リアルタイムではありません）",
     "map_alert_count": "警戒マップ・有効 {n} 件",
     "map_close": "閉じる",
     "map_layers": "レイヤー",
@@ -424,9 +468,16 @@ AI エージェント・自動化ツール向け：/llms.txt でサイト内容�
     "map_rain_pday": "当日累計",
     "map_rain_obs": "観測時刻",
     "map_rain_loc": "所在地",
-    "map_rain_note": "測站データはCWAが10分ごとに更新。本図は1時間ごとのスナップショットです",
+    "map_rain_note": "測站データはCWAが10分ごとに更新。本図は%IV%のスナップショットです",
 },
 }
+
+# %IV% 佔位 → 該語言的頻率詞（來源仍是 cron.txt）
+for _lang, _table in STRINGS.items():
+    _phrase = _INTERVAL_PHRASE.get(_lang, _INTERVAL_PHRASE[DEFAULT_LANG])
+    for _key, _val in _table.items():
+        if isinstance(_val, str) and "%IV%" in _val:
+            _table[_key] = _val.replace("%IV%", _phrase)
 
 
 def t(lang, key, **kw):

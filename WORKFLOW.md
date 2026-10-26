@@ -3,7 +3,7 @@
 > **讀者**：接手本專案的 agent 或人工操作者。
 > **定位**：「怎麼做」的逐步流程。專案規範（檔案格式、CWA API 結構、設計原則）在
 > `AGENTS.md`，本文件不重複，只引用。
-> 最後更新：2026-10-26（§2-7 底圖視野擴展：§3 ⑤ 瓦片檢查改為「查 `tiles.tile_list()` 現值＋驗 `_ocean.png`/`errorTileUrl`/`--sea`」；§6 測試站改為**在開發機部署**＋金鑰來源註記；§5.6 補兩機 `deploy.env` 實測狀態；詳細變更史見 git history）
+> 最後更新：2026-10-26（① §2-7 底圖視野擴展：§3 ⑤ 瓦片檢查改為「查 `tiles.tile_list()` 現值＋驗 `_ocean.png`/`errorTileUrl`/`--sea`」；§6 測試站改為**在開發機部署**＋金鑰來源註記；§5.6 補兩機 `deploy.env` 實測狀態；② §12 斷鏈修復：§3 ② 改用 `build/check_links.py`（不再嵌 heredoc）。詳細變更史見 git history）
 > 
 > **環境現況（2026/8/27）**：GitHub repo `Lawlietr/Weather` **已設為公開**（原私有）；`CWA_API_KEY`、
 > `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID` 已存入 **GitHub Actions Secrets**。公開網站由
@@ -135,22 +135,11 @@ severity: 🟢一般
 ```bash
 # ① 輸出應含 CWA 模式
 ./build/build.sh | tee /tmp/build.log          # 預期「｜CWA live」
-# ② 內部連結 0 斷鏈（注意中文檔名要 URL decode）
-python3 - <<'EOF'
-import re, os
-from urllib.parse import unquote
-bad = total = 0
-for root, _, files in os.walk('public'):
-    for f in files:
-        if not f.endswith('.html'): continue
-        html = open(os.path.join(root, f), encoding='utf-8').read()
-        for l in re.findall(r'href="([^"#][^"]*)"', html):
-            if l.startswith(('http','#','mailto')): continue
-            total += 1
-            if not os.path.exists(os.path.join(root, unquote(l.split('#')[0]))):
-                bad += 1; print("斷:", f, "->", l)
-print(f"內部連結 {total}，斷鏈 {bad}")
-EOF
+# ② 內部連結 0 斷鏈（已收編成工具；注意中文檔名要 URL decode）
+build/.venv/bin/python build/check_links.py            # 預期「斷鏈 0 條」、exit 0；--show N 看清單
+#   工具會區分：一般斷鏈（計入 exit code）／404.html 的相對連結（另計、不計入；
+#   因 CF Pages 對任何深度都送同一份 top-level 404.html，絕對 URL 又會破 GitHub Pages mirror
+#   的 /Weather/ 前綴 → 刻意保留相對寫法，細節見檔頭與 design/site.md「站內連結深度前綴」）
 # ③ 金鑰零外洩（兩項都應為 0）
 grep -rc "Authorization=" public/ | grep -v ":0" || echo "OK: 無 Authorization"
 grep -rc "$CWA_API_KEY" public/ build/cwa_cache.json | grep -v ":0" || echo "OK: 無金鑰值"
