@@ -1157,7 +1157,8 @@ def main():
     build_dir = Path(__file__).resolve().parent
     n_alerts, _cbph_warnings = cbph.build_map_geojson(build_dir / "map.geo.json")
 
-    # 觀測層（design/map.md 執行順序 4a）：雨量站超閾值 → 併入 map.geo.json。
+    # 觀測層（design/map.md 執行順序 4a）：雨量站（超閾值上色點 ＋ 未超閾值淡色底點）
+    # → 併入 map.geo.json。
     # 容錯獨立於 cbph：失敗只跳該層、不中斷 build（沿用 RSS 守則）。
     try:
         geo = json.loads((build_dir / "map.geo.json").read_text(encoding="utf-8"))
@@ -1165,7 +1166,9 @@ def main():
         geo["features"] = geo.get("features", []) + rain_pts
         (build_dir / "map.geo.json").write_text(
             json.dumps(geo, ensure_ascii=False, indent=1), encoding="utf-8")
-        print(f"map 雨量站層：{len(rain_pts)} 站（超閾值）")
+        _below = sum(1 for f in rain_pts if f["properties"].get("below"))
+        print(f"map 雨量站層：超閾值 {len(rain_pts) - _below} 站／未超閾值淡點 {_below} 站"
+              f"（共 {len(rain_pts)}，全 CWA 網絡）")
     except Exception as e:
         print(f"[warning] map 雨量站層：{e} — 跳過該層")
 

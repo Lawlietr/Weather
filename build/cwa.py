@@ -194,12 +194,27 @@ def fetch_rain():
 # 條件為「p1hr ≥ 閾值 **或** p24hr ≥ 閾值」，同時滿足多級時取最高級。
 # 校準例（2026/9/16 14:50，淡雨日）：L3 0 站 / L2 1 站 / L1 13 站——淡雨日
 # 點數可控，颱風期間高自然上升。詳見 design/map.md（執行順序 4a）。
+# 2026-10-26 §2-4a-follow 定案（B3）：色相走「紫 → 洋紅 → 玫紅」（越嚴重越紅，保
+# 「紅=危險」語意），刻意避開 OSM 底圖幹道/高速公路的橘（色相約 20–40°）與 §2-7 後的
+# 海面淡藍 #aad3df；半徑 11/8/5 → 17/12/9（現行 r5 在 z8 只有 4px、且與橘色路線糊在
+# 一起，使用者反映「太小＋混淆」）。半徑固定 px、不隨縮放變（2026-10-26 決策：先固定）。
 RAIN_LEVELS = (
     # (p1hr 閾值 mm, p24hr 閾值 mm, 顏色, 半徑 px)
-    (50.0, 250.0, "#dc2626", 11),
-    (25.0, 100.0, "#ea580c", 8),
-    (10.0, 50.0, "#f59e0b", 5),
+    # ⚠️ 三級色要同時避開 cbph 四個告警圖層的官方色（cbph.TYPES：cells #f59e0b、
+    # tywinds #ef4444、mountainstorms #7c3aed、largesurfs #0ea5e9）——點會畫在 polygon 上面，
+    # 同色就分不清誰是誰。2026-10-26 第一版用 #7c3aed 做 L1，實測發现舆 mountainstorms
+    # 完全同色（已改）；L3 也不用 #ef4444 相近的亮紅，改用较深的玫紅 #be123c。
+    (50.0, 250.0, "#be123c", 17),   # 玫紅（越嚴重越紅，保「紅=危險」語意）
+    (25.0, 100.0, "#c026d3", 12),   # 洋紅
+    (10.0, 50.0, "#4338ca", 9),     # 深靛藍（舆 mountainstorms 的 #7c3aed 拉開色相+明度）
 )
+
+# 未超閾值測站的「淡色底點」（2026-10-26 使用者定案：全部上圖）。理由：CWA 全網絡 1315 站，
+# 淡雨日超閾值站為 0 → 舊版地圖上一個點都沒有，使用者無法分辨「查過但沒超標」與「壞了」。
+# 中性石板灰（不與級別色相抢意）、r 4px、低 fillOpacity → 整體讀作「測站網絡」而非資料點。
+# ⚠️ 1315 點＝2630 個 SVG path（含命中圈）——命中圈半徑較小且在疊放最下層，
+# 免得吃掉告警 polygon 的點擊；效能與開關見 design/map.md。
+RAIN_BELOW = {"color": "#5b6b7b", "radius": 4}
 
 
 def fetch_rain_points():
@@ -207,7 +222,9 @@ def fetch_rain_points():
 
     - 座標必須取 `GeoInfo.Coordinates` 中 **WGS84** 一筆（另有 TWD67，與 OSM
       瓦片座標系不符、會偏移）。
-    - 低於最低級閾值者不上圖；與 fetch_rain()（首頁 top 10）各自獨立抓取
+    - 超閾值者按 `RAIN_LEVELS` 上色；未超閾值者以 `RAIN_BELOW` 淡色底點上圖並標
+      `properties.below = True`（前端分開圖層/開關，並把他們疊在告警 polygon 之下）。
+      與 fetch_rain()（首頁 top 10）各自獨立抓取
       （每次 build 多一次 HTTP、可接受；故障互相獨立，單層失敗不影響他層）。
     - obs 統一轉「YYYY/M/D HH:MM」（UTC+8）。
     - 回傳依 p1hr 降序（noscript fallback 取前 10 即雨量最大者）。
@@ -223,9 +240,8 @@ def fetch_rain_points():
             ((color, radius) for m1, m24, color, radius in RAIN_LEVELS
              if p1 >= m1 or p24 >= m24),
             None)
-        if lvl is None:
-            continue
-        color, radius = lvl
+        below = lvl is None
+        color, radius = lvl if lvl else (RAIN_BELOW["color"], RAIN_BELOW["radius"])
         geo = s.get("GeoInfo", {})
         lat = lon = None
         for c in geo.get("Coordinates", []):
@@ -251,11 +267,13 @@ def fetch_rain_points():
                 "county": geo.get("CountyName", ""),
                 "township": geo.get("TownName", ""),
                 "p1hr": p1, "p24hr": p24, "pday": pday,
+                "below": below,
                 "obs": obs,
                 "source": "CWA O-A0002-001",
             },
         })
-    out.sort(key=lambda f: -f["properties"]["p1hr"])
+    # 超閾值在前（noscript fallback 取前 10 即雨量最大者），未超閾值排在後面
+    out.sort(key=lambda f: (bool(f["properties"].get("below")), -f["properties"]["p1hr"]))
     return out
 
 

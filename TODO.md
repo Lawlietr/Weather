@@ -10,7 +10,6 @@
 |---|------|--------|------|--------|
 | **§2-7** | **底圖視野擴展**：瓦片東界 122°E＝台灣東岸→右側 2.9°（佔桌面視窗 37%）無底圖且畫成紙色。a 海色底＋`errorTileUrl`、b `MAP_CENTER` 往東＋`tiles.py` per-zoom bbox | 🔥 高 | **a＋b 已實作（2026/10/26，DEV，真瀏覽器實測全 PASS）**、待合併 main；**c 陸地輪廓兜底仍待辦** | [design/map.md](design/map.md) |
 | §2-7c | 陸地輪廓兜底（海色＋陸地最底層；`taiwan_geo.py` 擴到菲北/與那國/宮古——**要改產生器 `make_taiwan_geo.py`**） | 中 | 待辦 | [design/map.md](design/map.md) |
-| §2-4a-follow | 雨量點樣式重做（4a 合併後**先處理**；現行尺寸/色碼未過關） | 🔥 高 | 待辦（候選方向待討論；⚠️ 色碼判斷前提＝§2-7 的海域面積先定案） | [design/map.md](design/map.md) |
 | §2-4b | 颱風軌跡/風圈層（實線觀測＋虛線預報＋最新預報點風圈） | 高 | 待辦 | [design/map.md](design/map.md) |
 | §2-4c | 特報陸地紅區層（選項 A：自託縣界 GeoJSON；**動工前需確認縣界資料源**） | 高 | 待辦 | [design/map.md](design/map.md) |
 | §2-2b | 災情新聞點層（人工/agent 餵料，gazetteer 已備） | 中 | 暫緩（2026/9/1 定） | [design/map.md](design/map.md) |
@@ -26,6 +25,7 @@
 | §2-1~3 | 地圖紅警基礎（gazetteer、cbph 抓取→map.geo.json、/map/ 骨架＋離線瓦片＋自託 Leaflet） | 2026/9/2 | [design/map.md](design/map.md) |
 | §2-4a | 雨量站點層初版（三級點層＋側欄圖例＋詳情卡；樣式待 4a-follow 重做） | 2026/9/16 | [design/map.md](design/map.md) |
 | §12 | **站內斷鏈修復**：信任頁缺深度前綴、ja 樹的站根產物（llms.txt／sitemap）與語言切換按鈕差一層、事件正文的 `.md` 互連未改寫為事件頁；新增 `build/check_links.py` 當 build 後驗證工具（WORKFLOW §3 ②）。實測 **129 條 → 0 條**、build 零 warning | 2026-10-26 | [design/site.md](design/site.md) |
+| §2-4a-follow | **雨量點樣式重做定案**：三級改「深靛藍 #4338ca → 洋紅 #c026d3 → 玫紅 #be123c」（避開 OSM 橘線與 cbph 四色）、半徑 11/8/5→9/12/17 固定 px、未超閾值測站全網絡淡色底點（`RAIN_BELOW`＋面板開關）、命中圈保留；樣式收斂成 `RAIN_STYLE` 單一來源。真瀏覽器 close-up 比對 7 組候選後定案（效能：2628 path／heap 14MB／longtask 最長 166ms） | 2026-10-26 | [design/map.md](design/map.md) |
 | §6-自動層 | 停班停課 DGPA CAP feed 首頁卡（is_current 判斷、置頂/置底、容錯） | 2026/9/15 | [design/class-halt.md](design/class-halt.md) |
 | §1 | RSS 災情抓取（半自動：build 產候選清單、人工審查後入事件檔） | 2026/8/30 | [design/rss.md](design/rss.md) |
 | §7 | 颱風動態區塊淘汰機制（TYPHOON_STALE_HOURS 24h、海上警報豁免） | 2026/9/13 | [design/site.md](design/site.md) |

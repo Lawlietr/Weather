@@ -30,10 +30,15 @@ from tiles import MAP_CENTER, MAP_ZOOM, MAP_MAX_BOUNDS, OCEAN_TILE_NAME
 # shape: circle（現行外觀）| ring（空心粗環）| pin（水滴 divIcon，形狀編碼不靠色相）
 RAIN_STYLE = {
     "shape": "circle",
-    "weight": 2,          # 描邊（halo）粗細 px
+    "weight": 3,          # 描邊（halo）粗細 px——§2-4a-follow B3 定案：3px 白環，淺陸地/淡海都跳
     "stroke": "#fff",     # 描邊色
     "fill": 0.95,         # fillOpacity
-    "hit_min": 14,        # 手機可點度： invisible 命中圈最小半徑 px（§2-4a-follow 決策之一）
+    "hit_min": 14,        # 手機可點度： invisible 命中圈最小半徑 px（§2-4a-follow：先留，影響體驗再調）
+    # 未超閾值測站的淡色底點（顏色/半徑在 cwa.RAIN_BELOW，這裡只管怎麼畫）：
+    # 小、淡、白環 1px；命中圈也縮小——淡點有 400+ 個，命中圈太大會吃掉告警 polygon 的點擊
+    "below_weight": 1,
+    "below_fill": 0.45,
+    "below_hit": 11,
 }
 
 
@@ -163,15 +168,20 @@ def _noscript_html(lang, fc, root_prefix):
     else:
         parts.append(f'<p>{t(lang, "map_none")}</p>')
     rain = [f for f in feats if f["properties"].get("type") == "rain"]
-    if rain:
-        parts.append(f'<p><b>{t(lang, "map_noscript_rain")} {len(rain)} 站</b></p>')
+    rain_top = [f for f in rain if not f["properties"].get("below")]
+    rain_below = [f for f in rain if f["properties"].get("below")]
+    if rain_top:
+        parts.append(f'<p><b>{t(lang, "map_noscript_rain")} {len(rain_top)} 站</b></p>')
         parts.append(
             "<ul>" + "".join(
                 f'<li>{f["properties"]["name"]}（{f["properties"].get("county", "")}'
                 f'{f["properties"].get("township", "")}）：'
                 f'{t(lang, "map_rain_p1hr")} {f["properties"]["p1hr"]}mm ／ '
                 f'{t(lang, "map_rain_p24hr")} {f["properties"]["p24hr"]}mm</li>'
-                for f in rain[:10]) + "</ul>")
+                for f in rain_top[:10]) + "</ul>")
+    if rain_below:
+        # 淡色底點：JS 關了也不影響這段（noscript fallback 本来就沒有圖層開關）
+        parts.append(f'<p>{t(lang, "map_layer_rain_below")} {len(rain_below)} 站</p>')
     parts.append(f'<p><a href="{root_prefix}index.html">← {t(lang, "back_home")}</a></p>')
     return '<div class="map-noscript">' + "".join(parts) + "</div>"
 
@@ -200,23 +210,34 @@ def build(OUT, fc, events, warnings=None):
             counts[slug] = counts.get(slug, 0) + 1
         layers_html = "".join(
             f'<label class="layer"><input type="checkbox" data-type="{slug}" checked>'
-            f'<span class="swatch" style="background:{color}"></span>{name}'
+            f'<span class="swatch" style="background:{color}"></span>{t(lang, f"map_layer_{slug}")}'
             f'<span class="cnt">{counts[slug]}</span></label>'
-            for slug, (name, color) in TYPES.items())
+            for slug, (_zh_name, color) in TYPES.items())
+            # 層名走 i18n（cbph.TYPES 只有中文名，/ja/ 地圖頁因此曾外洩中文層名，2026-10-26 修）
         rain_feats = [f for f in fc.get("features", []) if f["properties"].get("type") == "rain"]
+        rain_top = [f for f in rain_feats if not f["properties"].get("below")]
+        rain_below = [f for f in rain_feats if f["properties"].get("below")]
         # 圖例顏色＝cwa.RAIN_LEVELS（與點本身同一來源；RAIN_LEVELS 由上而下＝l3→l1）
-        from cwa import RAIN_LEVELS as _RL
+        from cwa import RAIN_BELOW as _RB, RAIN_LEVELS as _RL
         lv_colors = [c for _m1, _m24, c, _r in _RL][:3]
-        top_color = lv_colors[0] if lv_colors else "#dc2626"
-        layers_html += (
-            f'<label class="layer"><input type="checkbox" data-type="rain" checked>'
-            f'<span class="swatch round" style="background:{top_color}"></span>{t(lang, "map_layer_rain")}'
-            f'<span class="cnt">{len(rain_feats)}</span></label>')
-        if rain_feats:
+        top_color = lv_colors[0] if lv_colors else "#e11d48"
+        if rain_top:
+            layers_html += (
+                f'<label class="layer"><input type="checkbox" data-type="rain" checked>'
+                f'<span class="swatch round" style="background:{top_color}"></span>'
+                f'{t(lang, "map_layer_rain")}<span class="cnt">{len(rain_top)}</span></label>')
             items = []
             for lv_key, color in zip(("map_rain_l3", "map_rain_l2", "map_rain_l1"), lv_colors):
                 items.append(f'<span><i style="{_rain_legend_item(color)}"></i>{t(lang, lv_key)}</span>')
             layers_html += ('<div class="rain-legend">' + "<br>".join(items) + '</div>')
+        if rain_below:
+            # 第二個開關：未超閾值的淡色底點（2026-10-26 使用者定案全部上圖；嫌亂可自行關掉）
+            layers_html += (
+                f'<label class="layer"><input type="checkbox" data-type="rain_below" checked>'
+                f'<span class="swatch round" style="background:{_RB["color"]};'
+                f'opacity:{RAIN_STYLE["below_fill"]:.2f};border:1px solid {RAIN_STYLE["stroke"]}">'
+                f'</span>{t(lang, "map_layer_rain_below")}'
+                f'<span class="cnt">{len(rain_below)}</span></label>')
 
         warn_html = ""
         if fc.get("warnings"):
@@ -308,8 +329,13 @@ def build(OUT, fc, events, warnings=None):
   var RAIN_STYLE = {rain_style};
 
   function rainMarker(ll, p) {{
-    // 顔色/半徑來自 build 端（cwa.RAIN_LEVELS）；形狀/描邊來自 RAIN_STYLE（同一來源）
+    // 顔色/半徑來自 build 端（超閾值＝cwa.RAIN_LEVELS、未超閾值＝cwa.RAIN_BELOW，
+    // 皆寫進 properties.color/radius）；形狀/描邊來自 RAIN_STYLE（同一來源）
     var r = Math.max(3, p.radius || 6);
+    if (p.below) {{   // 淡色底點：小、低透明度、細白環（不與超閾值點搶視線）
+      return L.circleMarker(ll, {{radius: r, color: RAIN_STYLE.stroke, weight: RAIN_STYLE.below_weight,
+        fillColor: p.color, fillOpacity: RAIN_STYLE.below_fill}});
+    }}
     if (RAIN_STYLE.shape === "pin") {{
       var s = Math.round(r * 2.6);
       var html = '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24">'
@@ -334,25 +360,31 @@ def build(OUT, fc, events, warnings=None):
     (byType[f.properties.type] = byType[f.properties.type] || []).push(f);
   }});
   var layerByType = {{}};
-  Object.keys(byType).forEach(function(type){{
-    var polys = [];
-    byType[type].forEach(function(f){{
+
+  function pointPolys(list) {{
+    var out = [];
+    list.forEach(function(f){{
       var p = f.properties;
-      if (f.geometry.type === "Point"){{
-        var ll = [f.geometry.coordinates[1], f.geometry.coordinates[0]];
-        var mk = rainMarker(ll, p);
-        var tip = p.name + " " + (p.township || "") + "　" + LABELS.rain_p1hr + " " + p.p1hr + "mm";
-        mk.bindTooltip(tip, {{sticky: true}});
-        mk.on("click", function(){{ showRainDetail(p); }});
-        polys.push(mk);
-        // 手機可點度：小點的命中區就是那個半徑 → 加一個透明大命中圈（同 layer、一起開關）
-        var hit = L.circleMarker(ll, {{radius: Math.max(RAIN_STYLE.hit_min, (p.radius || 6) + 4),
-          stroke: false, fillColor: "#000", fillOpacity: 0.01, interactive: true}});
-        hit.bindTooltip(tip, {{sticky: true}});
-        hit.on("click", function(){{ showRainDetail(p); }});
-        polys.push(hit);
-        return;
-      }}
+      var ll = [f.geometry.coordinates[1], f.geometry.coordinates[0]];
+      var mk = rainMarker(ll, p);
+      var tip = p.name + " " + (p.township || "") + "　" + LABELS.rain_p1hr + " " + p.p1hr + "mm";
+      mk.bindTooltip(tip, {{sticky: true}});
+      mk.on("click", function(){{ showRainDetail(p); }});
+      out.push(mk);
+      // 手機可點度：小點的命中區就是那個半徑 → 加一個透明大命中圈（同 layer、一起開關）
+      var hit = L.circleMarker(ll, {{radius: Math.max(p.below ? RAIN_STYLE.below_hit : RAIN_STYLE.hit_min,
+        (p.radius || 6) + 4), stroke: false, fillColor: "#000", fillOpacity: 0.01, interactive: true}});
+      hit.bindTooltip(tip, {{sticky: true}});
+      hit.on("click", function(){{ showRainDetail(p); }});
+      out.push(hit);
+    }});
+    return out;
+  }}
+
+  function polyPolys(list) {{
+    var out = [];
+    list.forEach(function(f){{
+      var p = f.properties;
       var tip = p.type_name + (p.effective ? " " + p.effective + " → " + (p.expires || "") : "");
       var counties = (p.counties || []).join("、");
       if (counties) tip += "（" + counties + "）";
@@ -361,12 +393,23 @@ def build(OUT, fc, events, warnings=None):
           {{color: p.color, weight: 2, fillColor: p.color, fillOpacity: 0.35}});
         pg.bindTooltip(tip, {{sticky: true}});
         pg.on("click", function(){{ showDetail(p); }});
-        polys.push(pg);
+        out.push(pg);
       }});
     }});
-    var lg = L.layerGroup(polys).addTo(map);
-    layerByType[type] = lg;
+    return out;
+  }}
+
+  // 疊放順序是刻意的（不是 byType 鍵序）：淡色底點最下 → 告警 polygon → 超閾值點最上。
+  // 否則 400+ 個淡點的透明命中圈會蓋住告警 polygon，點 polygon 變成點測站（設計定案）。
+  var rainAll = byType["rain"] || [];
+  var rainBelow = rainAll.filter(function(f){{ return f.properties.below; }});
+  var rainTop = rainAll.filter(function(f){{ return !f.properties.below; }});
+  if (rainBelow.length) layerByType.rain_below = L.layerGroup(pointPolys(rainBelow)).addTo(map);
+  Object.keys(byType).forEach(function(type){{
+    if (type === "rain") return;
+    layerByType[type] = L.layerGroup(polyPolys(byType[type])).addTo(map);
   }});
+  if (rainTop.length) layerByType.rain = L.layerGroup(pointPolys(rainTop)).addTo(map);
 
   document.querySelectorAll(".layer input").forEach(function(cb){{
     cb.addEventListener("change", function(){{
