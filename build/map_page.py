@@ -23,6 +23,31 @@ from cbph import TYPES  # slug → (中文名, 配色)，與 cbph UI 一致
 # （§2-7 的成因：舊 maxBounds 東界 123.6°E 超出舊瓦片東界 122°E → 右側 2.9° 無底圖）。
 from tiles import MAP_CENTER, MAP_ZOOM, MAP_MAX_BOUNDS, OCEAN_TILE_NAME
 
+# ⚠️ 雨量點樣式的「怎麼畫」單一來源（§2-4a-follow）。“畫多大、什幀顏色”在
+# `cwa.RAIN_LEVELS`（進 map.geo.json 的 properties.color/radius），本 dict 只管
+# 形狀/描邊/填充等「怎麼畫」，外加圖例要跟著形狀走。兩邊都不得在 JS 或圖例裡再寫死 hex
+# （舊版圖例硬編碼 #dc2626/#ea580c/#f59e0b 三份、跟 cwa.RAIN_LEVELS 完会漂移）。
+# shape: circle（現行外觀）| ring（空心粗環）| pin（水滴 divIcon，形狀編碼不靠色相）
+RAIN_STYLE = {
+    "shape": "circle",
+    "weight": 2,          # 描邊（halo）粗細 px
+    "stroke": "#fff",     # 描邊色
+    "fill": 0.95,         # fillOpacity
+    "hit_min": 14,        # 手機可點度： invisible 命中圈最小半徑 px（§2-4a-follow 決策之一）
+}
+
+
+def _rain_legend_item(color):
+    """圖例小色塊的樣式：形狀要跟實際渲染一致（ring→空心、pin→三角）。"""
+    sh = RAIN_STYLE["shape"]
+    if sh == "ring":
+        return (f'background:#fff;border:{max(2, RAIN_STYLE["weight"] + 1)}px solid {color};'
+                f'border-radius:50%')
+    if sh == "pin":
+        return (f'background:{color};border-radius:50% 50% 50% 0%;'
+                f'transform:rotate(-45deg);border:1px solid {RAIN_STYLE["stroke"]}')
+    return f'background:{color};border-radius:50%'
+
 # 地圖視野：MAP_CENTER [23.7,121.3]、MAP_ZOOM 8、MAP_MAX_BOUNDS [[20.7,118.3],[26.7,124.3]]
 # ——皆由 tiles.py import（不在此定義；§2-7）。不變項：MAP_MAX_BOUNDS 中心恆等於 MAP_CENTER
 #（Leaflet 1.9.4 setView 對 maxBounds clamp：視口寬於 bounds 經度跨度時會把整個視口對齊
@@ -78,6 +103,7 @@ body.map-page{display:flex;flex-direction:column}
 .swatch.round{border-radius:50%}
 .rain-legend{margin:2px 0 6px 24px;font-size:.8rem;color:var(--muted);line-height:1.9}
 .rain-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+.rain-pin{background:transparent;border:none}   /* pin 形狀的 divIcon：去掉 Leaflet 預設白框 */
 .layer .cnt{margin-left:auto;color:var(--muted);font-size:.85rem}
 .map-detail{font-size:.9rem}
 .map-detail .dl{margin:8px 0}
@@ -178,17 +204,19 @@ def build(OUT, fc, events, warnings=None):
             f'<span class="cnt">{counts[slug]}</span></label>'
             for slug, (name, color) in TYPES.items())
         rain_feats = [f for f in fc.get("features", []) if f["properties"].get("type") == "rain"]
+        # 圖例顏色＝cwa.RAIN_LEVELS（與點本身同一來源；RAIN_LEVELS 由上而下＝l3→l1）
+        from cwa import RAIN_LEVELS as _RL
+        lv_colors = [c for _m1, _m24, c, _r in _RL][:3]
+        top_color = lv_colors[0] if lv_colors else "#dc2626"
         layers_html += (
             f'<label class="layer"><input type="checkbox" data-type="rain" checked>'
-            f'<span class="swatch round" style="background:#dc2626"></span>{t(lang, "map_layer_rain")}'
+            f'<span class="swatch round" style="background:{top_color}"></span>{t(lang, "map_layer_rain")}'
             f'<span class="cnt">{len(rain_feats)}</span></label>')
         if rain_feats:
-            layers_html += (
-                f'<div class="rain-legend">'
-                f'<span><i style="background:#dc2626"></i>{t(lang, "map_rain_l3")}</span><br>'
-                f'<span><i style="background:#ea580c"></i>{t(lang, "map_rain_l2")}</span><br>'
-                f'<span><i style="background:#f59e0b"></i>{t(lang, "map_rain_l1")}</span>'
-                f'</div>')
+            items = []
+            for lv_key, color in zip(("map_rain_l3", "map_rain_l2", "map_rain_l1"), lv_colors):
+                items.append(f'<span><i style="{_rain_legend_item(color)}"></i>{t(lang, lv_key)}</span>')
+            layers_html += ('<div class="rain-legend">' + "<br>".join(items) + '</div>')
 
         warn_html = ""
         if fc.get("warnings"):
@@ -218,6 +246,7 @@ def build(OUT, fc, events, warnings=None):
 
         n = len([f for f in fc.get("features", []) if f["properties"].get("type") != "rain"])
         none_p = json.dumps('<p class="muted">' + t(lang, "map_none") + "</p>", ensure_ascii=False)
+        rain_style = json.dumps(RAIN_STYLE, ensure_ascii=False)
         page = f"""<!DOCTYPE html>
 <html lang="{lang}">
 <head>
@@ -276,6 +305,30 @@ def build(OUT, fc, events, warnings=None):
     {{minZoom:{MAP_ZOOM}, maxZoom:11, errorTileUrl:"{assets}tiles/{OCEAN_TILE_NAME}",
       attribution:"© OpenStreetMap contributors"}}).addTo(map);
 
+  var RAIN_STYLE = {rain_style};
+
+  function rainMarker(ll, p) {{
+    // 顔色/半徑來自 build 端（cwa.RAIN_LEVELS）；形狀/描邊來自 RAIN_STYLE（同一來源）
+    var r = Math.max(3, p.radius || 6);
+    if (RAIN_STYLE.shape === "pin") {{
+      var s = Math.round(r * 2.6);
+      var html = '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24">'
+        + '<path d="M12 1.6C7.4 1.6 3.6 5.4 3.6 10c0 6.2 8.4 12.4 8.4 12.4s8.4-6.2 8.4-12.4'
+        + 'C20.4 5.4 16.6 1.6 12 1.6z" fill="' + p.color + '" stroke="' + RAIN_STYLE.stroke
+        + '" stroke-width="' + RAIN_STYLE.weight + '"/>'
+        + '<circle cx="12" cy="9.8" r="2.6" fill="#fff"/></svg>';
+      return L.marker(ll, {{icon: L.divIcon({{className: "rain-pin", html: html,
+        iconSize: [s, s], iconAnchor: [Math.round(s / 2), Math.round(s * 0.78)]}})}});
+    }}
+    if (RAIN_STYLE.shape === "ring") {{
+      return L.circleMarker(ll, {{radius: r, color: p.color,
+        weight: Math.max(2, Math.round(r * 0.55)), fillColor: RAIN_STYLE.stroke,
+        fillOpacity: 1, opacity: 1}});
+    }}
+    return L.circleMarker(ll, {{radius: r, color: RAIN_STYLE.stroke, weight: RAIN_STYLE.weight,
+      fillColor: p.color, fillOpacity: RAIN_STYLE.fill}});
+  }}
+
   var byType = {{}};
   DATA.features.forEach(function(f){{
     (byType[f.properties.type] = byType[f.properties.type] || []).push(f);
@@ -286,11 +339,18 @@ def build(OUT, fc, events, warnings=None):
     byType[type].forEach(function(f){{
       var p = f.properties;
       if (f.geometry.type === "Point"){{
-        var mk = L.circleMarker([f.geometry.coordinates[1], f.geometry.coordinates[0]],
-          {{radius: p.radius, color: "#fff", weight: 2, fillColor: p.color, fillOpacity: 0.95}});
-        mk.bindTooltip(p.name + " " + (p.township || "") + "　" + LABELS.rain_p1hr + " " + p.p1hr + "mm", {{sticky: true}});
+        var ll = [f.geometry.coordinates[1], f.geometry.coordinates[0]];
+        var mk = rainMarker(ll, p);
+        var tip = p.name + " " + (p.township || "") + "　" + LABELS.rain_p1hr + " " + p.p1hr + "mm";
+        mk.bindTooltip(tip, {{sticky: true}});
         mk.on("click", function(){{ showRainDetail(p); }});
         polys.push(mk);
+        // 手機可點度：小點的命中區就是那個半徑 → 加一個透明大命中圈（同 layer、一起開關）
+        var hit = L.circleMarker(ll, {{radius: Math.max(RAIN_STYLE.hit_min, (p.radius || 6) + 4),
+          stroke: false, fillColor: "#000", fillOpacity: 0.01, interactive: true}});
+        hit.bindTooltip(tip, {{sticky: true}});
+        hit.on("click", function(){{ showRainDetail(p); }});
+        polys.push(hit);
         return;
       }}
       var tip = p.type_name + (p.effective ? " " + p.effective + " → " + (p.expires || "") : "");
