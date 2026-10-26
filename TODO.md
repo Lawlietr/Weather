@@ -2,13 +2,14 @@
 
 > 本檔只記**要做的事＋優先級＋狀態＋設計檔連結**；問題背景、定案細節、規格與陷阱在 `design/<功能>.md`（每功能領域一份）；流程 runbook（更新／build／驗證／部署）在 `WORKFLOW.md`。已完成項目的歷史細節看 git history。
 > 編號為傳統編號（§N），供既有引用對照；細節一律跟連結進 design/。
-> 最後更新：2026/9/16（拆檔：§2→`design/map.md`、§5→`design/share-button.md`、§6→`design/class-halt.md`、§1→`design/rss.md`、§3/§4/§7/§9/§10/§11→`design/site.md`；本檔瘦身為帳本）
+> 最後更新：2026/10/26（新增 §2-7 底圖視野擴展；拆檔歷史見 2026/9/16：§2→`design/map.md`、§5→`design/share-button.md`、§6→`design/class-halt.md`、§1→`design/rss.md`、§3/§4/§7/§9/§10/§11→`design/site.md`；本檔瘦身為帳本）
 
 ## 待辦（依優先級排序）
 
 | # | 任務 | 優先級 | 狀態 | 設計檔 |
 |---|------|--------|------|--------|
-| §2-4a-follow | 雨量點樣式重做（4a 合併後**先處理**；現行尺寸/色碼未過關） | 🔥 高 | 待辦（候選方向待討論） | [design/map.md](design/map.md) |
+| **§2-7** | **底圖視野擴展**：瓦片東界 122°E＝台灣東岸→右側 2.9°（佔桌面視窗 37%）無底圖且畫成紙色。定案＝海色底＋`errorTileUrl`＋`MAP_CENTER` 往東＋`tiles.py` per-zoom bbox（1,818 張 ≈ 9MB） | 🔥 高 | 待辦（**排在 4a-follow 前**：先定視野/海色再定點色，免返工） | [design/map.md](design/map.md) |
+| §2-4a-follow | 雨量點樣式重做（4a 合併後**先處理**；現行尺寸/色碼未過關） | 🔥 高 | 待辦（候選方向待討論；⚠️ 色碼判斷前提＝§2-7 的海域面積先定案） | [design/map.md](design/map.md) |
 | §2-4b | 颱風軌跡/風圈層（實線觀測＋虛線預報＋最新預報點風圈） | 高 | 待辦 | [design/map.md](design/map.md) |
 | §2-4c | 特報陸地紅區層（選項 A：自託縣界 GeoJSON；**動工前需確認縣界資料源**） | 高 | 待辦 | [design/map.md](design/map.md) |
 | §2-2b | 災情新聞點層（人工/agent 餵料，gazetteer 已備） | 中 | 暫緩（2026/9/1 定） | [design/map.md](design/map.md) |
