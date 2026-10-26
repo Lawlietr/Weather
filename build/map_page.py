@@ -39,6 +39,16 @@ RAIN_STYLE = {
     "below_weight": 1,
     "below_fill": 0.45,
     "below_hit": 11,
+    # 半徑隨縮放（2026-10-26 使用者改口：固定 px 在 z11 點還是一樣小、命中圈也一樣小、
+    # 點不中）。兩個係數分開：**可見點溫和放大**（1.2/級）、**命中圈快速放大**（1.6/級）。
+    # 理由：完全地理固定是 2.0/級 → z11 點變 4 倍大、1314 個淡點會變成一片灰碟蓋住底圖
+    #（實測過、已改）；但命中圈要大才點得中。上限 max_radius/max_hit 收斂 z11。
+    # base ＝ RAIN_LEVELS/RAIN_BELOW 的半徑（即 z8 的值）。
+    "dot_zoom_factor": 1.2,
+    "hit_zoom_factor": 1.6,
+    "zoom_ref": MAP_ZOOM,     # z8 ＝ 設計基準
+    "max_radius": 22,         # 可見點上限 px（半徑）
+    "max_hit": 30,            # 命中圈上限 px（半徑）→ z11 直徑 60px，手機拇指夠用
 }
 
 
@@ -328,10 +338,22 @@ def build(OUT, fc, events, warnings=None):
 
   var RAIN_STYLE = {rain_style};
 
+  // 半徑/命中圈隨縮放（見 RAIN_STYLE 註解）：circleMarker 的 radius 是螢幕 px，
+  // 不處理的話拉進两级點還是同樣大 → 命中圈也同樣小、點不中。
+  var ZOOM_ITEMS = [];   // {{m: layer, base: 基準半徑, hit: 是否命中圈}}
+  function dotRadius(base) {{
+    var k = map.getZoom() - RAIN_STYLE.zoom_ref;
+    return Math.min(Math.max(3, base) * Math.pow(RAIN_STYLE.dot_zoom_factor, k), RAIN_STYLE.max_radius);
+  }}
+  function hitRadius(base) {{
+    var k = map.getZoom() - RAIN_STYLE.zoom_ref;
+    return Math.min(Math.max(base, 6) * Math.pow(RAIN_STYLE.hit_zoom_factor, k), RAIN_STYLE.max_hit);
+  }}
+
   function rainMarker(ll, p) {{
     // 顔色/半徑來自 build 端（超閾值＝cwa.RAIN_LEVELS、未超閾值＝cwa.RAIN_BELOW，
     // 皆寫進 properties.color/radius）；形狀/描邊來自 RAIN_STYLE（同一來源）
-    var r = Math.max(3, p.radius || 6);
+    var r = dotRadius(p.radius || 6);
     if (p.below) {{   // 淡色底點：小、低透明度、細白環（不與超閾值點搶視線）
       return L.circleMarker(ll, {{radius: r, color: RAIN_STYLE.stroke, weight: RAIN_STYLE.below_weight,
         fillColor: p.color, fillOpacity: RAIN_STYLE.below_fill}});
@@ -367,13 +389,16 @@ def build(OUT, fc, events, warnings=None):
       var p = f.properties;
       var ll = [f.geometry.coordinates[1], f.geometry.coordinates[0]];
       var mk = rainMarker(ll, p);
+      ZOOM_ITEMS.push({{ m: mk, base: p.radius || 6, hit: false }});
       var tip = p.name + " " + (p.township || "") + "　" + LABELS.rain_p1hr + " " + p.p1hr + "mm";
       mk.bindTooltip(tip, {{sticky: true}});
       mk.on("click", function(){{ showRainDetail(p); }});
       out.push(mk);
       // 手機可點度：小點的命中區就是那個半徑 → 加一個透明大命中圈（同 layer、一起開關）
-      var hit = L.circleMarker(ll, {{radius: Math.max(p.below ? RAIN_STYLE.below_hit : RAIN_STYLE.hit_min,
-        (p.radius || 6) + 4), stroke: false, fillColor: "#000", fillOpacity: 0.01, interactive: true}});
+      var hitBase = Math.max(p.below ? RAIN_STYLE.below_hit : RAIN_STYLE.hit_min, (p.radius || 6) + 4);
+      var hit = L.circleMarker(ll, {{radius: hitRadius(hitBase),
+        stroke: false, fillColor: "#000", fillOpacity: 0.01, interactive: true}});
+      ZOOM_ITEMS.push({{ m: hit, base: hitBase, hit: true }});
       hit.bindTooltip(tip, {{sticky: true}});
       hit.on("click", function(){{ showRainDetail(p); }});
       out.push(hit);
@@ -410,6 +435,20 @@ def build(OUT, fc, events, warnings=None):
     layerByType[type] = L.layerGroup(polyPolys(byType[type])).addTo(map);
   }});
   if (rainTop.length) layerByType.rain = L.layerGroup(pointPolys(rainTop)).addTo(map);
+
+  // 半徑隨縮放：circleMarker 的 radius 是螢幕 px，不更新的話拉進兩級後點與命中圈都還是
+  // 同樣小（2026-10-26 使用者實測反應「地圖拉進後圈還是一樣小、點擊不方便」）。
+  // 只重算視野內（含 15% 邊界）的；關掉的層不從 ZOOM_ITEMS 移除，但 setRadius 對
+  // 未加入地圖的 layer 是 no-op（Leaflet Circle._updatePath 會查 this._map）。
+  function rescaleRain() {{
+    var b = map.getBounds().pad(0.15);
+    for (var i = 0; i < ZOOM_ITEMS.length; i++) {{
+      var it = ZOOM_ITEMS[i];
+      if (!b.contains(it.m.getLatLng())) continue;
+      it.m.setRadius(it.hit ? hitRadius(it.base) : dotRadius(it.base));
+    }}
+  }}
+  map.on("zoomend", rescaleRain);
 
   document.querySelectorAll(".layer input").forEach(function(cb){{
     cb.addEventListener("change", function(){{
