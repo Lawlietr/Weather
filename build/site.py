@@ -978,6 +978,13 @@ def build_misc_files(events, ts, groups):
     (OUT / "robots.txt").write_text(
         "User-agent: *\nAllow: /\n\nSitemap: " + SITE_BASE + "/sitemap.xml\n", encoding="utf-8")
 
+    # --- .nojekyll（**GitHub Pages 鏡像必放**，2026-10-27 實測）---
+    # gh-pages 是 orphan 分支直接 push（＝ Pages 的 branch 來源），GitHub 對 branch 來源會跑 Jekyll，
+    # 而 Jekyll **忽略檔名以 `_` 開頭的檔/資料夾**。後果：`assets/tiles/_blank.png`（缺瓦片佔位底）
+    # 在 lawlietr.github.io 上 404（CF 上 200）——舊的 `_ocean.png` 同樣一直 404，只在鏡像上沒發現。
+    # 放一個空 .nojekyll 就關掉 Jekyll 處理，`public/` 原樣發佈。
+    (OUT / ".nojekyll").write_text("", encoding="utf-8")
+
     # --- 站對外 AGENTS.md（agent instruction：when-to-use/引用格式）---
     (OUT / "AGENTS.md").write_text(agents_md_text(), encoding="utf-8")
 

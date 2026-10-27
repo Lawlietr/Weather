@@ -158,6 +158,9 @@ grep -c 'errorTileUrl' public/map/index.html     # 應為 2（JS 一處＋上方
 grep -c 'createPane("land")' public/map/index.html   # §2-7c 兜底陸地層：應為 1（pane zIndex 1 < tilePane 200）
 grep -o 'background:var(--sea)' public/map/index.html | head -1   # 應有（缺瓦片處＝海色，不是紙色；海色由 tiles.OCEAN_CSS 注入）
 find public/assets/tiles -name '*.png' -exec stat -c '%s' {} \; | sort -u | wc -l   # 預期 >50
+ls -l public/.nojekyll                     # 必須存在（空檔）——GitHub Pages 鏡像靠它關掉 Jekyll，
+#    否則 Jekyll 會忽略檔名以 `_` 開頭的檔（實測 2026-10-27：`assets/tiles/_blank.png` 在
+#    lawlietr.github.io 404、CF 上 200；舊 `_ocean.png` 在鏡像上也一直 404）
 # ⑤ 風險狀態列（由 CWA 自動推導；應與 build 日誌「目前風險：xxx」一致）
 grep -o 'risk-bar risk-[a-z]*' public/index.html | head -1
 # ⑥ RSS 候選清單（build/rss_candidates.json 應為本次 build 新生成；feeds ok 應接近全數）

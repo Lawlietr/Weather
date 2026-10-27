@@ -146,7 +146,8 @@
 - 兜底層只蓋 `zoom_bbox` 聯集 ⊕ 0.5° ＝ **(115.2, 19.6)~(127.4, 27.8)**。窗外不含：沖繩本島（127.7°E）、呂宋 main（18.5°N 以南）、東沙（116.7°E 已在窗内但未在 NE 10m land 出小島）。
 - ⚠️ **改 `tiles.MAP_MAX_BOUNDS`／`ZOOMS` 後必須重跑 `python3 build/make_taiwan_geo.py`**，否则兜底層不會跟著長——就是 §2-7「maxBounds 比瓦片寬」漂移教訓的翻版（產生器頭部已寫這條）。
 - 矩形裁剪會在窗邊留下**沿裁剪邊的直線邊**（大陸/大島被窗切開處），屬預期，該處本就是視野邊緣。
-- 來源授權：Natural Earth 公有領域（與 `ISLANDS` 同）；不需署名但也無需隱矞。
+- 來源授權：Natural Earth 公有領域（與 `ISLANDS` 同）；不需署名但也無需隱晦。
+- ⚠️ **檔名以 `_` 開頭 → GitHub Pages 鏡像會 404**（2026-10-27 實測）：gh-pages 是 orphan 分支直推＝Pages 的 **branch 來源**，GitHub 對 branch 來源會跑 Jekyll，而 Jekyll **忽略 `_` 開頭的檔/資料夾**——實測 `assets/tiles/_blank.png` 在 `lawlietr.github.io` 404、同一路徑在 CF 上 200（鏡像上瓦片與 `leaflet.css` 皆 200，tree 內唯一的 `_` 開頭檔就是它）。舊 `_ocean.png` 也一直在鏡像上 404（只是從沒人發現）。**修法：`build/site.py` 已在站根產 `public/.nojekyll`（空檔）關掉 Jekyll**；WORKFLOW §3 ⑤ 已加檢查。若日後再出現 `_` 開頭的資產，只要 `.nojekyll` 在就不會再被漏。
 
 ## 雨量點樣式重做（§2-4a-follow，✅ 2026-10-26 定案、已合併 main ＋ 22:09 手動部署上線）
 
