@@ -1,6 +1,6 @@
 # 地圖紅警功能（/map/）設計
 
-> 狀態：實作中（步驟 1–4a 完成、**4a-follow 樣式 2026-10-26 定案並已上線**；§2-7 底圖視野擴展 2026-10-26 定案）｜最後更新：2026-10-26
+> 狀態：實作中（步驟 1–4a 完成、**4a-follow 樣式 2026-10-26 定案並已上線**；§2-7 底圖視野擴展 2026-10-26 定案、**§2-7c 兜底陸地層 2026-10-27 實作完成（DEV）**）｜最後更新：2026-10-27
 > 對應 TODO：M1–M5（見 `TODO.md` 主表）
 > TL;DR：獨立 `/map/` 頁，自託 Leaflet 1.9.4＋離線 OSM 瓦片；疊 CWA cbph 4 類告警 polygon＋雨量站點＋（待做）颱風軌跡/風圈＋（待做）特報陸地紅區；資料全 build 時抓取嵌入頁面、前端零外部請求。
 
@@ -83,7 +83,7 @@
 
 **定案（三標；首批＝ a＋b 同批上線，c 待辦）**
 
-1. **a 海色止血**：`#map`／`.leaflet-container` 背景 `var(--bg)` → **OSM standard 海洋 `#aad3df`**（OSM 瓦片本身不隨 theme 變色→light/dark 同色）；tileLayer 加 `errorTileUrl: "{assets}tiles/_ocean.png"`（build 產 256×256 海色 PNG）。缺瓦片處從白紙變海。
+1. **a 海色止血**：`#map`／`.leaflet-container` 背景 `var(--bg)` → **OSM standard 海洋 `#aad3df`**（OSM 瓦片本身不隨 theme 變色→light/dark 同色）；tileLayer 加 `errorTileUrl`。缺瓦片處從白紙變海。⚠️ 當時用的 `tiles/_ocean.png` 是**不透明**海色 PNG，2026-10-27 已改**全透明** `tiles/_blank.png`（不透明版會蓋住 §2-7c 兜底陸地層）；海色改由容器背景 `--sea`（＝`tiles.OCEAN_CSS`）提供。
 2. **b 視野＋瓦片往東/南擴**：
    - `MAP_CENTER` `[23.8, 120.95]` → **`[23.7, 121.3]`**（往東 0.35°，台灣在畫面偏左、右側留太平洋）
    - `MAP_MAX_BOUNDS` → **`[[20.7, 118.3], [26.7, 124.3]]`**（6.0°×6.0°，**中心恰＝新 `MAP_CENTER`**）
@@ -91,7 +91,7 @@
      **`MAP_CENTER`/`MAP_ZOOM`/`MAP_MAX_BOUNDS` 的單一事實來源改放 `build/tiles.py`**，`map_page.py` 由此 import（舊版兩處各寫一份、就是漂移的溫床）。
    - 原理（**不變項**）：⚠️ 每一 zoom 層的瓦片 bbox 必須涵蓋「視口可能到的範圍」，否則該處只剩海色底——低 zoom 時桌面視口比 maxBounds 寬（z8 1920px＝10.6° 經度 > bounds 6.0°）需要更寬瓦片帶，高 zoom（z11 1920px＝1.3°）視口比 bounds 窄、蓋 maxBounds 即可；`MAP_MAX_BOUNDS` 中心恆等於 `MAP_CENTER` 的不變項繼續成立。
    - **成本（2026/10/26 實測）**：**2,200 張**（舊 967）、`public/assets/tiles` 由 15 MB → **25 MB**（先前估 1,818 張≈ 9 MB 偏樂觀——OSM.de 的海域瓦片帶等深線/離島標註，單張仍有數 KB）。本次新抓 1,233 張、8 workers、build 總時 1 分 54 秒、失敗 0。仍遠低於 CF Pages 檔案/檔案大小上限。⚠️ `WORKFLOW.md` §3 ⑤ 已改為「先跑 `tiles.tile_list()` 查現值再對數」（瓦片數不再寫死）。
-3. **c 陸地輪廓兜底（未做、待辦）**：海色＋陸地輪廓最底層（獨立 pane、zIndex 低於 tilePane），`taiwan_geo.py` `ISLANDS`（現 6 條：本島/澎湖/金門/蘭嶼/綠島/馬祖）擴到菲律賓北（巴丹）、與那國、宮古。⚠️ 擴充要改**產生器** `make_taiwan_geo.py`，手改 `taiwan_geo.py` 會被覆寫（AGENTS.md 已警示）。也順帶服務 §2-4b（風圈畫到瓦片外仍有地理參照）。
+3. **c 陸地輪廓兜底（✅ 2026-10-27 實作完成、詳見下方「兜底陸地層」節）**：海色＋陸地輪廓最底層（獨立 pane、zIndex 低於 tilePane）。⚠️ **實際做法偏離原定案**：沒有擴充 `ISLANDS`（那 6 條是手描、專供**事件頁 SVG**、精度 5 位，給主島复用會被降到 4 位），而是新增獨立常數 `FALLBACK_LAND`（**Natural Earth 10m land**、經裁剪＋簡化，已含巴丹/與那國/宮古/石垣/大陸岸）。⚠️ 改視野要改**產生器** `make_taiwan_geo.py`，手改 `taiwan_geo.py` 會被覆寫（AGENTS.md 已警示）。也順帶服務 §2-4b（風圈畫到瓦片外仍有地理參照）。
 
 **為什麼不只是美觀**：cbph **巨浪告警 polygon** 與待辦 **§2-4b 颱風軌跡/風圈**都在台灣**以東**海域——現行底圖在那邊是空白，預報路徑與 70% 暴風半徑會畫在「沒有地圖」的白區上，直接傷害本專案核心用途。
 
@@ -114,6 +114,37 @@
 另外測 z11 拖到 maxBounds 四邊（東/西/南/北各拖到底）：全部零 404、海色佔位瓦片 0 張 → **可拖範圍內瓦片完整**。`.leaflet-container` 與 `#map` 實測 `rgb(170,211,223)`＝海色 ✓。截圖目視：右側出現石垣市/西表石垣國立公園（z8）與與那國町、沖繩縣界（z11）——不再是一片空白。
 
 ⚠️ 副作用：`public/assets/tiles` 25 MB（部署變大，CF Pages／gh-pages 同步時留意上傳時間）。2560px 以上 ultrawide 在 z8 最外側會露海色（刻意取捨，避免 z8 瓦片再倍增）。
+
+⚠️ 2026-10-27 更正（做 §2-7c 時才發現）：上述 `_ocean.png`（570 bytes、實色）已廢——不透明的佔位底住在 tilePane 裡，會**蓋住下方的兜底陸地層**。現行＝全透明 `_blank.png`，見下方「兜底陸地層」節。
+
+## 兜底陸地層（§2-7c，✅ 2026-10-27 實作完成、在 DEV）
+
+**做什麼**：瓦片缺一張（build 時抓失敗、或 future 視野超出瓦片覆蓋）時，`errorTileUrl` 只補海色 → 該處**連陸地一起消失**，包括台灣自己。這層在 tilePane **之下**補上「可能露出瓦片缺口的範圍」內的陸地輪廓（Natural Earth 10m land，公有領域）。日常瀏覽時瓦片齊全 → 這層**完全不顯示**（實測見下），它的價值在兜底與 §2-4b（風圈畫到瓦片外仍有地理參照）。
+
+**改動（三處，第三處是連動修 bug）**
+
+1. `build/make_taiwan_geo.py`：新增 `fallback_land()`。目標範圍＝`tiles.zoom_bbox()` 各層聯集 ⊕ `FALLBACK_MARGIN_DEG`（0.5°）——**推導而非寫死**，與離線瓦片同一事實來源。新工具：`clip_rect()`（Sutherland–Hodgman 矩形裁剪；先 bbox 粗篩再裁剪，大陸的環動輒數萬點）、`douglas_peucker_iter()`（**迭代版**DP——本檔原有的遞迴版對大環會爆 recursion limit）。產出新常數 `FALLBACK_LAND`。
+   **實測**：79 環／1,702 點／inline **36 KB**（台灣本島 207 點、大陸福建岸、與那國/西表/石垣/宮古、菲北巴丹 4 環都在）；`ISLANDS` 段與 HEAD **位元組相同**→ 事件頁 SVG 不受影響。⚠️ eps 必須**面積自適應** `min(0.003, max(0.0004, 0.12·√area))`：固定 0.003° 會把與那國/宮古這類小島整個簡化掉（實測丟 9 環）。
+2. `build/map_page.py`：`LAND_STYLE`（顏色單一來源、用**字面 hex**不用 `var()`——Leaflet 把 color/fillColor 寫進 SVG 顯示屬性，`var()` 在部分瀏覽器無效，與 4a-follow 同一教訓）；`map.createPane("land")` ＋ `zIndex=1`（⚠️ 是 **1** 不是 2：tilePane 的 z-index 來自 `leaflet.css` 的 **200**，不是「Leaflet 預設 2」）；每 ring 一條 `L.polygon(..., {pane:"land", interactive:false})`；(lon,lat)→[lat,lng] 在 build 端轉一次。
+3. ⚠️ **連動缺陷修正**：`errorTileUrl` 原本是**不透明**海色 `_ocean.png` → 它就畫在 tilePane 內，**蓋住了下方的兜底層**，這層永遠不會顯示（發現於本輪實測）。改成 **全透明** 256×256 RGBA `_blank.png`（`tiles.blank_png()`，PNG color type 6，334 bytes），海色改由容器背景 `--sea` 提供。海色收斂成單一來源 `tiles.OCEAN_RGB → OCEAN_CSS`，`map_page` 兩處寫死的 `#aad3df` 改用 `@SEA@` 佔位代換；舊 `_ocean.png` 由 `fetch_tiles()` 主動從 public/ 清掉（免上傳舊檔）。
+
+**真 Chromium 實測**（playwright 1.64／chromium-1248，依本檔驗證規則）
+
+| 項目 | 結果 |
+|---|---|
+| pane 堆疊 | land `zIndex=1`（inline）< tile（leaflet.css 200）< overlay 400 ✓ |
+| 瓦片齊全時是否干擾 | on/off 截圖差異：1440×900 **0.000%**（0/144,000 取樣）；2560×1440 **0.405%** 且差異全在 x 3–18（＝左側瓦片界外，顯示大陸海岸）→ **只在瓦片缺口處露出** ✓ |
+| 瓦片全 404（route abort，僅 `_blank.png` 可載入）像素探針 | 台灣本島 `#f2efe9` ✓、澎湖 ✓、石垣 ✓、與那國 有陸色像素（z8 僅 1–2px）✓、大陸岸 陸海各半（岸線）✓；**開闊太平洋／台灣海峽 純海色 `#aad3df`**（無假陸地）✓ |
+| 陸地面積合理性 | land-only 截圖陸色取樣 20,728／324,000 ≈ **6.4%**（舆此窗陸海面積相符） |
+| 效能 | 3 次縮放（z8→z11）＋4 次拖曳：longtask **0 筆**；新增 path 僅 79 條（overlay 2,622 不變） |
+| 手機 390×844 | 瓦片 9 張、land path 79、console error 0 |
+| build／體積 | 2,200 瓦片全快取命中、零 warning；`_blank.png` 334 bytes RGBA alpha=0；`public/` 14.02 MiB／2,241 檔（**檔數不變**）、最大單檔 1.18 MiB（CF Pages 25 MiB 上限的 **4.7%**） |
+
+**邊界與坑（改視野前必读）**
+- 兜底層只蓋 `zoom_bbox` 聯集 ⊕ 0.5° ＝ **(115.2, 19.6)~(127.4, 27.8)**。窗外不含：沖繩本島（127.7°E）、呂宋 main（18.5°N 以南）、東沙（116.7°E 已在窗内但未在 NE 10m land 出小島）。
+- ⚠️ **改 `tiles.MAP_MAX_BOUNDS`／`ZOOMS` 後必須重跑 `python3 build/make_taiwan_geo.py`**，否则兜底層不會跟著長——就是 §2-7「maxBounds 比瓦片寬」漂移教訓的翻版（產生器頭部已寫這條）。
+- 矩形裁剪會在窗邊留下**沿裁剪邊的直線邊**（大陸/大島被窗切開處），屬預期，該處本就是視野邊緣。
+- 來源授權：Natural Earth 公有領域（與 `ISLANDS` 同）；不需署名但也無需隱矞。
 
 ## 雨量點樣式重做（§2-4a-follow，✅ 2026-10-26 定案、已合併 main ＋ 22:09 手動部署上線）
 

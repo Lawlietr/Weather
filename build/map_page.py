@@ -21,7 +21,8 @@ from cbph import TYPES  # slug → (中文名, 配色)，與 cbph UI 一致
 # ⚠️ 地圖視野常數的單一事實來源在 `build/tiles.py`（離線瓦片的 per-zoom bbox 由 maxBounds
 # 推導，兩邊必須同步）——不在本檔重建座標，否則又會出現「maxBounds 比瓦片寬」的漂移
 # （§2-7 的成因：舊 maxBounds 東界 123.6°E 超出舊瓦片東界 122°E → 右側 2.9° 無底圖）。
-from tiles import MAP_CENTER, MAP_ZOOM, MAP_MAX_BOUNDS, OCEAN_TILE_NAME
+from tiles import (MAP_CENTER, MAP_ZOOM, MAP_MAX_BOUNDS, BLANK_TILE_NAME, OCEAN_CSS)
+from taiwan_geo import FALLBACK_LAND  # §2-7c 陸地兜底層（範圍由 tiles 視野推導）
 
 # ⚠️ 雨量點樣式的「怎麼畫」單一來源（§2-4a-follow）。“畫多大、什幀顏色”在
 # `cwa.RAIN_LEVELS`（進 map.geo.json 的 properties.color/radius），本 dict 只管
@@ -51,6 +52,16 @@ RAIN_STYLE = {
     "max_hit": 30,            # 命中圈上限 px（半徑）→ z11 直徑 60px，手機拇指夠用
 }
 
+# ⚠️ 兜底陸地層樣式的單一來源（§2-7c）。用**字面 hex** 而非 var(--land)：本檔已有的教訓
+#   （RAIN_STYLE 註解）＝ Leaflet 把 color/fillColor 寫進 SVG 顯示屬性，`var()` 在部分
+#   瀏覽器不生效。顏色取 OSM standard 陸地色系（#f2efe9）——瓦片本身不隨主題變色，
+#   所以兜底陸地兩主題同色（與 §2-7a 海色同一理由）。
+LAND_STYLE = {
+    "fill": "#f2efe9",   # 陸地填色（OSM standard land 同色系）
+    "edge": "#d6ccbc",   # 海岸線描邊（比填色暗一點，低縮放才讀得出輪廓）
+    "weight": 1,         # 描邊粗細 px
+}
+
 
 def _rain_legend_item(color):
     """圖例小色塊的樣式：形狀要跟實際渲染一致（ring→空心、pin→三角）。"""
@@ -72,16 +83,19 @@ THEME_VARS = """
 :root{--red:#ef5350;--yellow:#ffb300;--green:#66bb6a;
 --bg:#14181c;--card:#1d242c;--line:#2f3944;--ink:#e4e8ec;--muted:#98a3af;
 --accent:#64b5f6;--chip-bg:#2a333e;--side-bg:#0f1317;--head-bg:#0c0f12;
---sea:#aad3df;  /* §2-7：缺瓦片處的底＝OSM standard 海洋色（OSM 瓦片不隨主題變色→dark 同色） */
+--sea:@SEA@;  /* §2-7：缺瓦片處的容器底色＝OSM standard 海洋色（OSM 瓦片不隨主題變色→dark 同色）；
+             值由 tiles.OCEAN_CSS 注入（下方 replace），不得在此寫死 hex——會與 tiles.OCEAN_RGB 漂移 */
 color-scheme:dark;}
 /* 與 site.py 主題變數同步（子集：本頁未用 risk-bg/table-head/ph-*）；
    site.py 改主題色時須一併更新此處（2026/9/16 曾遺漏淡黃舊版）。 */
 :root[data-theme="light"]{--red:#c62828;--yellow:#ef8f00;--green:#2e7d32;
 --bg:#f9f3eb;--card:#fcfaf7;--line:#d1b594;--ink:#3b2816;--muted:#76614c;
 --accent:#a35200;--chip-bg:#f2e4d4;--side-bg:#f5eee5;--head-bg:#342214;
---sea:#aad3df;
+--sea:@SEA@;
 color-scheme:light;}
 """
+# 海色只定義一次（單一事實來源＝tiles.OCEAN_RGB → OCEAN_CSS）：上面兩個 @SEA@ 在此一次代換
+THEME_VARS = THEME_VARS.replace("@SEA@", OCEAN_CSS)
 
 MAP_CSS = THEME_VARS + """
 *{box-sizing:border-box}
@@ -278,6 +292,10 @@ def build(OUT, fc, events, warnings=None):
         n = len([f for f in fc.get("features", []) if f["properties"].get("type") != "rain"])
         none_p = json.dumps('<p class="muted">' + t(lang, "map_none") + "</p>", ensure_ascii=False)
         rain_style = json.dumps(RAIN_STYLE, ensure_ascii=False)
+        land_style = json.dumps(LAND_STYLE, ensure_ascii=False)
+        # §2-7c：兜底陸地的 ring 從 `taiwan_geo.FALLBACK_LAND`（lon,lat）轉成 Leaflet 習慣的
+        # [lat,lng]——座標順序只在此處定一次，不得在 JS 再維護一套。
+        land_rings = json.dumps([[[lat, lon] for lon, lat in ring] for ring in FALLBACK_LAND])
         page = f"""<!DOCTYPE html>
 <html lang="{lang}">
 <head>
@@ -332,8 +350,23 @@ def build(OUT, fc, events, warnings=None):
   var map = L.map(mapEl, {{minZoom:{MAP_ZOOM}, maxZoom:11}});
   map.setView({json.dumps(MAP_CENTER)}, {MAP_ZOOM});
   map.setMaxBounds({json.dumps(MAP_MAX_BOUNDS)});
+
+  // §2-7c 兜底陸地層：**獨立 pane、zIndex 低於 tilePane（CSS 為 200）**——瓦片在的處永遠蓋住它，
+  // 只在瓦片缺口處露出。需要它的理由：errorTileUrl 那張佔位底是**全透明**的（§2-7a），
+  // 海色靠容器背景；若沒這層，缺瓦片處會連陸地一併消失（包括台灣自己）。
+  // 陆地範圍由 build 端從 tiles.zoom_bbox() 推導（taiwan_geo.FALLBACK_LAND）。
+  var LAND_STYLE = {land_style};
+  var LAND = {land_rings};
+  var landPane = map.createPane("land");
+  landPane.style.zIndex = 1;
+  for (var li = 0; li < LAND.length; li++) {{
+    L.polygon(LAND[li], {{pane: "land", interactive: false, stroke: true,
+      weight: LAND_STYLE.weight, color: LAND_STYLE.edge,
+      fillColor: LAND_STYLE.fill, fillOpacity: 1}}).addTo(map);
+  }}
+
   L.tileLayer("{assets}tiles/{{z}}/{{x}}_{{y}}.png",
-    {{minZoom:{MAP_ZOOM}, maxZoom:11, errorTileUrl:"{assets}tiles/{OCEAN_TILE_NAME}",
+    {{minZoom:{MAP_ZOOM}, maxZoom:11, errorTileUrl:"{assets}tiles/{BLANK_TILE_NAME}",
       attribution:"© OpenStreetMap contributors"}}).addTo(map);
 
   var RAIN_STYLE = {rain_style};

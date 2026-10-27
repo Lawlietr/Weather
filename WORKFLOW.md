@@ -3,7 +3,7 @@
 > **讀者**：接手本專案的 agent 或人工操作者。
 > **定位**：「怎麼做」的逐步流程。專案規範（檔案格式、CWA API 結構、設計原則）在
 > `AGENTS.md`，本文件不重複，只引用。
-> 最後更新：2026-10-26（① §2-7 底圖視野擴展：§3 ⑤ 瓦片檢查改為「查 `tiles.tile_list()` 現值＋驗 `_ocean.png`/`errorTileUrl`/`--sea`」；§6 測試站改為**在開發機部署**＋金鑰來源註記；§5.6 補兩機 `deploy.env` 實測狀態；② §12 斷鏈修復：§3 ② 改用 `build/check_links.py`（不再嵌 heredoc）。詳細變更史見 git history）
+> 最後更新：2026-10-27（§2-7c 兜底陸地層上線前測試：§3 ⑤ 改為 `_blank.png`（全透明佔位底，**不得改實色**）＋新增 `createPane("land")` 計數檢查。前次 2026-10-26：① §2-7 底圖視野擴展（§3 ⑤ 瓦片檢查改查 `tiles.tile_list()` 現值）；② §6 測試站改為**在開發機部署**；③ §12 斷鏈修復。詳細變更史見 git history）
 > 
 > **環境現況（2026/8/27）**：GitHub repo `Lawlietr/Weather` **已設為公開**（原私有）；`CWA_API_KEY`、
 > `CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID` 已存入 **GitHub Actions Secrets**。公開網站由
@@ -145,16 +145,18 @@ grep -rc "Authorization=" public/ | grep -v ":0" || echo "OK: 無 Authorization"
 grep -rc "$CWA_API_KEY" public/ build/cwa_cache.json | grep -v ":0" || echo "OK: 無金鑰值"
 # ④ 雙語言輸出確認（兩套根頁都存在、語言切換連結正確）
 ls public/index.html public/ja/index.html
-# ⑤ 地圖頁＋瓦片確認（/map/ 兩語言存在；瓦片應有兩類檔案：各層瓦片＋1 張 `_ocean.png`
-#    缺瓦片佔位底（§2-7，`tiles.OCEAN_TILE_NAME`）。瓦片數不是寫死的常數——per-zoom bbox 由
+# ⑤ 地圖頁＋瓦片確認（/map/ 兩語言存在；瓦片應有兩類檔案：各層瓦片＋1 張 `_blank.png`
+#    缺瓦片佔位底（§2-7a，`tiles.BLANK_TILE_NAME`；⚠️ 必須**全透明**——實色底會蓋住 §2-7c 兜底陸地層）。
+#    瓦片數不是寫死的常數——per-zoom bbox 由
 #    `tiles.zoom_bbox()` 從 `MAP_MAX_BOUNDS` 推導，改 bounds/VIEWPORT 會跟著變，所以先查現值再對數。
 #    大小應有分佈而非單一值——單一值＝疑似整批被擋（2026/9/2 實測 OSM 官方 server 回假 200＋6987B 封鎖頁））
 ls public/map/index.html public/ja/map/index.html
-build/.venv/bin/python -c "import sys;sys.path.insert(0,'build');import tiles;print('瓦片計畫:',len(tiles.tile_list()),'+1 張 _ocean.png')"
+build/.venv/bin/python -c "import sys;sys.path.insert(0,'build');import tiles;print('瓦片計畫:',len(tiles.tile_list()),'+1 張 _blank.png')"
 find public/assets/tiles -name '*.png' | wc -l   # 預期＝上行數＋1（2026/10/26 現值 2,201）
-ls -l public/assets/tiles/_ocean.png             # 應存在、約 570 bytes
+ls -l public/assets/tiles/_blank.png             # 應存在、約 334 bytes（全透明 RGBA）；舊 `_ocean.png` 不得殘留
 grep -c 'errorTileUrl' public/map/index.html     # 應為 1
-grep -o 'background:var(--sea)' public/map/index.html | head -1   # 應有（缺瓦片處＝海色，不是紙色）
+grep -c 'createPane("land")' public/map/index.html   # §2-7c 兜底陸地層：應為 1（pane zIndex 1 < tilePane 200）
+grep -o 'background:var(--sea)' public/map/index.html | head -1   # 應有（缺瓦片處＝海色，不是紙色；海色由 tiles.OCEAN_CSS 注入）
 find public/assets/tiles -name '*.png' -exec stat -c '%s' {} \; | sort -u | wc -l   # 預期 >50
 # ⑤ 風險狀態列（由 CWA 自動推導；應與 build 日誌「目前風險：xxx」一致）
 grep -o 'risk-bar risk-[a-z]*' public/index.html | head -1

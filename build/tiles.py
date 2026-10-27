@@ -16,8 +16,11 @@ OSM 官方 server（含 a./c. 副域）對本機 IP 回「假 200＋封鎖頁 PN
 若 OSM.de 日後也封，改抓其他 OSM 鏡像即可（URL 一處）。
 
 守則：
-- 單張失敗 → 跳過＋warning、不中斷 build（沿用 RSS/cbph 守則）；缺的瓦片顯示**海色底**
-  （`OCEAN_RGB`＋`_ocean.png`，前端由 `errorTileUrl` 兜底），不再露紙色。
+- 單張失敗 → 跳過＋warning、不中斷 build（沿用 RSS/cbph 守則）；缺的瓦片由前端
+  `errorTileUrl` 補一張**全透明**佔位底（`BLANK_TILE_NAME`），海色來自容器背景
+  （`--sea`＝`OCEAN_RGB`）、陸地來自 §2-7c 兜底陸地層（獨立 pane、zIndex 低於 tilePane）。
+  ⚠️ 佔位底不得改成實色：§2-7 曾用不透明的海色 `_ocean.png`，結果它蓋在兜底陸地層之上
+  → 缺瓦片處只剩一片海、連台灣自己都不見（2026-10-27 實測發現、已改）。
 - HTTP 狀態碼 ≠ 200 或 PNG signature 不對 → 視為失敗（防 OSM 式「假 200 封鎖頁」）。
 - 快取已存在（>100 位元組）→ 不重抓。
 - 自訂 User-Agent；地圖頁頁尾顯示「© OpenStreetMap contributors」（署名義務）。
@@ -50,9 +53,12 @@ MAP_MAX_BOUNDS = [[20.7, 118.3], [26.7, 124.3]]  # [[lat_min,lon_min],[lat_max,l
 #    溢出 2.27°，z8 需要更寬瓦片帶；高 zoom 視口（z11 1920px＝1.3°）比 bounds 窄 → 蓋 bounds 就夠。
 VIEWPORT_PX = (1920, 1200)  # 依最大常用桌面視口估算；2560px 以上 ultrawide 時 z8 最外側刻意露海色
 ELASTIC_DEG = 0.3           # maxBoundsViscosity=0 拖曳橡皮筋的暫時溢出裕度
-# 缺瓦片處的字底：OSM standard 海洋色（與瓦片自帶的海洋同色 → 出範圍看到的是「海」不是「沒畫完」）
+# 缺瓦片處：海色由 CSS 容器背景提供（與瓦片自帶的海洋同色 → 出範圍看到的是「海」不是「沒畫完」）；
+# errorTileUrl 那張佔位底則必須**全透明**，否則會蓋住 tilePane 下方的兜底陸地層（見上方守則）。
 OCEAN_RGB = (0xAA, 0xD3, 0xDF)
-OCEAN_TILE_NAME = "_ocean.png"
+OCEAN_CSS = "#%02x%02x%02x" % OCEAN_RGB     # CSS/JS 用的單一字串來源（免與 OCEAN_RGB 漂移）
+BLANK_TILE_NAME = "_blank.png"              # errorTileUrl：256×256 全透明 PNG
+LEGACY_OCEAN_TILE = "_ocean.png"            # 舊的不透明檔：要從 public/ 清掉，免上傳舊檔
 
 
 def _tile_xy(lon, lat, z):
@@ -96,17 +102,21 @@ def tile_list(zooms=ZOOMS):
     return out
 
 
-def ocean_png():
-    """256×256 實色海洋色 PNG（stdlib zlib 手寫、不依賴 Pillow）——`errorTileUrl` 的佔位底。"""
+def blank_png():
+    """256×256 **全透明** PNG（RGBA、stdlib zlib 手寫、不依賴 Pillow）——`errorTileUrl` 的佔位底。
+
+    透明而非實色：缺瓦片時要同時露出「容器背景的海色」與「tilePane 下方的兜底陸地層」（§2-7c）；
+    實色底會把兩者都蓋住。
+    """
     w = h = 256
-    raw = (b"\x00" + bytes(OCEAN_RGB) * w) * h
+    raw = (b"\x00" + bytes(4) * w) * h        # 每行：filter 0 + RGBA 全 0（alpha 0＝全透明）
 
     def chunk(tag, data):
         return (struct.pack(">I", len(data)) + tag + data
                 + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF))
 
     return (PNG_MAGIC
-            + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+            + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6, 0, 0, 0))   # 6＝RGBA
             + chunk(b"IDAT", zlib.compress(raw, 9))
             + chunk(b"IEND", b""))
 
@@ -140,7 +150,7 @@ def _fetch_one(z, x, y, cache):
 
 
 def fetch_tiles(cache_dir, out_dir, warnings=None):
-    """抓缺的瓦片 → 快取 → 全部複製到 out_dir/tiles/{z}/{x}_{y}.png，並寫出海色佔位瓦片。
+    """抓缺的瓦片 → 快取 → 全部複製到 out_dir/tiles/{z}/{x}_{y}.png，並寫出透明佔位瓦片。
 
     回傳 (total, fetched, cached, failed)。任何失敗不 raise（呼叫端仍應再包 try）。
     """
@@ -154,9 +164,12 @@ def fetch_tiles(cache_dir, out_dir, warnings=None):
             dest = out / "tiles" / str(z)
             dest.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, dest / f"{x}_{y}.png")
-    # §2-7a 缺瓦片佔位底（前端 errorTileUrl）：每次重寫，確保與 OCEAN_RGB 同步
+    # §2-7a/2-7c 缺瓦片佔位底（前端 errorTileUrl）：每次重寫；必須全透明（見 blank_png 註解）
     (out / "tiles").mkdir(parents=True, exist_ok=True)
-    (out / "tiles" / OCEAN_TILE_NAME).write_bytes(ocean_png())
+    (out / "tiles" / BLANK_TILE_NAME).write_bytes(blank_png())
+    legacy = out / "tiles" / LEGACY_OCEAN_TILE
+    if legacy.exists():
+        legacy.unlink()      # 舊的不透明海色檔：不清就會留在 public/ 被上傳
     fetched, failed = results.count("fetched"), results.count("failed")
     if failed and warnings is not None:
         warnings.append(f"map tiles: {failed} 張瓦片抓取失敗（該處顯示海色底）")
