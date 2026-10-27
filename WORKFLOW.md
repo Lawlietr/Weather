@@ -154,7 +154,7 @@ ls public/map/index.html public/ja/map/index.html
 build/.venv/bin/python -c "import sys;sys.path.insert(0,'build');import tiles;print('瓦片計畫:',len(tiles.tile_list()),'+1 張 _blank.png')"
 find public/assets/tiles -name '*.png' | wc -l   # 預期＝上行數＋1（2026/10/26 現值 2,201）
 ls -l public/assets/tiles/_blank.png             # 應存在、約 334 bytes（全透明 RGBA）；舊 `_ocean.png` 不得殘留
-grep -c 'errorTileUrl' public/map/index.html     # 應為 1
+grep -c 'errorTileUrl' public/map/index.html     # 應為 2（JS 一處＋上方註解一處；舊值 1 已過時）
 grep -c 'createPane("land")' public/map/index.html   # §2-7c 兜底陸地層：應為 1（pane zIndex 1 < tilePane 200）
 grep -o 'background:var(--sea)' public/map/index.html | head -1   # 應有（缺瓦片處＝海色，不是紙色；海色由 tiles.OCEAN_CSS 注入）
 find public/assets/tiles -name '*.png' -exec stat -c '%s' {} \; | sort -u | wc -l   # 預期 >50

@@ -113,7 +113,7 @@
 
 另外測 z11 拖到 maxBounds 四邊（東/西/南/北各拖到底）：全部零 404、海色佔位瓦片 0 張 → **可拖範圍內瓦片完整**。`.leaflet-container` 與 `#map` 實測 `rgb(170,211,223)`＝海色 ✓。截圖目視：右側出現石垣市/西表石垣國立公園（z8）與與那國町、沖繩縣界（z11）——不再是一片空白。
 
-⚠️ 副作用：`public/assets/tiles` 25 MB（部署變大，CF Pages／gh-pages 同步時留意上傳時間）。2560px 以上 ultrawide 在 z8 最外側會露海色（刻意取捨，避免 z8 瓦片再倍增）。
+⚠️ 副作用：`public/assets/tiles` 25 MB（部署變大，CF Pages／gh-pages 同步時留意上傳時間）。原註「2560px 以上 ultrawide 在 z8 最外側會露海色」——⚙ **2026-10-27 實測更正**：z8 瓦片實際涵蓋 **115.31–127.97°E**（`tiles.tile_list()` 實際網格，比 `zoom_bbox()` 的 115.73–126.87 更寬，因網格以 1.4° 對齊），所以 2560 視窗在 z8 **只有左側約 18px（≈0.1°）缺瓦片**（右側不缺），該處已由 §2-7c 兜底陸地層補上海岸線（見下方「兜底陸地層」節的 on/off 截圖差異 0.405%、差異全在 x 3–18）。真正會露出海色的主要場景是**瓦片抓取失敗**與**未來改 `ZOOMS`/`MAP_MAX_BOUNDS`**。
 
 ⚠️ 2026-10-27 更正（做 §2-7c 時才發現）：上述 `_ocean.png`（570 bytes、實色）已廢——不透明的佔位底住在 tilePane 裡，會**蓋住下方的兜底陸地層**。現行＝全透明 `_blank.png`，見下方「兜底陸地層」節。
 
@@ -139,6 +139,8 @@
 | 效能 | 3 次縮放（z8→z11）＋4 次拖曳：longtask **0 筆**；新增 path 僅 79 條（overlay 2,622 不變） |
 | 手機 390×844 | 瓦片 9 張、land path 79、console error 0 |
 | build／體積 | 2,200 瓦片全快取命中、零 warning；`_blank.png` 334 bytes RGBA alpha=0；`public/` 14.02 MiB／2,241 檔（**檔數不變**）、最大單檔 1.18 MiB（CF Pages 25 MiB 上限的 **4.7%**） |
+
+**測試站部署＋線上複驗（2026-10-27 15:11 build → `wea-testing`，帶 `--branch main`）**：`weatesting.avpclub.eu.org/map/` 與 `/ja/map/` 皆 land **79 paths**（pane z=1）、tile z=200、overlay 2,620 paths、容器底色 `rgb(170,211,223)`、land pane 內 `leaflet-interactive` **0**（不抢命中）；`_blank.png` HTTP 200／334 bytes／PNG colorType **6**（RGBA）；正常載入**零 4xx、零 console error**（load 2.0 s）。用 `ctx.route(/\/assets\/tiles\/\d+\//, r => r.abort())` 模擬瓦片全滅 → 20 張 errorTile 全走透明佔位底、台灣/澎湖/石垣/與那國 可見（截圖 `/tmp/live_tiles404.png`）。**對照正式站**（`weather.avpclub.eu.org/map/`）：land 0 paths、HTML 仍含 `_ocean.png` → 符合「DEV 尚未合併」的预期。
 
 **邊界與坑（改視野前必读）**
 - 兜底層只蓋 `zoom_bbox` 聯集 ⊕ 0.5° ＝ **(115.2, 19.6)~(127.4, 27.8)**。窗外不含：沖繩本島（127.7°E）、呂宋 main（18.5°N 以南）、東沙（116.7°E 已在窗内但未在 NE 10m land 出小島）。
