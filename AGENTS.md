@@ -243,7 +243,7 @@
 - **非即時**：首頁顯示「**產生時間**」（i18n key `updated`），由 `build/site.py` 以**固定 UTC+8** 產生（`datetime.now(timezone(timedelta(hours=8)))`）；**不可改回不帶時區的 `datetime.now()`**（Actions runner 是 UTC、會慢 8 小時）。「產生時間」＝網頁何時生成，**不等於氣象／災情資料已更新**。
 - **CWA 不支援 CORS**：氣象資料全部 build 時本機抓取寫入靜態 HTML；前端零外部請求、首頁零 JS。
 - **授權僅針對網站專案**（2026/8/28 修正）：網站程式 **GNU AGPLv3**（`LICENSE`）、網站內容（含 `llms.txt`／`llms-full.txt`）**CC BY-NC-SA 4.0**（`LICENSE-CONTENT`，不得商用）；**倉儲本身**（`build/` 腳本、`災情/`、`颱風/`、文件）**不以此兩授權釋出**；CWA 資料以官方條款為準。
-- **`/map/` 底圖三層堆疊（2026-10-27 定案，§2-7c）**：兜底陸地層（自訂 pane、`zIndex=1`）→ 離線瓦片 tilePane（`leaflet.css` 為 **200**，不是 Leaflet「預設 2」）→ 告警 polygon／雨量點 overlay（400）。由此推出三條不得破壞的條件：① `errorTileUrl` 的佔位底 `tiles/_blank.png` **必須全透明**（實色底會蓋住陸地層，§2-7a 舊版踩過）；② 陸地層 `interactive: false`（不得搶走 polygon 的命中）；③ 改 `tiles.MAP_MAX_BOUNDS`／`ZOOMS` 後**必須重跑 `python3 build/make_taiwan_geo.py`**——兜底層範圍由 `tiles.zoom_bbox()` 推導，不重跑就不會跟著長。
+- **`/map/` 底圖三層堆疊（2026-10-27 定案，§2-7c）**：兜底陸地層（自訂 pane、`zIndex=1`）→ 離線瓦片 tilePane（`leaflet.css` 為 **200**，不是 Leaflet「預設 2」）→ 告警 polygon／雨量點 overlay（400）。由此推出四條不得破壞的條件：① `errorTileUrl` 的佔位底 `tiles/_blank.png` **必須全透明**（實色底會蓋住陸地層，§2-7a 舊版踩過）；② 陸地層 `interactive: false`（不得搶走 polygon 的命中）；③ 改 `tiles.MAP_MAX_BOUNDS`／`ZOOMS` 後**必須重跑 `python3 build/make_taiwan_geo.py`**——兜底層範圍由 `tiles.zoom_bbox()` 推導，不重跑就不會跟著長；④ 站根**必須有 `public/.nojekyll`**（由 `site.py` 產）——gh-pages 是 branch 來源、GitHub 會跑 Jekyll，而 Jekyll **忽略檔名以 `_` 開頭的檔**，少了它鏡像上的 `_blank.png` 會 404（CF 正常，2026-10-27 實測）。
 - **LLM 友善產出**：build 必產 `llms.txt`＋`llms-full.txt`，canonical base URL `https://weather.avpclub.eu.org`（`build/site.py` 之 `SITE_BASE`）。
 
 ### 網站結構（實作細節 → `design/site.md`／`design/map.md`）

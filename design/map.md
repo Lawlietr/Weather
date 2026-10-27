@@ -117,7 +117,7 @@
 
 ⚠️ 2026-10-27 更正（做 §2-7c 時才發現）：上述 `_ocean.png`（570 bytes、實色）已廢——不透明的佔位底住在 tilePane 裡，會**蓋住下方的兜底陸地層**。現行＝全透明 `_blank.png`，見下方「兜底陸地層」節。
 
-## 兜底陸地層（§2-7c，✅ 2026-10-27 實作完成、在 DEV）
+## 兜底陸地層（§2-7c，✅ 2026-10-27 實作完成、已合併 `main` ＋ 上線正式站）
 
 **做什麼**：瓦片缺一張（build 時抓失敗、或 future 視野超出瓦片覆蓋）時，`errorTileUrl` 只補海色 → 該處**連陸地一起消失**，包括台灣自己。這層在 tilePane **之下**補上「可能露出瓦片缺口的範圍」內的陸地輪廓（Natural Earth 10m land，公有領域）。日常瀏覽時瓦片齊全 → 這層**完全不顯示**（實測見下），它的價值在兜底與 §2-4b（風圈畫到瓦片外仍有地理參照）。
 
@@ -141,6 +141,10 @@
 | build／體積 | 2,200 瓦片全快取命中、零 warning；`_blank.png` 334 bytes RGBA alpha=0；`public/` 14.02 MiB／2,241 檔（**檔數不變**）、最大單檔 1.18 MiB（CF Pages 25 MiB 上限的 **4.7%**） |
 
 **測試站部署＋線上複驗（2026-10-27 15:11 build → `wea-testing`，帶 `--branch main`）**：`weatesting.avpclub.eu.org/map/` 與 `/ja/map/` 皆 land **79 paths**（pane z=1）、tile z=200、overlay 2,620 paths、容器底色 `rgb(170,211,223)`、land pane 內 `leaflet-interactive` **0**（不搶命中）；`_blank.png` HTTP 200／334 bytes／PNG colorType **6**（RGBA）；正常載入**零 4xx、零 console error**（load 2.0 s）。用 `ctx.route(/\/assets\/tiles\/\d+\//, r => r.abort())` 模擬瓦片全滅 → 20 張 errorTile 全走透明佔位底、台灣/澎湖/石垣/與那國 可見（截圖 `/tmp/live_tiles404.png`）。**對照正式站**（`weather.avpclub.eu.org/map/`）：land 0 paths、HTML 仍含 `_ocean.png` → 符合「DEV 尚未合併」的预期。
+
+**正式站上線後複驗**（2026-10-27 15:49 透過 `build/deploy-cron.sh` 於部署機手動跑一次，`rc=0`；build：2,200 瓦片全快取命中、失敗 0、零 warning）：四个託管（`weather.avpclub.eu.org`／`.uk`／`.larch.dpdns.org`／`lawlietr.github.io/Weather`）＋ ja 頁皆 **land 79 paths（pane z=1）＜ tile z=200 ＜ overlay 2,632 paths**、容器底色海色、`_blank.png` HTTP 200／334 B／colorType 6、land pane 內命中 0、**零 4xx、零 console error**（load 1.0–2.1 s）。瓦片全滅情境（route abort）：三邊都看到 20 張 errorTile 全走透明佔位底、兜底 land 79 條可見。
+
+⚠️ **上線時發現並已修：GitHub Pages 鏡像會漏掉 `_` 開頭的資產**。實測 `_blank.png` 在鏡像上 404（同路徑在 CF 200），而 `map/index.html`、`assets/tiles/8/214_110.png`、`leaflet.css` 均 200，gh-pages tree 內唯一的 `_` 開頭檔就是它——gh-pages 屬於 Pages 的 **branch 來源**，GitHub 會跑 Jekyll，而 Jekyll 忽略 `_` 開頭的檔/資料夾（舊 `_ocean.png` 也一直在鏡像上 404，只是没人發現）。修法：`site.py` 於站根產空檔 **`public/.nojekyll`**（commit `94963c6`），重新部署後鏡像 `_blank.png` 已是 200、`.nojekyll` 200。`public/` 2,242 檔／14.03 MiB。
 
 **邊界與坑（改視野前必读）**
 - 兜底層只蓋 `zoom_bbox` 聯集 ⊕ 0.5° ＝ **(115.2, 19.6)~(127.4, 27.8)**。窗外不含：沖繩本島（127.7°E）、呂宋 main（18.5°N 以南）、東沙（116.7°E 已在窗内但未在 NE 10m land 出小島）。
