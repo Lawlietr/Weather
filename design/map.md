@@ -140,7 +140,7 @@
 | 手機 390×844 | 瓦片 9 張、land path 79、console error 0 |
 | build／體積 | 2,200 瓦片全快取命中、零 warning；`_blank.png` 334 bytes RGBA alpha=0；`public/` 14.02 MiB／2,241 檔（**檔數不變**）、最大單檔 1.18 MiB（CF Pages 25 MiB 上限的 **4.7%**） |
 
-**測試站部署＋線上複驗（2026-10-27 15:11 build → `wea-testing`，帶 `--branch main`）**：`weatesting.avpclub.eu.org/map/` 與 `/ja/map/` 皆 land **79 paths**（pane z=1）、tile z=200、overlay 2,620 paths、容器底色 `rgb(170,211,223)`、land pane 內 `leaflet-interactive` **0**（不抢命中）；`_blank.png` HTTP 200／334 bytes／PNG colorType **6**（RGBA）；正常載入**零 4xx、零 console error**（load 2.0 s）。用 `ctx.route(/\/assets\/tiles\/\d+\//, r => r.abort())` 模擬瓦片全滅 → 20 張 errorTile 全走透明佔位底、台灣/澎湖/石垣/與那國 可見（截圖 `/tmp/live_tiles404.png`）。**對照正式站**（`weather.avpclub.eu.org/map/`）：land 0 paths、HTML 仍含 `_ocean.png` → 符合「DEV 尚未合併」的预期。
+**測試站部署＋線上複驗（2026-10-27 15:11 build → `wea-testing`，帶 `--branch main`）**：`weatesting.avpclub.eu.org/map/` 與 `/ja/map/` 皆 land **79 paths**（pane z=1）、tile z=200、overlay 2,620 paths、容器底色 `rgb(170,211,223)`、land pane 內 `leaflet-interactive` **0**（不搶命中）；`_blank.png` HTTP 200／334 bytes／PNG colorType **6**（RGBA）；正常載入**零 4xx、零 console error**（load 2.0 s）。用 `ctx.route(/\/assets\/tiles\/\d+\//, r => r.abort())` 模擬瓦片全滅 → 20 張 errorTile 全走透明佔位底、台灣/澎湖/石垣/與那國 可見（截圖 `/tmp/live_tiles404.png`）。**對照正式站**（`weather.avpclub.eu.org/map/`）：land 0 paths、HTML 仍含 `_ocean.png` → 符合「DEV 尚未合併」的预期。
 
 **邊界與坑（改視野前必读）**
 - 兜底層只蓋 `zoom_bbox` 聯集 ⊕ 0.5° ＝ **(115.2, 19.6)~(127.4, 27.8)**。窗外不含：沖繩本島（127.7°E）、呂宋 main（18.5°N 以南）、東沙（116.7°E 已在窗内但未在 NE 10m land 出小島）。

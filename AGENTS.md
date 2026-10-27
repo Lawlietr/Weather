@@ -233,7 +233,7 @@
 - **文件分工**：見上方「參考索引」表（runbook → `WORKFLOW.md`；CWA 欄位 → `build/CWA_API.md`；手動路徑 → `MANUAL_UPDATE.md`；本地 cron → `LOCAL_CRON.md`；構想與待辦 → `TODO.md` 帳本＋`design/` 各功能設計檔）。
 - **⚠️ 更新災情前必看 `WORKFLOW.md` §8「Agent 效率規範」**：先查 repo 既有檔案／`ctx_search`／`cwa_cache.json`，只查會變的資料，同一資料一個 session 只查一次。
 - **build 入口**：`./build/build.sh` → `public/`（繁中）＋`public/ja/`（日文）、`llms.txt`＋`llms-full.txt`、cbph `build/map.geo.json`（中間檔、gitignored）、離線瓦片（來源陷阱 → `build/tiles.py` 頭註）。
-- **颱風軌跡圖台灣輪廓**：`build/taiwan_geo.py` 的 `ISLANDS`；產生器 `build/make_taiwan_geo.py` 重跑會**覆寫 `taiwan_geo.py`**（GeoJSON 快取 `build/_geo_cache_*.json` gitignored）。
+- **颱風軌跡圖台灣輪廓**：`build/taiwan_geo.py` 的 `ISLANDS`（手描、專供**事件頁 SVG**）；同檔另有 `FALLBACK_LAND`（Natural Earth 10m land、給 `/map/` 兜底陸地層，範圍由 `tiles.zoom_bbox()` 推導）——兩者不得混用（復用 `ISLANDS` 會被降精度、`FALLBACK_LAND` 有窗邊裁剪直線）。產生器 `build/make_taiwan_geo.py` 重跑會**覆寫 `taiwan_geo.py`**（⚠️ 改 `MAP_MAX_BOUNDS`/`ZOOMS` 後**必須重跑**，兜底層範圍才會跟著長）。GeoJSON 快取 `build/_geo_cache_*.json` gitignored（含 NE 10m land／admin_0 兩個大檔）。
 - **i18n**：預設 zh-Hant（根目錄）、ja（`public/ja/`）；UI 字串收斂在 `build/i18n.py`（**加新語言＝加一組 dict、不改模板**）；**內容不翻譯**——事件正文與 CWA 資料全語言保留中文原文。
 
 ### 不變項（改動前先確認）
@@ -243,12 +243,13 @@
 - **非即時**：首頁顯示「**產生時間**」（i18n key `updated`），由 `build/site.py` 以**固定 UTC+8** 產生（`datetime.now(timezone(timedelta(hours=8)))`）；**不可改回不帶時區的 `datetime.now()`**（Actions runner 是 UTC、會慢 8 小時）。「產生時間」＝網頁何時生成，**不等於氣象／災情資料已更新**。
 - **CWA 不支援 CORS**：氣象資料全部 build 時本機抓取寫入靜態 HTML；前端零外部請求、首頁零 JS。
 - **授權僅針對網站專案**（2026/8/28 修正）：網站程式 **GNU AGPLv3**（`LICENSE`）、網站內容（含 `llms.txt`／`llms-full.txt`）**CC BY-NC-SA 4.0**（`LICENSE-CONTENT`，不得商用）；**倉儲本身**（`build/` 腳本、`災情/`、`颱風/`、文件）**不以此兩授權釋出**；CWA 資料以官方條款為準。
+- **`/map/` 底圖三層堆疊（2026-10-27 定案，§2-7c）**：兜底陸地層（自訂 pane、`zIndex=1`）→ 離線瓦片 tilePane（`leaflet.css` 為 **200**，不是 Leaflet「預設 2」）→ 告警 polygon／雨量點 overlay（400）。由此推出三條不得破壞的條件：① `errorTileUrl` 的佔位底 `tiles/_blank.png` **必須全透明**（實色底會蓋住陸地層，§2-7a 舊版踩過）；② 陸地層 `interactive: false`（不得搶走 polygon 的命中）；③ 改 `tiles.MAP_MAX_BOUNDS`／`ZOOMS` 後**必須重跑 `python3 build/make_taiwan_geo.py`**——兜底層範圍由 `tiles.zoom_bbox()` 推導，不重跑就不會跟著長。
 - **LLM 友善產出**：build 必產 `llms.txt`＋`llms-full.txt`，canonical base URL `https://weather.avpclub.eu.org`（`build/site.py` 之 `SITE_BASE`）。
 
 ### 網站結構（實作細節 → `design/site.md`／`design/map.md`）
 
 - **首頁**：「目前風險狀態列」（由 CWA 目前生效中警報／特報自動推導，**與事件 `severity` 無關**）→ 氣象彙整（颱風/警報特報/雨量/風力；卡片排序、過時氣旋淘汰、特報 TTL 等 → `design/site.md`）→ 事件 Hero＋各縣市災情總覽（build 時跨事件依縣聚合、純靜態無資料庫）→ 過去事件封存。
-- **災防告警地圖 `/map/`**：cbph 4 類告警官方 polygon＋自託 Leaflet＋離線瓦片；資料全 build 時嵌入、**前端零外部請求**（細節與待辦 → `design/map.md`）。
+- **災防告警地圖 `/map/`**：cbph 4 類告警官方 polygon＋自託 Leaflet＋離線瓦片；資料全 build 時嵌入、**前端零外部請求**；瓦片之下另有一層**兜底陸地層**（缺瓦片時仍有陸地參考，見上方不變項）（細節與待辦 → `design/map.md`）。
 
 ### 部署（指令、域名與救回方式詳 `WORKFLOW.md` §6）
 
