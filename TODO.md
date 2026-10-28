@@ -2,13 +2,13 @@
 
 > 本檔只記**要做的事＋優先級＋狀態＋設計檔連結**；問題背景、定案細節、規格與陷阱在 `design/<功能>.md`（每功能領域一份）；流程 runbook（更新／build／驗證／部署）在 `WORKFLOW.md`。已完成項目的歷史細節看 git history。
 > 編號為傳統編號（§N），供既有引用對照；細節一律跟連結進 design/。
-> 最後更新：2026-10-28（**§2-4b 颱風軌跡／風圈層 ＋ 淡點改預設不勾選：已合併 `main` 並於 16:40 手動跑 `build/deploy-cron.sh` 上線正式站**（三 CF 域名＋GH 鏡像皆複驗：`rain_below=off`＋「（預設不顯示）」、panes 390/410/420、圖境外提示列在、console error 0、`_blank.png` 與 `.nojekyll` 皆 200）；衍生新待辦 **§2-7d：底圖再向東擴**——現在氣旋中心多在 124.3°E 以外，只有側欄提示列可見。前次 2026-10-27：**§2-7c 兜底陸地層已合併 `main` 並上線正式站**（四託管＋ja 皆複驗通過；順帶修 §2-7a 的 `errorTileUrl` 缺陷——實色海色底會蓋住陸地→改全透明 `_blank.png`）。**另發現並修好一個镜像缺陷**：GitHub Pages（branch 來源＝跑 Jekyll）會忽略 `_` 開頭資產→ `_blank.png`（與舊 `_ocean.png`）在 `lawlietr.github.io` 一直 404，現由 `site.py` 在站根產 `public/.nojekyll` 解決。兩項皆已上線。前次 2026-10-26：§12 斷鏈修復 129→0；拆檔歷史見 2026-09-16：§2→`design/map.md`、§5→`design/share-button.md`、§6→`design/class-halt.md`、§1→`design/rss.md`、§3/§4/§7/§9/§10/§11→`design/site.md`；本檔瘦身為帳本）
+> 最後更新：2026-10-28（**§2-4b 颱風軌跡／風圈層 ＋ 淡點改預設不勾選：已合併 `main` 並於 16:40 手動跑 `build/deploy-cron.sh` 上線正式站**（三 CF 域名＋GH 鏡像皆複驗：`rain_below=off`＋「（預設不顯示）」、panes 390/410/420、圖境外提示列在、console error 0、`_blank.png` 與 `.nojekyll` 皆 200）；衍生項 **§2-7d（底圖再向東擴）已擱置**（2026-10-28 使用者決定先不做；三方案與瓦片/體積實算已備、隨時可啟動）——期間氣旋中心多在 124.3°E 以外，只有側欄提示列可見。前次 2026-10-27：**§2-7c 兜底陸地層已合併 `main` 並上線正式站**（四託管＋ja 皆複驗通過；順帶修 §2-7a 的 `errorTileUrl` 缺陷——實色海色底會蓋住陸地→改全透明 `_blank.png`）。**另發現並修好一個镜像缺陷**：GitHub Pages（branch 來源＝跑 Jekyll）會忽略 `_` 開頭資產→ `_blank.png`（與舊 `_ocean.png`）在 `lawlietr.github.io` 一直 404，現由 `site.py` 在站根產 `public/.nojekyll` 解決。兩項皆已上線。前次 2026-10-26：§12 斷鏈修復 129→0；拆檔歷史見 2026-09-16：§2→`design/map.md`、§5→`design/share-button.md`、§6→`design/class-halt.md`、§1→`design/rss.md`、§3/§4/§7/§9/§10/§11→`design/site.md`；本檔瘦身為帳本）
 
 ## 待辦（依優先級排序）
 
 | # | 任務 | 優先級 | 狀態 | 設計檔 |
 |---|------|--------|------|--------|
-| §2-7d | 底圖**再向東擴** `MAP_MAX_BOUNDS`（§2-4b 上線後的衍生項：薔琵實例——10/21 23:30 發海警，10/22 11:00 中心 125.7°E、10/22 23:00 124.6°E 都在現行東界 124.3°E 以外 → **海警後前 10～14 小時地圖上看不到中心**） | 中高 | 待辦：**三方案與瓦片/體積實算已寫進設計檔**（建議 B 混合窗：z8/z9 寬、z11 守現行窗 → 只 +1.2 MiB），**需你選 A/B/C ＋ 東界度數** | [design/map.md](design/map.md)「§2-7d」 |
+| §2-7d | 底圖**再向東擴** `MAP_MAX_BOUNDS`（§2-4b 上線後的衍生項：薔琵實例——10/21 23:30 發海警，10/22 11:00 中心 125.7°E、10/22 23:00 124.6°E 都在現行東界 124.3°E 以外 → **海警後前 10～14 小時地圖上看不到中心**） | — | **擱置**（2026-10-28 使用者決定先不做；三方案 A/B/C 與瓦片/體積實算已寫好，隨時可啟動） | [design/map.md](design/map.md)「§2-7d」 |
 | §2-4c | 特報陸地紅區層（選項 A：自託縣界 GeoJSON；**動工前需確認縣界資料源**） | 高 | 待辦 | [design/map.md](design/map.md) |
 | §2-2b | 災情新聞點層（人工/agent 餵料，gazetteer 已備） | 中 | 暫緩（2026/9/1 定） | [design/map.md](design/map.md) |
 | §2-6 | /map/ v2（data.json 公開＋deep link＋時間線快照；**快照需先定案**存哪裡、留幾份） | 中 | 待辦 | [design/map.md](design/map.md) |
