@@ -171,11 +171,14 @@ W-C0034-005（已在 `cwa.load_snapshot()` 的 `typhoons` 內，**不额外打 A
   `fix_obs`（過往觀測點）、`center_obs`（最新觀測點）、`wind_obs`（最新點的 15 m/s 風圈）、
   `track_fc`（虛線，從最新觀測點接出）、`center_fc`（預報點，+6h…+120h）、`wind_fc`（最遠預報點的
   15 m/s 風圈）、`radius70`（最遠預報點的 70% 暴風半徑）。空心預報點＝「未來」，與事件頁 SVG 同一語意。
-- **風圈不是正圓**：實測 `Circle15ms.QuadrantRadii.Radius[]` 有 NE/SE/SW/NW **四個不等值**（例：煙花
-  2026-10-28 14:00 ＝ NE 180／SE 200／SW 160／NW 180 km）。`cwa._wind_ring()` 沿方位角 32 點線性插值
-  成非正圓環；等圓柱近似（1° 緯≈110.574 km、1° 經≈111.320·cos φ），風圈 ≤ 500 km 誤差可忽略，
-  **不引入投影庫依賴**。預報 Fix 只有單值 `Radius`→ 正圓。TD 階段風圈整欄缺→ 跳過該環（不炸）。
-  ⚠️ `_circles()` 對非 dict 元素要跳過（CWA 欄位形態不穩，實測觸發過 `AttributeError`）。
+- **風圈不是正圓**：實測 `Circle15ms.QuadrantRadii.Radius[]` 的元素形態是 **`{"value","dir"}`**（不是
+  `Quadrant`/`Radius`），且**四象限常常不相等**（煙花 2026-10-27 14:00 ＝ NE 180／SE 200／SW 160／
+  NW 180 km；10-28 14:00 四值全等 180 → 該刻畫出來就是正圓，插值結果一致）。`cwa._wind_ring()`
+  沿方位角 32 點線性插值成非正圓環；等圓柱近似（1° 緯≈110.574 km、1° 經≈111.320·cos φ），風圈
+  ≤ 500 km 誤差可忽略，**不引入投影庫依賴**。預報 Fix 只有單值 `Radius`→ 正圓。TD 階段風圈整欄缺
+  → 跳過該環（不炸）。⚠️ `_circles()` 與 `_fix_props()`（`MovingPrediction` 是多語 list）都要對形態異常
+  免疫（實測觸發過 `AttributeError`）。另 note：`Radius70PercentProbability` **實為公里半徑、不是百分比**
+  （煙花 +72h：r15 200 km／R70P 210）——欄位表已写進 `build/CWA_API.md`。
 - **風圈只畫兩處**（最新觀測點＋最遠預報點），不是每個預報點都畫：9 個點×2 組環會糊成一團。
   中間點的半徑數值放進 `properties`，**點下去詳情卡就顯示**（含 `+24 小時` 時距標籤、四象限半徑、
   陣風、氣壓、`MovingPrediction` 原文）。70% 暴風半徑是 AGENTS 的建檔判準（「進入 70% 暴風半徑」），
@@ -189,6 +192,11 @@ W-C0034-005（已在 `cwa.load_snapshot()` 的 `typhoons` 內，**不额外打 A
      時必伴隨超閾值雨量點（半徑可到 22 px），舊順序會讓這些點把軌跡線與風圈壓在下面——最需要看
      路徑的時候最看不清。代價只有「正正點在風中心或 3 px 細線上」時改拿到氣旋卡。淡點仍在最下、
      不搶 polygon 點擊（§2-4a 定案不變）。
+     ⚠️ **疊放現在靠獨立 pane 的 zIndex 固定，不靠 addLayer 先後**（2026-10-28）：淡點 pane 390 <
+     告警 polygon（overlayPane 400）< 超閾值點 pane 410 < 氣旋層 pane 420（瓦片 200、兜底陸地 1 不動）。
+     理由：開關圖層＝removeLayer/addTo，後加回來的會被排到同一個 overlayPane 最後面——淡點改為
+     預設關閉後，使用者勾開時必定排在其他層之後，舊寫法會讓 1,300 個淡點命中圈搶走 polygon 點擊
+     （實測舊版「關掉再打開」就有這個順序跑位，只是沒人碰過）。**新層要畫在同一 pane 並傳 `pane:` 選項**。
   4. 軌跡線帶 7 px 白襯（`casing`）：3 px 細線畫在 cbph polygon（fillOpacity .35）上會被填色吃掉。
 - **詳情卡與事件檔連動**：`repo_links` 對氣旋圖元改用**氣旋名／國際命名比對事件檔 `event:` 標題**
   （例：「颱風薔琵（CHAMPI）— 2026年第33號」）——氣旋沒有縣市欄（影響範圍是動態風圈不是縣市清單），
@@ -243,6 +251,10 @@ W-C0034-005（已在 `cwa.load_snapshot()` 的 `typhoons` 內，**不额外打 A
 - **淡色底點＝未超閾值測站全部上圖**：`cwa.RAIN_BELOW`＝`#5b6b7b` r4、`RAIN_STYLE.below_fill`
   0.45、面板另有獨立開關。理由：CWA 全網絡 1314 站、淡雨日超閾值 0 站 → 舊版地圖一顆點都沒有，
   使用者無法分辨「查過但沒超標」與「壞了」（呼應「空圖＝查過」原則的可驗證底）。
+  **但 2026-10-28 使用者定案：該開關預設不勾選**（平時 1,300+ 個淡點把底圖弄亂）——淡點仍進
+  `map.geo.json`（需要時勾開就好、不重新 build），但預設不上圖；行尾的站數（1327）就是
+  「查過但沒超標」的證據，不拿淡點當下線。JS 初始狀態跟隨 checkbox 的 `checked`（`addLayer()`），
+  預設值只寫在 HTML 一處。
 - **透明命中圈保留**（超閾值 `RAIN_STYLE.hit_min` 14px、淡點 `below_hit` 11px）——現行 r5 小點
   在手機上點不中；2026-10-26 使用者「先留，影響操作體驗再改」。
 
@@ -250,8 +262,11 @@ W-C0034-005（已在 `cwa.load_snapshot()` 的 `typhoons` 內，**不额外打 A
 1. **點色不得撞 cbph 圖層官方色**：第一版 L1 用 `#7c3aed` ＝ cbph `mountainstorms`（山區暴雨
    警示 polygon）**完全同色**；L3 也不能用與 `tywinds` `#ef4444` 相近的亮紅（改 `#be123c`
    以明度拉開）。四色見 `cbph.TYPES`，改點色前先對表。
-2. **疊放順序是刻意的**（JS `pointPolys()`/`polyPolys()` 分層）：淡點最下 → 告警 polygon →
-   超閾值點最上。否則 1314 個淡點的透明命中圈會蓋住 polygon，點 polygon 變成點測站。
+2. **疊放順序是刻意的**：淡點最下 → 告警 polygon → 超閾值點 → 氣旋層。否則 1314 個淡點的透明
+   命中圈會蓋住 polygon，點 polygon 變成點測站。⚠️ 2026-10-28 起**用獨立 pane 的 zIndex 固定**
+   （淡點 390 < overlayPane 400 < 超閾值點 410 < 氣旋 420），不再是 `pointPolys()`/`polyPolys()`
+   的 addLayer 先後：開關圖層是 removeLayer/addTo，後加回來的會排到同 pane 最後面 → 舊寫法下
+   「淡點預設關閉 → 使用者勾開」會把淡點拱到最上面（舊版關掉再打開也同一錯，只是沒人碰過）。
 3. **HTML 屬性少一個引號會「吃掉」面板文字**：swatch 的 `style="…#fff` 沒關引號 → 瀏覽器一路吞
    到下一個 `"`，層名整個消失（面板只剩色塊＋計數）。build log、`check_links.py` 都不報，
    **只有真瀏覽器截圖看得到**。

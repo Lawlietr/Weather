@@ -369,6 +369,8 @@ def _fix_props(fix, is_fc):
     """單個 Fix（分析或預報）→ 詳情卡用的欄位（數值在 build 端算好，前端只渲染）。"""
     move_pred = ""
     for mp in (fix.get("MovingPrediction") or []):
+        if not isinstance(mp, dict):   # 同 _circles：CWA 多語欄位形態不穩 → 跳過不炸
+            continue
         if mp.get("lang", "").startswith("zh"):
             move_pred = mp.get("value", "")
             break
@@ -385,7 +387,7 @@ def _fix_props(fix, is_fc):
         "move_pred": move_pred,
         "r15": r15,
         "r25": r25,
-        "r70": _num(fix.get("Radius70PercentProbability")),
+        "r70": _num(fix.get("Radius70PercentProbability")),  # ⚠️ 實測為公里半徑，非百分比
         "cat": _classify(_num(fix.get("MaxWindSpeed"))) or "",
     }
     if q15:
@@ -487,6 +489,8 @@ def typhoon_map_features(typhoons):
             if ring:
                 add({"type": "Polygon", "coordinates": [ring]}, "wind_fc",
                     TYPHOON_COLORS["wind15"], dict(_fix_props(far, True), latest=True))
+            # ⚠️ 欄位名叫 `Radius70PercentProbability`，但實測是**公里半徑**不是百分比（煙花
+            # +72h: r15=200 km / R70P=210；+120h: r15=220 / R70P=410——機率圓必然大於現行暴風圈）。
             r70 = _num(far.get("Radius70PercentProbability"))
             ring70 = _wind_ring(*pt(far), r70)
             if ring70:

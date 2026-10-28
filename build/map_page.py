@@ -161,6 +161,7 @@ padding:8px 10px;margin:8px 0;font-size:.85rem;line-height:1.6}
 .map-ty-outside .muted{font-size:.8rem}
 .rain-pin{background:transparent;border:none}   /* pin 形狀的 divIcon：去掉 Leaflet 預設白框 */
 .layer .cnt{margin-left:auto;color:var(--muted);font-size:.85rem}
+.layer .offhint{color:var(--muted);font-size:.78rem;font-weight:400}
 .map-detail{font-size:.9rem}
 .map-detail .dl{margin:8px 0}
 .map-detail .dt{color:var(--muted);font-size:.8rem;margin-bottom:1px}
@@ -381,12 +382,15 @@ def build(OUT, fc, events, warnings=None):
                 items.append(f'<span><i style="{_rain_legend_item(color)}"></i>{t(lang, lv_key)}</span>')
             layers_html += ('<div class="rain-legend">' + "<br>".join(items) + '</div>')
         if rain_below:
-            # 第二個開關：未超閾值的淡色底點（2026-10-26 使用者定案全部上圖；嫌亂可自行關掉）
+            # 第二個開關：未超閾值的淡色底點。**預設不勾選**（2026-10-28 使用者定案：平時
+            # 1,300+ 個淡點把底圖弄亂，要看全站網絡時自己勾開）。超閾值點仍預設開；
+            # 「看不到淡點」不等於「查過但沒資料」——行尾的站數與圖境外提示列就是那個證據。
             layers_html += (
-                f'<label class="layer"><input type="checkbox" data-type="rain_below" checked>'
+                f'<label class="layer"><input type="checkbox" data-type="rain_below">'
                 f'<span class="swatch round" style="background:{_RB["color"]};'
                 f'opacity:{RAIN_STYLE["below_fill"]:.2f};border:1px solid {RAIN_STYLE["stroke"]}">'
                 f'</span>{t(lang, "map_layer_rain_below")}'
+                f'<span class="offhint">{t(lang, "map_rain_below_off")}</span>'
                 f'<span class="cnt">{len(rain_below)}</span></label>')
 
         warn_html = ""
@@ -523,6 +527,18 @@ def build(OUT, fc, events, warnings=None):
       fillColor: LAND_STYLE.fill, fillOpacity: 1}}).addTo(map);
   }}
 
+  // 叠放順序改用「獨立 pane 的 zIndex」固定，而不是 addLayer 的先後順序（2026-10-28 修）。
+  // 理由：開關圖層就是 removeLayer/addTo，後加回來的會被排到同一個 overlayPane 的最後面。
+  // 未超閾值淡點現在**預設關閉** → 使用者勾開時必定在其他層之後加入，會被排到告警 polygon／
+  // 超閾值點／氣旋層之上，1,300 個透明命中圈就此抢走 polygon 的點擊（§2-4a 那條鐵則會被
+  // 「開關」這個動作破壞；舊版把淡點關掉再打開也有同一問題，只是沒人碰过）。
+  // 固定後：淡點 390 < 告警 polygon（overlayPane 400）< 超閾值點 410 < 氣旋層 420；
+  // 瓦片 200、兜底陆地 1（上方 landPane）不受影響。
+  var BELOW_PANE = "rainbelow", RAIN_PANE = "raintop", TYP_PANE = "typhoon";
+  map.createPane(BELOW_PANE).style.zIndex = 390;
+  map.createPane(RAIN_PANE).style.zIndex = 410;
+  map.createPane(TYP_PANE).style.zIndex = 420;
+
   L.tileLayer("{assets}tiles/{{z}}/{{x}}_{{y}}.png",
     {{minZoom:{MAP_ZOOM}, maxZoom:11, errorTileUrl:"{assets}tiles/{BLANK_TILE_NAME}",
       attribution:"© OpenStreetMap contributors"}}).addTo(map);
@@ -542,13 +558,13 @@ def build(OUT, fc, events, warnings=None):
     return Math.min(Math.max(base, 6) * Math.pow(RAIN_STYLE.hit_zoom_factor, k), RAIN_STYLE.max_hit);
   }}
 
-  function rainMarker(ll, p) {{
+  function rainMarker(ll, p, paneName) {{
     // 顔色/半徑來自 build 端（超閾值＝cwa.RAIN_LEVELS、未超閾值＝cwa.RAIN_BELOW，
     // 皆寫進 properties.color/radius）；形狀/描邊來自 RAIN_STYLE（同一來源）
     var r = dotRadius(p.radius || 6);
     if (p.below) {{   // 淡色底點：小、低透明度、細白環（不與超閾值點搶視線）
-      return L.circleMarker(ll, {{radius: r, color: RAIN_STYLE.stroke, weight: RAIN_STYLE.below_weight,
-        fillColor: p.color, fillOpacity: RAIN_STYLE.below_fill}});
+      return L.circleMarker(ll, {{pane: paneName, radius: r, color: RAIN_STYLE.stroke,
+        weight: RAIN_STYLE.below_weight, fillColor: p.color, fillOpacity: RAIN_STYLE.below_fill}});
     }}
     if (RAIN_STYLE.shape === "pin") {{
       var s = Math.round(r * 2.6);
@@ -557,16 +573,16 @@ def build(OUT, fc, events, warnings=None):
         + 'C20.4 5.4 16.6 1.6 12 1.6z" fill="' + p.color + '" stroke="' + RAIN_STYLE.stroke
         + '" stroke-width="' + RAIN_STYLE.weight + '"/>'
         + '<circle cx="12" cy="9.8" r="2.6" fill="#fff"/></svg>';
-      return L.marker(ll, {{icon: L.divIcon({{className: "rain-pin", html: html,
+      return L.marker(ll, {{pane: paneName, icon: L.divIcon({{className: "rain-pin", html: html,
         iconSize: [s, s], iconAnchor: [Math.round(s / 2), Math.round(s * 0.78)]}})}});
     }}
     if (RAIN_STYLE.shape === "ring") {{
-      return L.circleMarker(ll, {{radius: r, color: p.color,
+      return L.circleMarker(ll, {{pane: paneName, radius: r, color: p.color,
         weight: Math.max(2, Math.round(r * 0.55)), fillColor: RAIN_STYLE.stroke,
         fillOpacity: 1, opacity: 1}});
     }}
-    return L.circleMarker(ll, {{radius: r, color: RAIN_STYLE.stroke, weight: RAIN_STYLE.weight,
-      fillColor: p.color, fillOpacity: RAIN_STYLE.fill}});
+    return L.circleMarker(ll, {{pane: paneName, radius: r, color: RAIN_STYLE.stroke,
+      weight: RAIN_STYLE.weight, fillColor: p.color, fillOpacity: RAIN_STYLE.fill}});
   }}
 
   var byType = {{}};
@@ -575,12 +591,12 @@ def build(OUT, fc, events, warnings=None):
   }});
   var layerByType = {{}};
 
-  function pointPolys(list) {{
+  function pointPolys(list, paneName) {{
     var out = [];
     list.forEach(function(f){{
       var p = f.properties;
       var ll = [f.geometry.coordinates[1], f.geometry.coordinates[0]];
-      var mk = rainMarker(ll, p);
+      var mk = rainMarker(ll, p, paneName);
       ZOOM_ITEMS.push({{ m: mk, base: p.radius || 6, hit: false }});
       var tip = p.name + " " + (p.township || "") + "　" + LABELS.rain_p1hr + " " + p.p1hr + "mm";
       mk.bindTooltip(tip, {{sticky: true}});
@@ -588,7 +604,7 @@ def build(OUT, fc, events, warnings=None):
       out.push(mk);
       // 手機可點度：小點的命中區就是那個半徑 → 加一個透明大命中圈（同 layer、一起開關）
       var hitBase = Math.max(p.below ? RAIN_STYLE.below_hit : RAIN_STYLE.hit_min, (p.radius || 6) + 4);
-      var hit = L.circleMarker(ll, {{radius: hitRadius(hitBase),
+      var hit = L.circleMarker(ll, {{pane: paneName, radius: hitRadius(hitBase),
         stroke: false, fillColor: "#000", fillOpacity: 0.01, interactive: true}});
       ZOOM_ITEMS.push({{ m: hit, base: hitBase, hit: true }});
       hit.bindTooltip(tip, {{sticky: true}});
@@ -619,7 +635,7 @@ def build(OUT, fc, events, warnings=None):
   // §2-4b 氣旋層：一個開關控全部圖元（byType["typhoon"]），kind 决定怎麼畫。
   // 風圈 polygon 與線白襯 interactive:false —— 否則一個半徑 400 km 的圈會吃掉整片海洋上的
   // 點與告警 polygon 的點擊（§2-4a 淡點命中圈的同一教訓）。可點的是線與中心點。
-  function typhoonLayer(list) {{
+  function typhoonLayer(list, paneName) {{
     var out = [];
     // 同一層內也要定叠放順序：線（含白襯）→ 風圈 → 點。後進 DOM 者在上層、點擊優先贏，
     // 否則預報線在交會處會搶走最新中心點的點擊（2026-10-28 真 Chromium 實測踩到：
@@ -634,17 +650,18 @@ def build(OUT, fc, events, warnings=None):
       if (p.fc_hour) tip += " " + LABELS.ty_fc_tag.replace("{{h}}", p.fc_hour);
       if (g.type === "LineString") {{
         var lls = g.coordinates.map(function(c){{ return [c[1], c[0]]; }});
-        out.push(L.polyline(lls, {{color: "#fff", weight: TYPHOON_STYLE.casing,
+        out.push(L.polyline(lls, {{pane: paneName, color: "#fff", weight: TYPHOON_STYLE.casing,
           opacity: TYPHOON_STYLE.casing_opacity, interactive: false}}));
-        var ln = L.polyline(lls, {{color: p.color, weight: TYPHOON_STYLE.weight, opacity: 1,
-          dashArray: kind === "track_fc" ? TYPHOON_STYLE.fc_dash : null}});
+        var ln = L.polyline(lls, {{pane: paneName, color: p.color, weight: TYPHOON_STYLE.weight,
+          opacity: 1, dashArray: kind === "track_fc" ? TYPHOON_STYLE.fc_dash : null}});
         ln.bindTooltip(tip, {{sticky: true}});
         ln.on("click", function(){{ showTyphoonDetail(f); }});
         out.push(ln);
       }} else if (g.type === "Polygon") {{
         (g.coordinates || []).forEach(function(ring){{
           out.push(L.polygon(ring.map(function(c){{ return [c[1], c[0]]; }}),
-            {{color: p.color, weight: TYPHOON_STYLE.ring_weight, dashArray: TYPHOON_STYLE.ring_dash,
+            {{pane: paneName, color: p.color, weight: TYPHOON_STYLE.ring_weight,
+              dashArray: TYPHOON_STYLE.ring_dash,
               fillColor: p.color, fillOpacity: TYPHOON_STYLE.ring_fill,
               interactive: false, smoothFactor: 1}}));
         }});
@@ -653,15 +670,15 @@ def build(OUT, fc, events, warnings=None):
         var hollow = kind === "center_fc";   // 空心＝未來（與事件頁 SVG 同一語意）
         var r = kind === "center_obs" ? TYPHOON_STYLE.dot_obs_latest
           : kind === "center_fc" ? TYPHOON_STYLE.dot_fc : TYPHOON_STYLE.dot_obs;
-        var m = L.circleMarker(ll, {{radius: r, color: p.color, weight: TYPHOON_STYLE.halo,
-          fillColor: hollow ? "#fff" : p.color, fillOpacity: 1}});
+        var m = L.circleMarker(ll, {{pane: paneName, radius: r, color: p.color,
+          weight: TYPHOON_STYLE.halo, fillColor: hollow ? "#fff" : p.color, fillOpacity: 1}});
         m.bindTooltip(tip, {{sticky: true}});
         m.on("click", function(){{ showTyphoonDetail(f); }});
         out.push(m);
         // 手機可點度：中心點只有 8px → 加透明命中圈（風圈 polygon 不互動，不會互相搶）
         if (kind !== "fix_obs") {{
-          var hit = L.circleMarker(ll, {{radius: r + TYPHOON_STYLE.hit_pad, stroke: false,
-            fillColor: "#000", fillOpacity: 0.01, interactive: true}});
+          var hit = L.circleMarker(ll, {{pane: paneName, radius: r + TYPHOON_STYLE.hit_pad,
+            stroke: false, fillColor: "#000", fillOpacity: 0.01, interactive: true}});
           hit.bindTooltip(tip, {{sticky: true}});
           hit.on("click", function(){{ showTyphoonDetail(f); }});
           out.push(hit);
@@ -677,18 +694,27 @@ def build(OUT, fc, events, warnings=None):
   var rainAll = byType["rain"] || [];
   var rainBelow = rainAll.filter(function(f){{ return f.properties.below; }});
   var rainTop = rainAll.filter(function(f){{ return !f.properties.below; }});
-  if (rainBelow.length) layerByType.rain_below = L.layerGroup(pointPolys(rainBelow)).addTo(map);
+
+  // 初始顯示與否完全跟隨 checkbox 的 `checked`（JS 不重複寫一份預設值 → 日後要改預設只改 HTML）。
+  function addLayer(type, lg) {{
+    layerByType[type] = lg;
+    var cb = document.querySelector('.layer input[data-type="' + type + '"]');
+    if (!cb || cb.checked) lg.addTo(map);
+    return lg;
+  }}
+
+  if (rainBelow.length) addLayer("rain_below", L.layerGroup(pointPolys(rainBelow, BELOW_PANE)));
   Object.keys(byType).forEach(function(type){{
     if (type === "rain" || type === "typhoon") return;
-    layerByType[type] = L.layerGroup(polyPolys(byType[type])).addTo(map);
+    addLayer(type, L.layerGroup(polyPolys(byType[type])));
   }});
-  if (rainTop.length) layerByType.rain = L.layerGroup(pointPolys(rainTop)).addTo(map);
+  if (rainTop.length) addLayer("rain", L.layerGroup(pointPolys(rainTop, RAIN_PANE)));
   // 氣旋層放最上（2026-10-28 復驗後改判）：真氣旋靠近時必然伴隨超閾值雨量點（半徑可到 22px），
   // 舊順序（氣旋在點下）會讓這些點把軌跡線與風圈壓在下面——最需要看路徑的時候最看不清。
   // 代價極小：氣旋層只有細線（3px）與中心命中圈可互動（風圈 polygon 與線白襯皆 interactive:false），
   // 所以只有「正正點在風中心或細線上」時改拿到氣旋卡——那裡本來就該顯示氣旋。
   var tyAll = byType["typhoon"] || [];
-  if (tyAll.length) layerByType.typhoon = L.layerGroup(typhoonLayer(tyAll)).addTo(map);
+  if (tyAll.length) addLayer("typhoon", L.layerGroup(typhoonLayer(tyAll, TYP_PANE)));
 
   // 半徑隨縮放：circleMarker 的 radius 是螢幕 px，不更新的話拉進兩級後點與命中圈都還是
   // 同樣小（2026-10-26 使用者實測反應「地圖拉進後圈還是一樣小、點擊不方便」）。

@@ -33,6 +33,18 @@
   - 結構是 `records.TropicalCyclones.TropicalCyclone[]`（**多一層**，與官方文件不同）
   - 移動欄位是 `MovingSpeed` / `MovingDirection`
   - 風圈 `Circle15ms` / `Circle25ms` = `{Radius: str}`（字串）
+- **實測補充（2026-10-28，§2-4b 風圈層動工時從 `build/cwa_cache.json` 直接 dump）**：
+  - **分析 Fix** 的風圈多一組 `QuadrantRadii.Radius[]`，元素是 **`{"value": "180", "dir": "NE"}`**
+    （不是 `Quadrant`/`Radius`！），四象限常常不相等的（煙花 10-27 14:00＝NE180/SE200/SW160/NW180；
+    10-28 14:00 則四值全等 180 → 畫出來就是正圓）→ 風圈不能當成單一半徑畫正圓。
+  - **預報 Fix** 只有單值 `Circle15ms.Radius`（無象限）；熱帶性低氣壓階段兩組風圈整欄缺。
+  - ⚠️ **`Radius70PercentProbability` 是公里半徑、不是百分比**（煙花 +72h：r15＝200 km、R70P＝210；
+    +120h：r15＝220、R70P＝410——70% 機率圓必然大於現行暴風圈，數量級可直接辨認）。
+  - `MovingPrediction` 是**多語 list** `[{"value": "以每小時…", "lang": "zh-hant"}, {…en-us}]`，
+    不是字串（解析時要 `isinstance` 防護，同 `_circles`）。
+  - 本專案快取（`cwa_cache.json`）已把資料扁平化成 `data.typhoons[]`，每筆直接是
+    `{name, intl, no, year, analysis[], forecast[]}`（不復刻 records 外殼）；預報點用
+    `InitialTime`/`ForecastHour`，分析點用 `DateTime`。
 
 ### W-C0034-001 海上颱風警報
 

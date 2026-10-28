@@ -2,7 +2,7 @@
 
 > 本檔只記**要做的事＋優先級＋狀態＋設計檔連結**；問題背景、定案細節、規格與陷阱在 `design/<功能>.md`（每功能領域一份）；流程 runbook（更新／build／驗證／部署）在 `WORKFLOW.md`。已完成項目的歷史細節看 git history。
 > 編號為傳統編號（§N），供既有引用對照；細節一律跟連結進 design/。
-> 最後更新：2026-10-28（**§2-4b 颱風軌跡／風圈層已在 `DEV` 完成並用真 Chromium 驗過，尚未合併 `main`、未上線**；衍生新待辦 **§2-7d：底圖再向東擴**——現在氣旋中心多在 124.3°E 以外，只有側欄提示列可見。前次 2026-10-27：**§2-7c 兜底陸地層已合併 `main` 並上線正式站**（四託管＋ja 皆複驗通過；順帶修 §2-7a 的 `errorTileUrl` 缺陷——實色海色底會蓋住陸地→改全透明 `_blank.png`）。**另發現並修好一個镜像缺陷**：GitHub Pages（branch 來源＝跑 Jekyll）會忽略 `_` 開頭資產→ `_blank.png`（與舊 `_ocean.png`）在 `lawlietr.github.io` 一直 404，現由 `site.py` 在站根產 `public/.nojekyll` 解決。兩項皆已上線。前次 2026-10-26：§12 斷鏈修復 129→0；拆檔歷史見 2026-09-16：§2→`design/map.md`、§5→`design/share-button.md`、§6→`design/class-halt.md`、§1→`design/rss.md`、§3/§4/§7/§9/§10/§11→`design/site.md`；本檔瘦身為帳本）
+> 最後更新：2026-10-28（**§2-4b 颱風軌跡／風圈層 ＋ 淡點改預設不勾選，兩者皆只在 `DEV`、尚未合併 `main`／未上線**；衍生新待辦 **§2-7d：底圖再向東擴**——現在氣旋中心多在 124.3°E 以外，只有側欄提示列可見。前次 2026-10-27：**§2-7c 兜底陸地層已合併 `main` 並上線正式站**（四託管＋ja 皆複驗通過；順帶修 §2-7a 的 `errorTileUrl` 缺陷——實色海色底會蓋住陸地→改全透明 `_blank.png`）。**另發現並修好一個镜像缺陷**：GitHub Pages（branch 來源＝跑 Jekyll）會忽略 `_` 開頭資產→ `_blank.png`（與舊 `_ocean.png`）在 `lawlietr.github.io` 一直 404，現由 `site.py` 在站根產 `public/.nojekyll` 解決。兩項皆已上線。前次 2026-10-26：§12 斷鏈修復 129→0；拆檔歷史見 2026-09-16：§2→`design/map.md`、§5→`design/share-button.md`、§6→`design/class-halt.md`、§1→`design/rss.md`、§3/§4/§7/§9/§10/§11→`design/site.md`；本檔瘦身為帳本）
 
 ## 待辦（依優先級排序）
 
@@ -20,7 +20,8 @@
 
 | # | 項目 | 完成 | 設計檔 |
 |---|------|------|--------|
-| §2-4b | **颱風軌跡／風圈層**（**僅在 `DEV`，待合併 `main`**）：`cwa.typhoon_map_features()` 把 W-C0034-005 轉 GeoJSON（觀測實線＋預報虛線＋最新觀測點／最遠預報點的 15 m/s 風圈＋**70% 暴風半徑環**）；風圈用 `QuadrantRadii` 四象限插值→**非正圓**（實測煙花 NE180／SE200／SW160／NW180 km）；顏色單一來源 `cwa.TYPHOON_COLORS`、畫法 `map_page.TYPHOON_STYLE`；一個開關控整層＋圖例＋詳情卡（含四象限半徑、預報時距）＋用氣旋名比對事件檔的本站連結；**風圈 polygon 不互動**、**同層線→圈→點**、**氣旋層疊在超閾值雨量點之上**（推翻 §2-4a 舊定案）三条為鐵則（前雨者實測踩過抢點擊）；新增「圖境外活動氣旋」提示列（煙花在 158.9°E、`maxBounds` 東界 124.3°E→36 圖元 0 可見）。實測：真 Chromium z8/z10/z11、ja 頁、console error 0、heap 14 MB、斷鏈 0、`public/` 14.11 MiB／2,242 檔（+0.09 MiB） | 2026-10-28（**待合併 `main`**） | [design/map.md](design/map.md) |
+| §2-4b | **颱風軌跡／風圈層**（**僅在 `DEV`，待合併 `main`**）：`cwa.typhoon_map_features()` 把 W-C0034-005 轉 GeoJSON（觀測實線＋預報虛線＋最新觀測點／最遠預報點的 15 m/s 風圈＋**70% 暴風半徑環**）；風圈用 `QuadrantRadii` 四象限插值→**非正圓**（實測煙花 2026-10-27 14:00：NE180／SE200／SW160／NW180 km）；顏色單一來源 `cwa.TYPHOON_COLORS`、畫法 `map_page.TYPHOON_STYLE`；一個開關控整層＋圖例＋詳情卡（含四象限半徑、預報時距）＋用氣旋名比對事件檔的本站連結；**風圈 polygon 不互動**、**同層線→圈→點**、**氣旋層疊在超閾值雨量點之上**（推翻 §2-4a 舊定案）三條為鐵則（前兩者實測踩過搶點擊）；新增「圖境外活動氣旋」提示列（煙花在 158.9°E、`maxBounds` 東界 124.3°E→36 圖元 0 可見）。實測：真 Chromium z8/z10/z11、ja 頁、console error 0、heap 14 MB、斷鏈 0、`public/` 14.11 MiB／2,242 檔（+0.09 MiB） | 2026-10-28（**待合併 `main`**） | [design/map.md](design/map.md) |
+| §2-4a（續） | **未超閾值淡點改為預設不勾選**（使用者 2026-10-28 要求：平時 1,300+ 個淡點把底圖弄亂）：淡點仍進 `map.geo.json`（勾開即顯示、不重新 build），label 加「（預設不顯示）」提示與站數作為「查過但沒超標」的證據；JS 初始狀態跟隨 checkbox 的 `checked`（`addLayer()`，預設值只寫在 HTML 一處）。同時修一個**真實順序 bug**：叠放原本靠 addLayer 先後，開關（removeLayer/addTo）會把淡點拱到最上面 → 1,300 個命中圈搶走 polygon 點擊；現用**獨立 pane 的 zIndex 固定**（淡點 390 < overlay 400 < 超閾值點 410 < 氣旋 420）。實測（真 Chromium）：z8/z9/z10/z11 淡點開啟與 off→on 兩次後，polygon 仍拿到點擊（命中圈 22→60px）；縮放重算仍 8/22→14/60px；氣旋中心點擊在任何開關後仍贏過超閾值點；真實頁載入後淡點 pane 0 path、console error 0 | 2026-10-28（**待合併 `main`**） | [design/map.md](design/map.md) |
 | §2-1~3 | 地圖紅警基礎（gazetteer、cbph 抓取→map.geo.json、/map/ 骨架＋離線瓦片＋自託 Leaflet） | 2026/9/2 | [design/map.md](design/map.md) |
 | §2-4a | 雨量站點層初版（三級點層＋側欄圖例＋詳情卡；樣式待 4a-follow 重做） | 2026/9/16 | [design/map.md](design/map.md) |
 | §12 | **站內斷鏈修復**：信任頁缺深度前綴、ja 樹的站根產物（llms.txt／sitemap）與語言切換按鈕差一層、事件正文的 `.md` 互連未改寫為事件頁；新增 `build/check_links.py` 當 build 後驗證工具（WORKFLOW §3 ②）。實測 **129 條 → 0 條**、build 零 warning | 2026-10-26 | [design/site.md](design/site.md) |

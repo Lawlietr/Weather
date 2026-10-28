@@ -254,6 +254,7 @@ AI agent 與自動化工具：請以 /llms.txt 讀取本站內容索引、/llms-
     "map_noscript_rain": "雨量站觀測（超閾值）",
     "map_layer_rain": "雨量站（超閾值）",
     "map_layer_rain_below": "測站（未超閾值）",
+    "map_rain_below_off": "（預設不顯示）",
     # 四個 cbph 告警層的名稱（cbph.TYPES 只有中文名，/ja/ 地圖頁曾外洩中文，2026-10-26 修。
     # 日譯經 Index-Translate，再照本檔 ja 慣用語複核）
     "map_layer_cells": "大雷雨即時訊息",
@@ -500,6 +501,7 @@ AI エージェント・自動化ツール向け：/llms.txt でサイト内容�
     "map_noscript_rain": "雨量観測点（閾値超過）",
     "map_layer_rain": "雨量観測点（閾値超過）",
     "map_layer_rain_below": "観測点（閾値未満）",
+    "map_rain_below_off": "（既定では非表示）",
     "map_layer_cells": "大雷雨速報",
     "map_layer_tywinds": "台風強風警報",
     "map_layer_mountainstorms": "山間部豪雨警報",
