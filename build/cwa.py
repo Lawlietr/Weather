@@ -18,6 +18,7 @@
 - O-A0002-001: records.Station[]，GeoInfo.TownName/CountyName，值為字串。
 """
 import json
+import math
 import os
 import re
 import subprocess
@@ -275,6 +276,223 @@ def fetch_rain_points():
     # 超閾值在前（noscript fallback 取前 10 即雨量最大者），未超閾值排在後面
     out.sort(key=lambda f: (bool(f["properties"].get("below")), -f["properties"]["p1hr"]))
     return out
+
+
+# ------------------------------------ 地圖用颱風軌跡／風圈（design/map.md §2-4b，2026-10-27）
+
+# 顏色＝單一事實來源：寫進 map.geo.json 的 properties.color，前端（map_page.py）只管
+# 「怎麼畫」（粗細/虛線/填色，見 map_page.TYPHOON_STYLE），兩邊都不再寫第二份 hex。
+# ⚠️ 必須避開同一張圖上已有的色：cbph 四色（cells #f59e0b／tywinds #ef4444／
+#   mountainstorms #7c3aed／largesurfs #0ea5e9）、雨量三級（#be123c／#c026d3／#4338ca）
+#   與淡點 #5b6b7b——同色就分不清誰是誰（§2-4a-follow 的教訓）。
+# 地圖画布兩主題都是亮的（海＝tiles.OCEAN_CSS #aad3df、陸＝LAND_STYLE #f2efe9），
+# 所以用**深色**線條；且 Leaflet 把 color 寫進 SVG 顯示屬性 → 不得使用 var(--xxx)。
+TYPHOON_COLORS = {
+    "track_obs": "#1f2937",    # 觀測軌跡（實線）——中性近黑，讀作「走過的路」
+    "track_fc": "#b45309",     # 預報軌跡（虛線）——暗琥珀；與 cells 的 #f59e0b 靠明度＋虛線拉開
+    "wind15": "#b91c1c",       # 15 m/s 暴風圈（環）——與 tywinds polygon（#ef4444 實心填充）不同形同明度
+    "r70": "#475569",          # 70% 暴風半徑（環）——石板灰，不與任何層搶色相
+    "center_obs": "#b91c1c",   # 最新分析點（與其風圈同色系）
+    "center_fc": "#b45309",    # 預報點（與其軌跡同色系）
+    "fix_obs": "#1f2937",      # 過往分析點
+}
+
+# 風圈環的取樣數（象限半徑線性插值後沿方位角取樣）。風圈 ≤ 500 km，32 點已夠圓。
+RING_STEPS = 32
+_QUAD_AZ = {"N": 0, "NE": 45, "E": 90, "SE": 135, "S": 180, "SW": 225, "W": 270, "NW": 315}
+
+
+def _circles(fix, key):
+    """Circle15ms/Circle25ms → (平均半徑 km or None, {象限: 半徑 km})。
+
+    實測（2026-10-27 W-C0034-005）：**分析** Fix 的風圈帶 `QuadrantRadii.Radius[]`
+    （dir＝NE/SE/SW/NW，四值常不相等，故風圈不是正圓）；**預報** Fix 只有單值 `Radius`；
+    熱帶性低氣壓階段（未達 15 m/s）整組缺 → 回 (None, {})，呼叫端據此跳過該環。
+    """
+    d = fix.get(key)
+    if not isinstance(d, dict):
+        return None, {}
+    base = _num(d.get("Radius"))
+    quads = {}
+    for r in ((d.get("QuadrantRadii") or {}).get("Radius") or []):
+        if not isinstance(r, dict):   # CWA 欄位形態不穩（曾整欄回字串/None）→ 跳過不炸 build
+            continue
+        v = _num(r.get("value"))
+        if v is not None and r.get("dir"):
+            quads[r["dir"]] = v
+    if base is None and quads:
+        base = round(sum(quads.values()) / len(quads))
+    return base, quads
+
+
+def _radius_at(quads, az):
+    """象限半徑 → 方位角 az（度，0=北、順時針）的半徑：沿圓周線性插值；無資料回 None。"""
+    pts = sorted((a, quads[d]) for d, a in _QUAD_AZ.items() if d in quads)
+    if not pts:
+        return None
+    if len(pts) == 1:
+        return pts[0][1]
+    n = len(pts)
+    for i in range(n):
+        a0, r0 = pts[i]
+        a1, r1 = pts[(i + 1) % n]
+        span = (a1 - a0) % 360
+        d = (az - a0) % 360
+        if d <= span:
+            return r0 + (r1 - r0) * (d / span)
+    return pts[0][1]
+
+
+def _wind_ring(lon, lat, radius_km, quads=None, steps=RING_STEPS):
+    """中心＋半徑 km（或象限半徑 dict）→ GeoJSON 閉合環 `[[lon,lat],...]`。
+
+    等圓柱近似：1° 緯度 ≈ 110.574 km、1° 經度 ≈ 111.320·cos(lat)。本專案風圈 ≤ 500 km，
+    誤差遠小於資料本身的不確定性，不值得為它引入投影庫依賴（且 build 端零外部依賴是原則）。
+    """
+    if not quads and not radius_km:
+        return []
+    dlat = 1.0 / 110.574
+    dlon = 1.0 / (111.320 * max(0.2, math.cos(math.radians(lat))))
+    ring = []
+    for i in range(steps):
+        az = 360.0 * i / steps
+        r = _radius_at(quads, az) if quads else radius_km
+        if r is None:
+            return []
+        a = math.radians(az)
+        ring.append([round(lon + r * math.sin(a) * dlon, 4), round(lat + r * math.cos(a) * dlat, 4)])
+    ring.append(ring[0])
+    return ring
+
+
+def _fix_props(fix, is_fc):
+    """單個 Fix（分析或預報）→ 詳情卡用的欄位（數值在 build 端算好，前端只渲染）。"""
+    move_pred = ""
+    for mp in (fix.get("MovingPrediction") or []):
+        if mp.get("lang", "").startswith("zh"):
+            move_pred = mp.get("value", "")
+            break
+    r15, q15 = _circles(fix, "Circle15ms")
+    r25, _q25 = _circles(fix, "Circle25ms")
+    out = {
+        "time": _t(fix.get("DateTime") if not is_fc else fix.get("InitialTime")),
+        "fc_hour": _num(fix.get("ForecastHour")) if is_fc else None,
+        "wind": _num(fix.get("MaxWindSpeed")),
+        "gust": _num(fix.get("MaxGustSpeed")),
+        "pressure": _num(fix.get("Pressure")),
+        "move_speed": _num(fix.get("MovingSpeed")),
+        "move_dir": fix.get("MovingDirection") or "",
+        "move_pred": move_pred,
+        "r15": r15,
+        "r25": r25,
+        "r70": _num(fix.get("Radius70PercentProbability")),
+        "cat": _classify(_num(fix.get("MaxWindSpeed"))) or "",
+    }
+    if q15:
+        g = lambda v: ("%g" % v) if v is not None else "—"
+        out["r15_quads"] = "NE {}／SE {}／SW {}／NW {} km".format(
+            g(q15.get("NE")), g(q15.get("SE")), g(q15.get("SW")), g(q15.get("NW")))
+    return out
+
+
+def typhoon_map_features(typhoons):
+    """活動氣旋（W-C0034-005）→ /map/ 圖元清單（design/map.md 執行順序 4b，2026-10-27）。
+
+    每個氣旋產四種幾何，全部 `properties.type = "typhoon"`（前端一個開關控整個氣旋層），
+    以 `properties.kind` 分別繪製方式：
+
+      track_obs   LineString  分析軌跡（實線）
+      fix_obs     Point       過往分析點（最新點除外）
+      center_obs  Point       最新分析點（＋其風圈）
+      wind_obs    Polygon     最新分析點的 15 m/s 暴風圈（有象限資料→非正圓）
+      track_fc    LineString  預報軌跡（虛線，從最新分析點接出）
+      center_fc   Point       每個預報點（+6h…+120h，可點、詳情卡含該點數值）
+      wind_fc     Polygon     最遠預報點的 15 m/s 暴風圈
+      radius70    Polygon     最遠預報點的 70% 暴風半徑（AGENTS 的「可能影響台灣」判準就是它）
+
+    風圈刻意只畫兩處（最新分析＋最遠預報）：9 個預報點各画一組會糊成一團、無法讀；
+    中間點的半徑數值放進 properties，點下去就看得到。`latest: True` 標出放大的中心點。
+    空清單＝目前無活動氣旋（前端圖層空，維持「空＝查過」原則；抓取失敗由 site.py 記 warning）。
+    """
+    feats = []
+    for c in typhoons or []:
+        an = [f for f in (c.get("analysis") or [])
+              if _num(f.get("CoordinateLongitude")) is not None
+              and _num(f.get("CoordinateLatitude")) is not None]
+        fc = [f for f in (c.get("forecast") or [])
+              if _num(f.get("CoordinateLongitude")) is not None
+              and _num(f.get("CoordinateLatitude")) is not None]
+        an.sort(key=lambda f: f.get("DateTime") or "")
+        fc.sort(key=lambda f: _num(f.get("ForecastHour")) or 0)
+        if not an and not fc:
+            continue
+        base = {
+            "type": "typhoon",
+            # type_name 用作詳情卡標題與 tooltip（CWA 資料不翻譯 → 各語言同為中文原文，
+            # 與 site.py 的 cwa_data_note 同一原則）；編號一律 CWA `CwaTdNo`（AGENTS 規範）
+            "type_name": "{}（{} 號）".format(c.get("name") or c.get("intl") or "?",
+                                              c.get("no") or "—"),
+            "name": c.get("name") or "",
+            "intl": c.get("intl") or "",
+            "no": c.get("no") or "",
+            "year": c.get("year") or "",
+            "n_obs": len(an),
+            "n_fc": len(fc),
+            "source": "CWA W-C0034-005",
+        }
+        pt = lambda f: [_num(f.get("CoordinateLongitude")), _num(f.get("CoordinateLatitude"))]
+        add = lambda geom, kind, color, extra=None: feats.append({
+            "type": "Feature",
+            "geometry": geom,
+            "properties": dict(base, kind=kind, color=color, **(extra or {})),
+        })
+
+        # ── 觀測軌跡（實線）＋過往點
+        if len(an) >= 2:
+            add({"type": "LineString", "coordinates": [pt(f) for f in an]},
+                "track_obs", TYPHOON_COLORS["track_obs"],
+                {"obs_from": _t(an[0].get("DateTime")), "obs_to": _t(an[-1].get("DateTime"))})
+        for f in an[:-1]:
+            add({"type": "Point", "coordinates": pt(f)}, "fix_obs", TYPHOON_COLORS["fix_obs"],
+                _fix_props(f, False))
+
+        # ── 最新分析點＋其 15 m/s 風圈（象限非正圓）
+        latest = None
+        if an:
+            latest = an[-1]
+            r15, q15 = _circles(latest, "Circle15ms")
+            add({"type": "Point", "coordinates": pt(latest)}, "center_obs",
+                TYPHOON_COLORS["center_obs"], dict(_fix_props(latest, False), latest=True))
+            ring = _wind_ring(*pt(latest), r15, q15)
+            if ring:
+                add({"type": "Polygon", "coordinates": [ring]}, "wind_obs",
+                    TYPHOON_COLORS["wind15"], _fix_props(latest, False))
+
+        # ── 預報軌跡（虛線，從最新分析點接出）＋各預報點
+        if fc:
+            line = [pt(latest)] if latest else []
+            line += [pt(f) for f in fc]
+            if len(line) >= 2:
+                add({"type": "LineString", "coordinates": line}, "track_fc", TYPHOON_COLORS["track_fc"],
+                    {"fc_from": _t(fc[0].get("InitialTime")),
+                     "fc_hours": "{}–{}h".format(fc[0].get("ForecastHour", ""),
+                                                 fc[-1].get("ForecastHour", ""))})
+            for f in fc:
+                add({"type": "Point", "coordinates": pt(f)}, "center_fc", TYPHOON_COLORS["center_fc"],
+                    _fix_props(f, True))
+            # 最遠預報點：風圈＋70% 暴風半徑（數值取自該點，非平均）
+            far = fc[-1]
+            r15f, _qf = _circles(far, "Circle15ms")
+            ring = _wind_ring(*pt(far), r15f)
+            if ring:
+                add({"type": "Polygon", "coordinates": [ring]}, "wind_fc",
+                    TYPHOON_COLORS["wind15"], dict(_fix_props(far, True), latest=True))
+            r70 = _num(far.get("Radius70PercentProbability"))
+            ring70 = _wind_ring(*pt(far), r70)
+            if ring70:
+                add({"type": "Polygon", "coordinates": [ring70]}, "radius70",
+                    TYPHOON_COLORS["r70"], dict(_fix_props(far, True), latest=True))
+    return feats
 
 
 def load_snapshot():

@@ -18,6 +18,7 @@ from pathlib import Path
 
 from i18n import t, LANGS, is_default
 from cbph import TYPES  # slug → (中文名, 配色)，與 cbph UI 一致
+from cwa import TYPHOON_COLORS  # 颱風圖元色（寫進 map.geo.json 的 properties.color）
 # ⚠️ 地圖視野常數的單一事實來源在 `build/tiles.py`（離線瓦片的 per-zoom bbox 由 maxBounds
 # 推導，兩邊必須同步）——不在本檔重建座標，否則又會出現「maxBounds 比瓦片寬」的漂移
 # （§2-7 的成因：舊 maxBounds 東界 123.6°E 超出舊瓦片東界 122°E → 右側 2.9° 無底圖）。
@@ -60,6 +61,27 @@ LAND_STYLE = {
     "fill": "#f2efe9",   # 陸地填色（OSM standard land 同色系）
     "edge": "#d6ccbc",   # 海岸線描邊（比填色暗一點，低縮放才讀得出輪廓）
     "weight": 1,         # 描邊粗細 px
+}
+
+# ⚠️ 颱風軌跡／風圈的「怎麼畫」單一來源（§2-4b，design/map.md）。**顏色不在這裡**——
+#   在 `cwa.TYPHOON_COLORS`，build 時寫進每個 feature 的 properties.color（與雨量層同一分工：
+#   顏色在 build 端、形狀在本檔），兩邊都不写第二份 hex。
+# 白描邊（casing）是必要的：軌跡線會畫在 cbph 告警 polygon（fillOpacity .35）與瓦片上，
+# 3px 細線沒有底襯時會被 polygon 的填色吃掉（2026-10-27 真瀏覽器比對過）。白襯設
+# interactive:false，不搶 polygon／測站點的點擊。
+TYPHOON_STYLE = {
+    "weight": 3,             # 軌跡線 px
+    "casing": 7,             # 白襯總寬 px（比線寬 4，兩側各露 2px）
+    "casing_opacity": 0.75,
+    "fc_dash": "9 7",        # 預報＝虛線（與事件頁 SVG 同一語意：實線已走、虛線預測）
+    "ring_weight": 2,
+    "ring_dash": "6 6",      # 風圈一律虛線（與實心填色的告警 polygon 區隔）
+    "ring_fill": 0.06,       # 圈內極淡填色：只提示範圍，不搶告警 polygon 的視覺
+    "dot_obs": 4,            # 過往觀測點
+    "dot_obs_latest": 8,     # 最新觀測點（風圈中心）
+    "dot_fc": 5,             # 預報點（空心＝「未來」）
+    "halo": 2,               # 點白環 px
+    "hit_pad": 6,            # 中心點的透明命中圈額外半徑 px（手機拇指）
 }
 
 
@@ -132,6 +154,11 @@ body.map-page{display:flex;flex-direction:column}
 .swatch.round{border-radius:50%}
 .rain-legend{margin:2px 0 6px 24px;font-size:.8rem;color:var(--muted);line-height:1.9}
 .rain-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px}
+/* §2-4b：氣旋在底圖視野外時的提示列（否則圖層看起來是「空的」，使用者分不清
+   「沒有颱風」與「有颱風但在視野外」——與雨量層的淡點同一目的） */
+.map-ty-outside{background:var(--chip-bg);border-left:3px solid var(--accent);border-radius:6px;
+padding:8px 10px;margin:8px 0;font-size:.85rem;line-height:1.6}
+.map-ty-outside .muted{font-size:.8rem}
 .rain-pin{background:transparent;border:none}   /* pin 形狀的 divIcon：去掉 Leaflet 預設白框 */
 .layer .cnt{margin-left:auto;color:var(--muted);font-size:.85rem}
 .map-detail{font-size:.9rem}
@@ -180,7 +207,8 @@ def _noscript_html(lang, fc, root_prefix):
     """無 JS fallback：靜態告警清單＋回總覽（靜態 SVG 總覽在首頁）。"""
     parts = [f'<p>{t(lang, "map_noscript")}</p>']
     feats = fc.get("features", [])
-    alerts = [f for f in feats if f["properties"].get("type") != "rain"]
+    # §2-4b：氣旋圖元不算「告警」（也不能混進告警清單）——另列一節
+    alerts = [f for f in feats if f["properties"].get("type") not in ("rain", "typhoon")]
     if alerts:
         lis = []
         for f in alerts:
@@ -206,6 +234,24 @@ def _noscript_html(lang, fc, root_prefix):
     if rain_below:
         # 淡色底點：JS 關了也不影響這段（noscript fallback 本来就沒有圖層開關）
         parts.append(f'<p>{t(lang, "map_layer_rain_below")} {len(rain_below)} 站</p>')
+    tys = [f for f in feats if f["properties"].get("type") == "typhoon"]
+    if tys:
+        # 每個氣旋一行：取最新分析點（無分析點時退回任一帶 wind 的圖元）
+        parts.append(f'<p><b>{t(lang, "map_noscript_typhoon")}</b></p><ul>')
+        seen = set()
+        gv = lambda v: ("%g" % v) if isinstance(v, (int, float)) else (v or "—")
+        for f in tys:
+            p = f["properties"]
+            key = p.get("name") or p.get("type_name")
+            if key in seen:
+                continue
+            seen.add(key)
+            pos = f["geometry"].get("coordinates") if f["geometry"]["type"] == "Point" else None
+            loc = f"{pos[1]:.1f}°N {pos[0]:.1f}°E" if pos else "—"
+            parts.append(
+                f'<li><b>{p.get("type_name", "")}</b>：{loc}・{gv(p.get("wind"))} m/s'
+                f'・{p.get("move_dir", "")} {gv(p.get("move_speed"))} km/h・{p.get("time", "—")}</li>')
+        parts.append("</ul>")
     parts.append(f'<p><a href="{root_prefix}index.html">← {t(lang, "back_home")}</a></p>')
     return '<div class="map-noscript">' + "".join(parts) + "</div>"
 
@@ -225,6 +271,18 @@ def build(OUT, fc, events, warnings=None):
         # 雨量站點用單值 county 欄。
         for f in fc.get("features", []):
             p = f["properties"]
+            if p.get("type") == "typhoon":
+                # §2-4b：氣旋圖元沒有縣市欄（影響範圍不是「哪些縣市」而是動態風圈），
+                # 改用氣旋名／國際命名對齐事件檔標題（例：「颱風薔琵（CHAMPI）— 2026年第33號」）
+                # → 點了軌跡就能跳到本 repo 的事件檔（有建檔時）。
+                nm = (p.get("name") or "").strip()
+                intl = (p.get("intl") or "").strip().upper()
+                hits = [e for e in events
+                        if (nm and nm in e["name"]) or (intl and intl in e["name"].upper())]
+                hits.sort(key=lambda e: e["mtime"], reverse=True)
+                p["repo_links"] = [{"name": e["name"], "url": "/".join(e["url"]),
+                                    "status": e["status"]} for e in hits[:5]]
+                continue
             counties = p.get("counties") or ([p["county"]] if p.get("county") else [])
             p["repo_links"] = _events_for_counties(events, counties)
 
@@ -238,6 +296,74 @@ def build(OUT, fc, events, warnings=None):
             f'<span class="cnt">{counts[slug]}</span></label>'
             for slug, (_zh_name, color) in TYPES.items())
             # 層名走 i18n（cbph.TYPES 只有中文名，/ja/ 地圖頁因此曾外洩中文層名，2026-10-26 修）
+        # §2-4b 颱風軌跡／風圈：一個開關控整個氣旋層（線＋圈＋點一起開關，因為它們本來就是
+        # 同一氣旋的不同圖元）。無活動氣旋時不寫開關→ 維持「圖層空＝查過」（與 cbph 503
+        # 視為空清單同一原則）；抓取失敗由 site.py 記 warning，不會被當成「沒有颱風」。
+        ty_feats = [f for f in fc.get("features", []) if f["properties"].get("type") == "typhoon"]
+        ty_names = {f["properties"].get("name") or f["properties"].get("type_name", "?")
+                    for f in ty_feats}
+        if ty_feats:
+            layers_html += (
+                f'<label class="layer"><input type="checkbox" data-type="typhoon" checked>'
+                f'<span class="swatch" style="background:linear-gradient(135deg,'
+                f'{TYPHOON_COLORS["track_obs"]} 50%,{TYPHOON_COLORS["track_fc"]} 50%)"></span>'
+                f'{t(lang, "map_layer_typhoon")}'
+                f'<span class="cnt">{t(lang, "map_ty_count", n=len(ty_names))}</span></label>')
+            lg = [
+                f'<span><i style="background:{TYPHOON_COLORS["track_obs"]};width:16px;height:3px;'
+                f'border-radius:2px"></i>{t(lang, "map_ty_legend_track_obs")}</span>',
+                f'<span><i style="background:repeating-linear-gradient(90deg,'
+                f'{TYPHOON_COLORS["track_fc"]} 0 5px,transparent 5px 9px);width:16px;height:3px;'
+                f'border-radius:2px"></i>{t(lang, "map_ty_legend_track_fc")}</span>',
+                f'<span><i style="border:2px dashed {TYPHOON_COLORS["wind15"]};background:transparent;'
+                f'width:12px;height:12px"></i>{t(lang, "map_ty_legend_wind15")}</span>',
+                f'<span><i style="border:2px dashed {TYPHOON_COLORS["r70"]};background:transparent;'
+                f'width:12px;height:12px"></i>{t(lang, "map_ty_legend_r70")}</span>',
+            ]
+            layers_html += '<div class="rain-legend">' + "<br>".join(lg) + "</div>"
+
+        # 氣旋全在底圖視野外（例：2026-10-27 的煙花在 162°E，而 maxBounds 東界 124.3°E）
+        # → 圖層有資料但地圖上看不到。不提示就成了「看起來像沒颱風」，與「淡點證明查過」
+        # 同一目的（§2-4a-follow）。（待辦：要真的看到中心需向東擴 maxBounds → design/map.md）
+        ty_note_html = ""
+        if ty_feats:
+            (lat_lo, lon_lo), (lat_hi, lon_hi) = MAP_MAX_BOUNDS
+            by_cyc = {}
+            for f in ty_feats:
+                p = f["properties"]
+                by_cyc.setdefault(p.get("name") or p.get("type_name", "?"), []).append(f)
+
+            def _pts(geom):
+                if geom["type"] == "Point":
+                    return [geom["coordinates"]]
+                if geom["type"] == "LineString":
+                    return geom["coordinates"]
+                return geom["coordinates"][0] if geom["coordinates"] else []
+
+            outside = []
+            for feats in by_cyc.values():
+                if not any(lon_lo <= c[0] <= lon_hi and lat_lo <= c[1] <= lat_hi
+                           for f in feats for c in _pts(f["geometry"])):
+                    outside.append(feats)
+            if outside:
+                det = []
+                gv = lambda v: ("%g" % v) if isinstance(v, (int, float)) else (v or "—")
+                for feats in outside:
+                    cf = next((f for f in feats if f["properties"].get("kind") == "center_obs"),
+                              next((f for f in feats if f["geometry"]["type"] == "Point"), None))
+                    if cf is None:
+                        continue
+                    p = cf["properties"]
+                    lon, lat = cf["geometry"]["coordinates"]
+                    det.append(f'{p["type_name"]} {lat:.1f}°N {lon:.1f}°E・{gv(p.get("wind"))} m/s'
+                               f'・{p.get("move_dir", "")} {gv(p.get("move_speed"))} km/h'
+                               f'・{p.get("time", "—")}')
+                if det:
+                    ty_note_html = (
+                        '<div class="map-ty-outside">'
+                        + t(lang, "map_ty_outside", n=len(det), detail="；".join(det))
+                        + f'<br><span class="muted">{t(lang, "map_ty_outside_note", lon=lon_hi, lat=lat_hi)}'
+                        + "</span></div>")
         rain_feats = [f for f in fc.get("features", []) if f["properties"].get("type") == "rain"]
         rain_top = [f for f in rain_feats if not f["properties"].get("below")]
         rain_below = [f for f in rain_feats if f["properties"].get("below")]
@@ -287,12 +413,43 @@ def build(OUT, fc, events, warnings=None):
             "rain_pday": t(lang, "map_rain_pday"),
             "rain_obs": t(lang, "map_rain_obs"),
             "rain_note": t(lang, "map_rain_note"),
+            # §2-4b 氣旋詳情卡
+            "ty_name": t(lang, "map_layer_typhoon"),
+            "ty_no": t(lang, "map_ty_no"),
+            "ty_intl": t(lang, "map_ty_intl"),
+            "ty_cat": t(lang, "map_ty_cat"),
+            "ty_time": t(lang, "map_ty_time"),
+            "ty_fc_hour": t(lang, "map_ty_fc_hour"),
+            "ty_fc_tag": t(lang, "map_ty_fc_tag"),
+            "ty_pos": t(lang, "map_rain_loc"),
+            "ty_wind": t(lang, "map_ty_wind"),
+            "ty_gust": t(lang, "map_ty_gust"),
+            "ty_pressure": t(lang, "map_ty_pressure"),
+            "ty_move": t(lang, "map_ty_move"),
+            "ty_r15": t(lang, "map_ty_r15"),
+            "ty_r15q": t(lang, "map_ty_r15q"),
+            "ty_r25": t(lang, "map_ty_r25"),
+            "ty_r70": t(lang, "map_ty_r70"),
+            "ty_track_range": t(lang, "map_ty_track_range"),
+            "ty_fc_span": t(lang, "map_ty_fc_span"),
+            "ty_latest": t(lang, "map_ty_latest"),
+            "ty_from": t(lang, "map_ty_from"),
+            "ty_to": t(lang, "map_ty_to"),
+            "ty_n_pts": t(lang, "map_ty_n_pts"),
+            "ty_note": t(lang, "map_ty_note"),
+            # 強度分級名：features 是三語言共用的一份 JSON，所以分級 key 在 JS 查本表翻譯
+            # （同 §2-4a 的顏色在 build 端、但分級名必須随語言走）
+            "cats": {k: t(lang, k) for k in
+                     ("ty_cat_super", "ty_cat_strong", "ty_cat_vstrong",
+                      "ty_cat_mod", "ty_cat_weak", "ty_cat_td")},
         }, ensure_ascii=False)
 
-        n = len([f for f in fc.get("features", []) if f["properties"].get("type") != "rain"])
+        n = len([f for f in fc.get("features", [])
+                 if f["properties"].get("type") not in ("rain", "typhoon")])
         none_p = json.dumps('<p class="muted">' + t(lang, "map_none") + "</p>", ensure_ascii=False)
         rain_style = json.dumps(RAIN_STYLE, ensure_ascii=False)
         land_style = json.dumps(LAND_STYLE, ensure_ascii=False)
+        typhoon_style = json.dumps(TYPHOON_STYLE, ensure_ascii=False)
         # §2-7c：兜底陸地的 ring 從 `taiwan_geo.FALLBACK_LAND`（lon,lat）轉成 Leaflet 習慣的
         # [lat,lng]——座標順序只在此處定一次，不得在 JS 再維護一套。
         land_rings = json.dumps([[[lat, lon] for lon, lat in ring] for ring in FALLBACK_LAND])
@@ -329,6 +486,7 @@ def build(OUT, fc, events, warnings=None):
 {warn_html}
 <h3>{t(lang, "map_layers")}</h3>
 {layers_html}
+{ty_note_html}
 <h3>{t(lang, "map_detail_title")}</h3>
 <div class="map-detail" id="detail"><p class="muted">{t(lang, "map_detail_hint")}</p></div>
 </div>
@@ -370,6 +528,7 @@ def build(OUT, fc, events, warnings=None):
       attribution:"© OpenStreetMap contributors"}}).addTo(map);
 
   var RAIN_STYLE = {rain_style};
+  var TYPHOON_STYLE = {typhoon_style};
 
   // 半徑/命中圈隨縮放（見 RAIN_STYLE 註解）：circleMarker 的 radius 是螢幕 px，
   // 不處理的話拉進两级點還是同樣大 → 命中圈也同樣小、點不中。
@@ -457,17 +616,79 @@ def build(OUT, fc, events, warnings=None):
     return out;
   }}
 
-  // 疊放順序是刻意的（不是 byType 鍵序）：淡色底點最下 → 告警 polygon → 超閾值點最上。
-  // 否則 400+ 個淡點的透明命中圈會蓋住告警 polygon，點 polygon 變成點測站（設計定案）。
+  // §2-4b 氣旋層：一個開關控全部圖元（byType["typhoon"]），kind 决定怎麼畫。
+  // 風圈 polygon 與線白襯 interactive:false —— 否則一個半徑 400 km 的圈會吃掉整片海洋上的
+  // 點與告警 polygon 的點擊（§2-4a 淡點命中圈的同一教訓）。可點的是線與中心點。
+  function typhoonLayer(list) {{
+    var out = [];
+    // 同一層內也要定叠放順序：線（含白襯）→ 風圈 → 點。後進 DOM 者在上層、點擊優先贏，
+    // 否則預報線在交會處會搶走最新中心點的點擊（2026-10-28 真 Chromium 實測踩到：
+    // 點中心點出現只有一行的預報線詳情卡）。
+    var ordered = list.slice().sort(function(a, b) {{
+      var rank = {{ LineString: 0, Polygon: 1, Point: 2 }};
+      return (rank[a.geometry.type] || 0) - (rank[b.geometry.type] || 0);
+    }});
+    ordered.forEach(function(f){{
+      var p = f.properties, g = f.geometry, kind = p.kind;
+      var tip = p.type_name;
+      if (p.fc_hour) tip += " " + LABELS.ty_fc_tag.replace("{{h}}", p.fc_hour);
+      if (g.type === "LineString") {{
+        var lls = g.coordinates.map(function(c){{ return [c[1], c[0]]; }});
+        out.push(L.polyline(lls, {{color: "#fff", weight: TYPHOON_STYLE.casing,
+          opacity: TYPHOON_STYLE.casing_opacity, interactive: false}}));
+        var ln = L.polyline(lls, {{color: p.color, weight: TYPHOON_STYLE.weight, opacity: 1,
+          dashArray: kind === "track_fc" ? TYPHOON_STYLE.fc_dash : null}});
+        ln.bindTooltip(tip, {{sticky: true}});
+        ln.on("click", function(){{ showTyphoonDetail(f); }});
+        out.push(ln);
+      }} else if (g.type === "Polygon") {{
+        (g.coordinates || []).forEach(function(ring){{
+          out.push(L.polygon(ring.map(function(c){{ return [c[1], c[0]]; }}),
+            {{color: p.color, weight: TYPHOON_STYLE.ring_weight, dashArray: TYPHOON_STYLE.ring_dash,
+              fillColor: p.color, fillOpacity: TYPHOON_STYLE.ring_fill,
+              interactive: false, smoothFactor: 1}}));
+        }});
+      }} else if (g.type === "Point") {{
+        var ll = [g.coordinates[1], g.coordinates[0]];
+        var hollow = kind === "center_fc";   // 空心＝未來（與事件頁 SVG 同一語意）
+        var r = kind === "center_obs" ? TYPHOON_STYLE.dot_obs_latest
+          : kind === "center_fc" ? TYPHOON_STYLE.dot_fc : TYPHOON_STYLE.dot_obs;
+        var m = L.circleMarker(ll, {{radius: r, color: p.color, weight: TYPHOON_STYLE.halo,
+          fillColor: hollow ? "#fff" : p.color, fillOpacity: 1}});
+        m.bindTooltip(tip, {{sticky: true}});
+        m.on("click", function(){{ showTyphoonDetail(f); }});
+        out.push(m);
+        // 手機可點度：中心點只有 8px → 加透明命中圈（風圈 polygon 不互動，不會互相搶）
+        if (kind !== "fix_obs") {{
+          var hit = L.circleMarker(ll, {{radius: r + TYPHOON_STYLE.hit_pad, stroke: false,
+            fillColor: "#000", fillOpacity: 0.01, interactive: true}});
+          hit.bindTooltip(tip, {{sticky: true}});
+          hit.on("click", function(){{ showTyphoonDetail(f); }});
+          out.push(hit);
+        }}
+      }}
+    }});
+    return out;
+  }}
+
+  // 疊放順序見下方註解（淡點→polygon→超閾值點→氣旋層）。
+  // 否則 400+ 個淡點的透明命中圈會蓋住告警 polygon，點 polygon 變成點測站（§2-4a 定案）。
+  // 氣旋層的位置（最上）理由見下方 typhoon 層加入處的註解。
   var rainAll = byType["rain"] || [];
   var rainBelow = rainAll.filter(function(f){{ return f.properties.below; }});
   var rainTop = rainAll.filter(function(f){{ return !f.properties.below; }});
   if (rainBelow.length) layerByType.rain_below = L.layerGroup(pointPolys(rainBelow)).addTo(map);
   Object.keys(byType).forEach(function(type){{
-    if (type === "rain") return;
+    if (type === "rain" || type === "typhoon") return;
     layerByType[type] = L.layerGroup(polyPolys(byType[type])).addTo(map);
   }});
   if (rainTop.length) layerByType.rain = L.layerGroup(pointPolys(rainTop)).addTo(map);
+  // 氣旋層放最上（2026-10-28 復驗後改判）：真氣旋靠近時必然伴隨超閾值雨量點（半徑可到 22px），
+  // 舊順序（氣旋在點下）會讓這些點把軌跡線與風圈壓在下面——最需要看路徑的時候最看不清。
+  // 代價極小：氣旋層只有細線（3px）與中心命中圈可互動（風圈 polygon 與線白襯皆 interactive:false），
+  // 所以只有「正正點在風中心或細線上」時改拿到氣旋卡——那裡本來就該顯示氣旋。
+  var tyAll = byType["typhoon"] || [];
+  if (tyAll.length) layerByType.typhoon = L.layerGroup(typhoonLayer(tyAll)).addTo(map);
 
   // 半徑隨縮放：circleMarker 的 radius 是螢幕 px，不更新的話拉進兩級後點與命中圈都還是
   // 同樣小（2026-10-26 使用者實測反應「地圖拉進後圈還是一樣小、點擊不方便」）。
@@ -538,6 +759,54 @@ def build(OUT, fc, events, warnings=None):
     }}
     detail.appendChild(repo);
   }}
+  function showTyphoonDetail(f){{
+    var p = f.properties, g = f.geometry;
+    detail.innerHTML = "";
+    var h = document.createElement("div"); h.className = "type-head";
+    var sw = document.createElement("span"); sw.className = "swatch round";
+    sw.style.background = p.color;
+    var nmEl = document.createElement("span");
+    nmEl.textContent = p.type_name + (p.fc_hour ? "（" + LABELS.ty_fc_tag.replace("{{h}}", p.fc_hour) + "）" : "");
+    h.appendChild(sw); h.appendChild(nmEl); detail.appendChild(h);
+    if (p.no) row(LABELS.ty_no, p.no + (p.year ? "（" + p.year + "）" : ""));
+    if (p.intl) row(LABELS.ty_intl, p.intl);
+    if (p.cat && LABELS.cats[p.cat]) row(LABELS.ty_cat, LABELS.cats[p.cat]);
+    if (g.type === "Point") {{
+      row(LABELS.ty_pos, g.coordinates[1].toFixed(1) + "°N " + g.coordinates[0].toFixed(1) + "°E");
+    }} else if (g.type === "LineString") {{
+      // 軌跡線本身不附單點數值 → 呈現起訖位置與點數，詳情卡才不會只剩一行
+      var a = g.coordinates[0], z = g.coordinates[g.coordinates.length - 1];
+      row(LABELS.ty_from, a[1].toFixed(1) + "°N " + a[0].toFixed(1) + "°E");
+      row(LABELS.ty_to, z[1].toFixed(1) + "°N " + z[0].toFixed(1) + "°E");
+      row(LABELS.ty_n_pts, String(g.coordinates.length));
+    }} else if (g.type === "Polygon") {{
+      // 風圈 polygon 不互動（不搶點擊），正常不會走到這裡；保留防呆
+      row(LABELS.ty_r15, (p.r15 || "—") + " km");
+    }}
+    if (p.time && p.time !== "—") row(LABELS.ty_time, p.time);
+    if (p.fc_hour) row(LABELS.ty_fc_hour, LABELS.ty_fc_tag.replace("{{h}}", p.fc_hour));
+    if (p.wind !== null && p.wind !== undefined) row(LABELS.ty_wind, p.wind + " m/s");
+    if (p.gust) row(LABELS.ty_gust, p.gust + " m/s");
+    if (p.pressure) row(LABELS.ty_pressure, p.pressure + " hPa");
+    if (p.move_speed || p.move_pred) {{
+      var mv = p.move_speed ? (p.move_speed + " km/h " + (p.move_dir || "")) : "";
+      if (p.move_pred) mv += (mv ? "（" + p.move_pred + "）" : p.move_pred);
+      row(LABELS.ty_move, mv);
+    }}
+    if (p.r15) row(LABELS.ty_r15, p.r15 + " km");
+    if (p.r15_quads) row(LABELS.ty_r15q, p.r15_quads);
+    if (p.r25) row(LABELS.ty_r25, p.r25 + " km");
+    if (p.r70) row(LABELS.ty_r70, p.r70 + " km");
+    if (p.obs_from) row(LABELS.ty_track_range, p.obs_from + " → " + p.obs_to);
+    if (p.fc_hours) row(LABELS.ty_fc_span, p.fc_hours + "（" + p.n_fc + "）");
+    addRepo(p);
+    var note = document.createElement("p");
+    note.className = "muted"; note.style.cssText = "font-size:.8rem;margin:10px 0 0";
+    note.textContent = LABELS.ty_note;
+    detail.appendChild(note);
+    panel.classList.add("open");
+  }}
+
   function showRainDetail(p){{
     detail.innerHTML = "";
     var h = document.createElement("div"); h.className = "type-head";

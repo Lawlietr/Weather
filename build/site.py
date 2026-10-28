@@ -1179,6 +1179,20 @@ def main():
     except Exception as e:
         print(f"[warning] map 雨量站層：{e} — 跳過該層")
 
+    # 觀測層（design/map.md 執行順序 4b）：活動氣旋的觀測／預報軌跡＋風圈 → 併入 map.geo.json。
+    # 資料直接取 cwa_ctx（load_snapshot 已抓 W-C0034-005）→ **不额外打 API**；失敗只跳該層。
+    try:
+        geo = json.loads((build_dir / "map.geo.json").read_text(encoding="utf-8"))
+        ty_feats = cwa.typhoon_map_features((cwa_ctx[0] or {}).get("typhoons") or [])
+        geo["features"] = geo.get("features", []) + ty_feats
+        (build_dir / "map.geo.json").write_text(
+            json.dumps(geo, ensure_ascii=False, indent=1), encoding="utf-8")
+        _names = sorted({f["properties"]["name"] for f in ty_feats if f["properties"].get("name")})
+        print(f"map 颱風軌跡層：{len(_names)} 個氣旋／{len(ty_feats)} 個圖元"
+              + (f"（{'、'.join(_names)}）" if _names else "（目前無活動氣旋）"))
+    except Exception as e:
+        print(f"[warning] map 颱風軌跡層：{e} — 跳過該層")
+
     # 地圖紅警（design/map.md 執行順序 3）：/map/ 獨立頁＋離線瓦片＋自託 Leaflet。
     # 全部容錯不中斷：瓦片缺 → 空白底；Leaflet/靜態檔缺失 → 地圖頁退化（noscript 清單仍在）。
     geo_path = build_dir / "map.geo.json"
