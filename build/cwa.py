@@ -44,7 +44,7 @@ SOURCES = ("typhoons", "marine_alert", "reports", "rain")
 def _get_json(data_id, **params):
     key = os.getenv("CWA_API_KEY")
     if not key:
-        raise RuntimeError("CWA_API_KEY 未設定（請寫入 ~/.zshrc 或專案 .env）")
+        raise RuntimeError("CWA_API_KEY 未設定（請寫入 ~/.zshrc.secrets 或專案 .env）")
     q = {"Authorization": key, "format": "JSON"}
     q.update(params)
     url = f"{BASE}/{data_id}?" + urllib.parse.urlencode(q)

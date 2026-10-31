@@ -191,7 +191,7 @@
 
 解析任何 CWA 資料前先查 `build/CWA_API.md`（或 `ctx_search` 抽段落）——逐 dataset 欄位、事件類型優先級、關鍵陷阱都在那裡。
 
-- **Open Data**：`https://opendata.cwa.gov.tw/api/v1/rest/datastore/{Data ID}?Authorization=${CWA_API_KEY}&format=JSON`；key 讀環境變數 `CWA_API_KEY`（`~/.zshrc`／`.env` gitignored，**不得硬編碼或 commit**）。兩致命坑：① 回傳結構**與官方文件不同**——改解析碼前**先 dump 真實回傳**，勿照舊文件猜；② **不支援 CORS**——所有氣象資料 build 時本機抓取寫入靜態 HTML。
+- **Open Data**：`https://opendata.cwa.gov.tw/api/v1/rest/datastore/{Data ID}?Authorization=${CWA_API_KEY}&format=JSON`；key 讀環境變數 `CWA_API_KEY`（`~/.zshrc.secrets`／`.env` gitignored，**不得硬編碼或 commit**）。兩致命坑：① 回傳結構**與官方文件不同**——改解析碼前**先 dump 真實回傳**，勿照舊文件猜；② **不支援 CORS**——所有氣象資料 build 時本機抓取寫入靜態 HTML。
 - **cbph 災防告警**（大雷雨/颱風強風/山區暴雨/巨浪，含官方影響區域 polygon）：`cbph.cwa.gov.tw/api/`，免 key、build 時抓取、**非 Open Data 正式目錄、無 SLA → 失敗跳過不中斷**（endpoints/欄位/陷阱 → `CWA_API.md`「CWA cbph」節）。
 
 ## context-mode 知識庫（本機 agent 查詢加速器，2026/9/15 啟用）
@@ -239,7 +239,7 @@
 ### 不變項（改動前先確認）
 
 - **更新模式**：本地 cron（**每 2 小時整點**）為**唯一**自動 build＋部署通道；Actions 自 2026-10-23 起無自動排程，僅手動 dispatch（排程狀態與 CF 替代方案評估 → `WORKFLOW.md` §7、`design/cf-cron.md`）；**災情新聞人工把關、不自動推 RSS**（→ `WORKFLOW.md` §1、`MANUAL_UPDATE.md`）。
-- **金鑰**：CWA Key、Cloudflare 憑證分散在 (1) 本機 `~/.zshrc`（手動）、(2) GitHub Secrets（dispatch）、(3) `build/deploy.env`（cron 用，600）；**不寫進任何輸出檔案、不進 `public/`、不進網站**。
+- **金鑰**：CWA Key、Cloudflare 憑證分散在 (1) 本機 `~/.zshrc.secrets`（**憑證集中檔**、600、`~/.zshrc` 只 source 它——2026-10-29 定案，token 多、不塞 `.zshrc`）、(2) GitHub Secrets（dispatch）、(3) `build/deploy.env`（600，**只做兜底**：`deploy-cron.sh` 取到金鑰就不 source 它）；**不寫進任何輸出檔案、不進 `public/`、不進網站**。
 - **非即時**：首頁顯示「**產生時間**」（i18n key `updated`），由 `build/site.py` 以**固定 UTC+8** 產生（`datetime.now(timezone(timedelta(hours=8)))`）；**不可改回不帶時區的 `datetime.now()`**（Actions runner 是 UTC、會慢 8 小時）。「產生時間」＝網頁何時生成，**不等於氣象／災情資料已更新**。
 - **CWA 不支援 CORS**：氣象資料全部 build 時本機抓取寫入靜態 HTML；前端零外部請求、首頁零 JS。
 - **授權僅針對網站專案**（2026/8/28 修正）：網站程式 **GNU AGPLv3**（`LICENSE`）、網站內容（含 `llms.txt`／`llms-full.txt`）**CC BY-NC-SA 4.0**（`LICENSE-CONTENT`，不得商用）；**倉儲本身**（`build/` 腳本、`災情/`、`颱風/`、文件）**不以此兩授權釋出**；CWA 資料以官方條款為準。

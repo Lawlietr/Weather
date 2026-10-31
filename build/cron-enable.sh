@@ -21,7 +21,7 @@ echo "===================================================="
 
 # 1. 檢查金鑰檔
 if [ ! -r "$DEPLOY_DIR/deploy.env" ]; then
-  echo "❌ $DEPLOY_DIR/deploy.env 不存在。請先建立（cron-enable 會從 ~/.zshrc 複製金鑰）" >&2
+  echo "❌ $DEPLOY_DIR/deploy.env 不存在。金鑰通常放在 ~/.zshrc.secrets（deploy-cron.sh 會自動 grep）；本檔只做兜底，請建立並 chmod 600" >&2
   exit 1
 fi
 

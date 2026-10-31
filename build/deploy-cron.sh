@@ -6,7 +6,7 @@
 #       由 cron 呼叫（見 cron.txt / cron-enable.sh）。
 #
 # 功能：
-#   1. 載入 build/deploy.env（金鑰，gitignore，不進 repo）
+#   1. 載入金鑰（慣例來源＝~/.zshrc.secrets 憑證集中檔；build/deploy.env 只做兜底）
 #   2. 執行 ./build/deploy.sh（抓 CWA + build + 推 CF / GitHub Pages）
 #   3. 全程寫入 build/logs/ 日誌（最多保留 5 天，超時自動刪除）
 #   4. flock 防止重疊執行
@@ -35,16 +35,20 @@ LOCK_FILE="/tmp/weather-deploy.lock"
 # cron 環境 PATH 極簡，需補齊（含 node 與 python）
 export PATH="/root/.local/share/pi-node/node-v22.23.2-linux-x64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
-# 從 ~/.zshrc 抽取金鑰環境變數（cron 不載入 .zshrc，但可 grep export 行）
-# 若 .zshrc 不存在或抽不到，則 fallback 到 deploy.env 硬編碼值
-if [ -r "$HOME/.zshrc" ]; then
-  for var in CWA_API_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID GH_PAT; do
-    val=$(grep -E "^export ${var}=" "$HOME/.zshrc" 2>/dev/null | tail -1 | sed "s/^export ${var}=//;s/^['\"]//;s/['\"]$//")
-    if [ -n "$val" ]; then
-      export "$var"="$val"
-    fi
+# 金鑰環境變數：cron 不讀 shell rc，所以一律 grep `^export VAR=` 行。依序找，先找到即採用。
+# ~/.zshrc.secrets＝憑證集中檔（2026-10-29 起：token 太多，不再塞在 ~/.zshrc，改由 .zshrc source 此檔）。
+SECRET_FILES=("$HOME/.zshrc.secrets" "$HOME/.zshrc" "$HOME/.bashrc")
+KEY_FROM=""
+for var in CWA_API_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID GH_PAT; do
+  for sf in "${SECRET_FILES[@]}"; do
+    [ -r "$sf" ] || continue
+    val=$(grep -E "^export ${var}=" "$sf" 2>/dev/null | tail -1 | sed "s/^export ${var}=//;s/^['\"]//;s/['\"]$//")
+    [ -n "$val" ] || continue
+    export "$var"="$val"
+    KEY_FROM="${KEY_FROM:+$KEY_FROM,}${var}←${sf}"
+    break
   done
-fi
+done
 
 log() { echo "$(date '+%Y-%m-%d %H:%M:%S') [cron] $*" >> "$LOG_FILE"; }
 
@@ -62,15 +66,15 @@ do_selfcheck() {
     if [ -z "${!k:-}" ]; then log "SELFCHECK FAIL: 缺少 $k"; ok=0; fi
   done
   # 網路：CWA
-  if curl -fsS -m 20 "https://opendata.cwa.gov.tw/api/v1/rest/datastore/W-C0034-005?Authorization=${CWA_API_KEY}&format=JSON" \
+  if curl -fsS -m 20 "https://opendata.cwa.gov.tw/api/v1/rest/datastore/W-C0034-005?Authorization=${CWA_API_KEY:-}&format=JSON" \
         | grep -q "TropicalCyclones" 2>/dev/null; then
     log "SELFCHECK OK:  CWA API 可連"
   else
     log "SELFCHECK FAIL: CWA API 不可連"; ok=0
   fi
   # 網路：Cloudflare API 驗證
-  if curl -fsS -m 20 -X GET "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}" \
-        -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+  if curl -fsS -m 20 -X GET "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID:-}" \
+        -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN:-}" \
         | grep -q "\"success\":true" 2>/dev/null; then
     log "SELFCHECK OK:  Cloudflare API token 有效"
   else
@@ -105,13 +109,34 @@ case "${1:-}" in
 esac
 
 # ---- 載入金鑰 ----
-if [ ! -r "$DEPLOY_DIR/deploy.env" ]; then
-  log "ERROR: $DEPLOY_DIR/deploy.env 不存在或不可讀（權限？）"
-  echo "❌ $DEPLOY_DIR/deploy.env 不存在或不可讀，請先建立並 chmod 600" >&2
-  exit 3
+# 優先序：1) ~/.zshrc.secrets 2) ~/.zshrc／~/.bashrc（舊慣例）3) build/deploy.env（本機 gitignore，只做兜底）。
+# ⚠️ 三把金鑰都已從上面取得時不 source deploy.env：兩機那份內容不一致（開發機那份 2026-10-26 實測為失效 token、
+#    部署機那份是不含值的模板），source 下去會用過時值覆寫，或觸發其中的 `:?` 防呆。
+# ⚠️ deploy.env 內建 `: "${VAR:?…」"`：值為空時 bash 直接終止整個腳本，連 log 都來不及寫
+#    （2026-10-29 22:00 起連續 18 期只在 cron 郵件留字、build/logs 空白，就是這個死法）。
+#    所以缺金鑰一律在 source 之前先 log 再 exit 3。
+if [ -n "${CWA_API_KEY:-}" ] && [ -n "${CLOUDFLARE_API_TOKEN:-}" ] && [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+  log "金鑰來源：${KEY_FROM:-無}（已齊全，不載入 deploy.env）"
+else
+  if [ ! -r "$DEPLOY_DIR/deploy.env" ]; then
+    log "ERROR: 金鑰不全（已取：${KEY_FROM:-無}），且 $DEPLOY_DIR/deploy.env 不存在或不可讀（權限？）"
+    echo "❌ 金鑰不全，且 $DEPLOY_DIR/deploy.env 不存在或不可讀：請確認 ~/.zshrc.secrets，或建立 deploy.env（chmod 600）" >&2
+    exit 3
+  fi
+  missing=()
+  for k in CWA_API_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
+    [ -n "${!k:-}" ] && continue
+    grep -qE "^(export )?${k}=" "$DEPLOY_DIR/deploy.env" || missing+=("$k")
+  done
+  if [ "${#missing[@]}" -gt 0 ]; then
+    log "ERROR: 找不到金鑰 ${missing[*]}（找過：${SECRET_FILES[*]} 與 $DEPLOY_DIR/deploy.env）"
+    echo "❌ 缺少金鑰：${missing[*]}（請寫入 ~/.zshrc.secrets；日誌：$LOG_FILE）" >&2
+    exit 3
+  fi
+  log "金鑰不全（已取：${KEY_FROM:-無}）→ 改用 $DEPLOY_DIR/deploy.env 兜底"
+  # shellcheck disable=SC1090
+  . "$DEPLOY_DIR/deploy.env"
 fi
-# shellcheck disable=SC1090
-. "$DEPLOY_DIR/deploy.env"
 
 missing=()
 for k in CWA_API_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
@@ -133,7 +158,7 @@ if command -v flock >/dev/null 2>&1; then
   fi
 fi
 
-log "START（GH_PAT=${GH_PAT:+set}）"
+log "START（GH_PAT=${GH_PAT:+set}；金鑰來源：${KEY_FROM:-deploy.env}）"
 
 # ---- 清理舊日誌 ----
 cleanup_logs

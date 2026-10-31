@@ -15,7 +15,7 @@
 #   ./deploy.sh --no-gh               # build + Cloudflare，跳過 GitHub Pages
 #   ./deploy.sh --preview             # build 後本機預覽，不部署
 #
-# 需要環境變數（在 ~/.zshrc / ~/.bashrc 已設定）：
+# 需要環境變數（慣例：~/.zshrc source 的憑證集中檔 ~/.zshrc.secrets）：
 #   CWA_API_KEY、CLOUDFLARE_API_TOKEN、CLOUDFLARE_ACCOUNT_ID
 # 選用：GH_PAT（GitHub token；留空則改用本機 git remote github 的 SSH 推 gh-pages）
 #
@@ -67,7 +67,7 @@ for k in CWA_API_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
 done
 if [ "${#missing[@]}" -gt 0 ]; then
   echo "⚠️  缺少環境變數：${missing[*]}" >&2
-  echo "   請先在 ~/.zshrc（或 ~/.bashrc）設定後重開 shell。" >&2
+  echo "   請寫入 ~/.zshrc.secrets（憑證集中檔）後 exec zsh 重載，或在 shell 內 export。" >&2
   exit 1
 fi
 

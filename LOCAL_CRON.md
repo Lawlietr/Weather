@@ -3,7 +3,7 @@
 > **定位**：**本地 cron 是唯一自動 build＋部署通道**（本機＝**部署機 `192.168.100.14`**、Ubuntu LXC（hostname `hermes`）；2026-10-23 颱風期間改為**每小時**，2026-10-24 薔琵遠離後**降回每 2 小時**）。**本機 HEAD 常駐 `main`**：開發在另一台 `192.168.100.15` 的 `DEV` 分支，而 `build/deploy-cron.sh`/`deploy.sh` **不做 `git pull`**→ 開發機 merge 回 `main` 後，本機須 `git pull --ff-only origin main` 才會真正上線 → `WORKFLOW.md` §0.1。同日起 GitHub Actions 的 `schedule:` 已**完全移除**，僅留 `workflow_dispatch` 手動按鈕——因為 GitHub scheduler 實測不可靠（近 2 天 24 期只跑 10 期、間隔 185–424 分），詳 `.github/workflows/build.yml` 頭註與 `design/cf-cron.md`。
 > 歷史：2026/8/29 Actions 曾因 CWA 回傳 `MaxWindSpeed=None` 崩潰而暫停（已修復）、2026/9/26 恢復；2026-10-23 因排程可靠度問题彻底停用。
 > cron 工作項目以 `build/cron-enable.sh` 安裝（主力通道應常開）。
-> 最後更新：2026-10-24（cron 降回每 2 小時）
+> 最後更新：2026-10-31（金鑰來源改為 `~/.zshrc.secrets` 憑證集中檔；`build/deploy.env` 降為兜底）
 
 ---
 
@@ -16,7 +16,7 @@
 
 | | GitHub Actions（已停用排程，僅手動 dispatch） | 本地 cron（唯一自動通道） |
 |---|---|---|
-| 金鑰 | GitHub Secrets | `build/deploy.env`（本機，gitignore，600） |
+| 金鑰 | GitHub Secrets | `~/.zshrc.secrets`（憑證集中檔，600）；`build/deploy.env` 只做兜底 |
 | git 憑證 | Actions env | 本機已設定（Forgejo SSH / GitHub 直推） |
 | 依賴 | GitHub 伺服器 | **本機需保持醒著** |
 | 執行時間 | 約 3 分鐘 | 約 40 秒 |
@@ -30,8 +30,9 @@
 
 | 檔案 | 用途 |
 |---|---|
-| `build/deploy.env` | 本地金鑰（`CWA_API_KEY`、`CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`，選用 `GH_PAT`）。**gitignore，不進 repo**，權限 600。 |
-| `build/deploy-cron.sh` | cron 進入點。載入 `deploy.env`、`flock` 防重疊、跑 `deploy.sh`、寫 `build/logs/`。支援 `--selfcheck`。 |
+| `~/.zshrc.secrets` | **金鑰本體**（`CWA_API_KEY`、`CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`，選用 `GH_PAT`）。不進 git、不同步、權限 600，由 `~/.zshrc` source 它（2026-10-29 定案：token 太多，不再塞 `~/.zshrc`）。 |
+| `build/deploy.env` | 金鑰**兜底**檔（本機、gitignore、600）。`deploy-cron.sh` 只在上面取不到時才 source 它；檔內以 `${VAR:?}` 防呆——值為空會直接終止腳本，因此缺鑰由 `deploy-cron.sh` 在 source 之前先擋並寫日誌。 |
+| `build/deploy-cron.sh` | cron 進入點。依序 grep `~/.zshrc.secrets`→`~/.zshrc`→`~/.bashrc` 的 export 行取金鑰、`flock` 防重疊、跑 `deploy.sh`、寫 `build/logs/`。支援 `--selfcheck`。 |
 | `build/cron.txt` | crontab 內容（排程行）。 |
 | `build/cron-enable.sh` | **安裝** cron（主力自動通道）。冪等。 |
 | `build/cron-disable.sh` | **停用** cron。冪等。 |
@@ -42,7 +43,8 @@
 ## 三、使用流程
 
 ### 準備（接手時一次，或金鑰移動後）
-金鑰已從 `~/.zshrc` 複製到 `build/deploy.env`（若遺失，手動寫入後 `chmod 600`）。
+金鑰放在 `~/.zshrc.secrets`（600、不進 git、由 `~/.zshrc` source）。`deploy-cron.sh` 依序找 `~/.zshrc.secrets` → `~/.zshrc` → `~/.bashrc` 的 export 行，都取不到才用 `build/deploy.env` 兜底。
+每次換鍵後驗證：`bash build/deploy-cron.sh --selfcheck`（只驗金鑰與網路，不部署）。
 
 ### 開啟 cron（一次）
 ```bash
@@ -64,9 +66,9 @@ crontab -l   # 確認 Weather 排程已移除
 ```
 
 ### 不想用 cron、只想手動
-不裝 cron，直接跑（金鑰取自環境，或先 `source build/deploy.env`）：
+不裝 cron，直接跑（金鑰取自環境，或先 `source ~/.zshrc.secrets`）：
 ```bash
-source build/deploy.env
+source ~/.zshrc.secrets
 ./build/deploy.sh            # 完整（CF + GitHub Pages）
 ./build/deploy.sh --no-gh    # 僅 Cloudflare
 ./build/deploy.sh --build-only
@@ -96,10 +98,11 @@ source build/deploy.env
 ## 六、注意事項
 
 1. **本機需保持醒著**；休眠/關機期間的排程不會補跑（cron 非 systemd timer 的 missed-run 補執）。
-2. **金鑰安全**：`build/deploy.env` 權限 600、gitignore，絕不 commit。若懷疑洩漏，請到 Cloudflare/CWA 後台重設並更新此檔。
+2. **金鑰安全**：`~/.zshrc.secrets` 與 `build/deploy.env` 皆權限 600、不在 git（後者另 gitignore），絕不 commit。若懷疑洩漏，請到 Cloudflare/CWA 後台重設並更新 `~/.zshrc.secrets`。
 3. Actions 已無自動排程（2026-10-23 起），不會再與 cron 撞車或重複 publish；只有手動 dispatch 時才會多一次。
 4. Actions 偶發失敗 99% 是 Cloudflare token 限區域或失效；用 `--selfcheck` 可先確認是 token 問題還是本機問題（手動 dispatch 時同樣適用）。
-5. cron 環境極簡（不載入 `.zshrc`），故金鑰必須在 `build/deploy.env`（由 `deploy-cron.sh` 載入），不要依賴 shell 環境變數。
+5. cron 環境極簡（不載入 shell rc），故 `deploy-cron.sh` 直接 grep `~/.zshrc.secrets`（其次 `~/.zshrc`、`~/.bashrc`）的 export 行；**三把金鑰齊全時不再 source `build/deploy.env`**，避免該檔的過時 token 覆寫（開發機那份 2026-10-26 實測 CF API 403／9109）。
+6. ⚠️ **金鑰只從固定檔名取**：把金鑰搬家（如 2026-10-29 從 `~/.zshrc` 移到 `~/.zshrc.secrets`）之後，一定要 `bash build/deploy-cron.sh --selfcheck` 驗一次。舊版腳本只 grep `~/.zshrc`，鑰搬走後 `build/deploy.env` 的 `${VAR:?}` 會把腳本在寫日誌前就終止——連續 18 期（2026-10-29 22:00～10-31 08:00）只在 cron 郵件留字、`build/logs` 一片空白。現版已改為先 log 再 exit 3。
 
 ---
 
@@ -110,8 +113,11 @@ source build/deploy.env
 tail -n 40 build/logs/deploy-cron-$(date +%F).log
 
 # 手動跑一次（會實際部署，慎用）
-source build/deploy.env
-./build/deploy-cron.sh
+bash build/deploy-cron.sh --selfcheck   # 先驗金鑰與網路
+bash build/deploy-cron.sh
+
+# 排程有跑但 build/logs 是空白 → 看 cron 的郵件（stdout/stderr 進 postfix，不在日誌）
+grep -c "Subject: Cron" /var/mail/root && tail -60 /var/mail/root
 
 # 確認 cron 是否已安裝
 crontab -l | grep weather
