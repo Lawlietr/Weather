@@ -238,7 +238,7 @@ cd public && python3 -m http.server 8080
     ```bash
     npx -y wrangler@latest pages deploy public --project-name weather
     ```
-    需環境變數 `CLOUDFLARE_API_TOKEN`＋`CLOUDFLARE_ACCOUNT_ID`（已設在 `~/.zshrc`，金鑰不進 repo）。
+    需環境變數 `CLOUDFLARE_API_TOKEN`＋`CLOUDFLARE_ACCOUNT_ID`（已設在 `~/.zshrc.secrets`，金鑰不進 repo）。
   - 自訂域名 DNS 紀錄（如重建需重設）：三個 zone 各一筆 CNAME `weather.* → weather-9kb.pages.dev`（proxied on）。
   - 與 GitHub Pages 為**同一份 `public/` 的平行託管**；兩边都要更新時，先 build 一次、再分別跑上面的兩個推送流程。
 - **測試站（2026/9/13 上線，DEV 預覽專用）**：
@@ -251,7 +251,7 @@ cd public && python3 -m http.server 8080
     ⚠️ 務必帶 `--branch main`（自訂域名指向 production branch；wrangler 預取目前 git 分支名，DEV 上會部署成 `dev` 預覽而不生效）。
   - **落點＝開發機（.15）即可，不用到部署機**（2026-10-26 實測推翻舊記錄「開發機無 node 跑不起來」）：先載入有效 CF 鍵再部署——
     ```bash
-    eval "$(grep -E '^export (CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID)=' ~/.zshrc)"
+    eval "$(grep -E '^export (CLOUDFLARE_API_TOKEN|CLOUDFLARE_ACCOUNT_ID)=' ~/.zshrc.secrets)"
     ./build/build.sh
     npx -y wrangler@latest pages deploy public --project-name wea-testing --branch main
     ```

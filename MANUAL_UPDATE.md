@@ -19,7 +19,7 @@
 ## 0. 環境設定（接手時先跑一次）
 
 ```bash
-# 1) 金鑰（已設在 ~/.zshrc；若沒有，手動 export）
+# 1) 金鑰（已設在 ~/.zshrc.secrets，由 ~/.zshrc source；若沒有，手動 export）
 export CWA_API_KEY="你的_CWA_API_KEY"
 export CLOUDFLARE_API_TOKEN="你的_CLOUDFLARE_API_TOKEN"
 export CLOUDFLARE_ACCOUNT_ID="你的_CLOUDFLARE_ACCOUNT_ID"
@@ -118,7 +118,7 @@ git push origin main
 | SSL 錯誤 `CERTIFICATE_VERIFY_FAILED` | 已知問題，build 已改走 curl；改 `cwa.py` 的 `_get_json` 時**不要改回 urllib**。 |
 | `wrangler` 找不到 | 用 `npx -y wrangler@latest …`（本機已裝 node，或 npx 自動抓）。 |
 | GitHub Pages push 被拒 | 確認已 `source ~/.zshrc`、git 憑證正常（Mac 用 keychain）。 |
-| deploy.sh 說缺少環境變數 | 重開 shell 或 `source ~/.zshrc` 讓金鑰生效。 |
+| deploy.sh 說缺少環境變數 | 重開 shell，或 `source ~/.zshrc.secrets` 讓金鑰生效。 |
 
 ---
 
@@ -127,7 +127,7 @@ git push origin main
 ### Cloudflare Pages（主要通道）
 - 專案：`weather`，自訂域名 `weather.avpclub.eu.org`、`weather.avpclub.uk`、`weather.larch.dpdns.org`（皆 proxied、自動 HTTPS）。
 - 更新：`npx -y wrangler@latest pages deploy public --project-name weather`
-- 憑證：`CLOUDFLARE_API_TOKEN`＋`CLOUDFLARE_ACCOUNT_ID`（在 `~/.zshrc`，不進 repo）。
+- 憑證：`CLOUDFLARE_API_TOKEN`＋`CLOUDFLARE_ACCOUNT_ID`（在 `~/.zshrc.secrets` 憑證集中檔，不進 repo）。
 
 ### GitHub Pages（平行託管）
 - 站點：<https://lawlietr.github.io/Weather/>（繁中）＋ `/ja/`（日文）。
