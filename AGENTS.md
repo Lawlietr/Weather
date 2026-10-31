@@ -239,7 +239,7 @@
 ### 不變項（改動前先確認）
 
 - **更新模式**：本地 cron（**每 2 小時整點**）為**唯一**自動 build＋部署通道；Actions 自 2026-10-23 起無自動排程，僅手動 dispatch（排程狀態與 CF 替代方案評估 → `WORKFLOW.md` §7、`design/cf-cron.md`）；**災情新聞人工把關、不自動推 RSS**（→ `WORKFLOW.md` §1、`MANUAL_UPDATE.md`）。
-- **金鑰**：CWA Key、Cloudflare 憑證分散在 (1) 本機 `~/.zshrc.secrets`（**憑證集中檔**、600、`~/.zshrc` 只 source 它——2026-10-29 定案，token 多、不塞 `.zshrc`）、(2) GitHub Secrets（dispatch）、(3) `build/deploy.env`（600，**只做兜底**：`deploy-cron.sh` 取到金鑰就不 source 它）；**不寫進任何輸出檔案、不進 `public/`、不進網站**。
+- **金鑰**：CWA Key、Cloudflare 憑證分散在 (1) 本機 `~/.zshrc.secrets`（**憑證集中檔**、600、`~/.zshrc` 只 source 它——2026-10-29 定案，token 多、不塞 `.zshrc`）、(2) GitHub Secrets（dispatch）、(3) `build/deploy.env`（600、gitignore、**只做兜底**，需要時由 repo 內 `build/deploy.env.example` 複製；`deploy-cron.sh` 取到金鑰就不 source 它）；**不寫進任何輸出檔案、不進 `public/`、不進網站**。
 - **非即時**：首頁顯示「**產生時間**」（i18n key `updated`），由 `build/site.py` 以**固定 UTC+8** 產生（`datetime.now(timezone(timedelta(hours=8)))`）；**不可改回不帶時區的 `datetime.now()`**（Actions runner 是 UTC、會慢 8 小時）。「產生時間」＝網頁何時生成，**不等於氣象／災情資料已更新**。
 - **CWA 不支援 CORS**：氣象資料全部 build 時本機抓取寫入靜態 HTML；前端零外部請求、首頁零 JS。
 - **授權僅針對網站專案**（2026/8/28 修正）：網站程式 **GNU AGPLv3**（`LICENSE`）、網站內容（含 `llms.txt`／`llms-full.txt`）**CC BY-NC-SA 4.0**（`LICENSE-CONTENT`，不得商用）；**倉儲本身**（`build/` 腳本、`災情/`、`颱風/`、文件）**不以此兩授權釋出**；CWA 資料以官方條款為準。

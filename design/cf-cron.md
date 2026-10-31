@@ -59,10 +59,16 @@ GitHub 2026 年确有排程大面積延遲／靜默丢單的公開回報（orgs/
 
 ## 4. 現行定案（2026-10-23 起）
 
-- **唯一自動通道＝本地 cron，每小時整點**（`0 * * * *`，Asia/Taipei）。颱風期間提高頻率；平日是否降回每 2 小時另行決定。
+- **唯一自動通道＝本地 cron，每 2 小時整點**（`0 */2 * * *`，Asia/Taipei。2026-10-23 薈琵期間曾升為每小時 `0 * * * *`，10-24 遠離後降回）。
 - **Actions `schedule:` 已移除**，只留 `workflow_dispatch` 手動按鈕（不會自己跑）。
 - **未實作任何 CF 側東西**（無 Worker、無新 Pages 專案、無 Cron Trigger）。
 - 日後若要重啟此案，先決定：(a) 只要「準時觸發」→ 變體 A；(b) 要「compute 也離開 GitHub」→ 變體 B 並先跑上面 5 項驗證。
 
-### 顺帶記錄（本次評估發現、尚未處理）
-- `build/deploy.env` 未設 `GH_PAT` → cron 每次都 `--no-gh`，**GitHub Pages mirror 只在手動部署時更新**（最近一次 cron 皆顯示「跳過 GitHub Pages」）。若要 mirror 同步，需補 `GH_PAT` 或改用 github remote 直推邏輯。
+### 順帶記錄（本次評估發現 → 2026-10-31 已結案）
+- 當時發現：`build/deploy.env` 未設 `GH_PAT` → cron 每次都 `--no-gh`，GitHub Pages mirror 只在手動部署時更新。
+  **已修**：`0c5232e`（2026-10-23）起 cron 一律完整部署（CF＋gh-pages），gh-pages 改用本機 `github` remote 的 SSH 直推、不需要 `GH_PAT`。
+  實測（2026-10-31 10:06 那期）：cron 推 `gh-pages`（`23e48ef…5102734` forced update），`lawlietr.github.io` 約 1 分鐘後產生時間追到與 CF 同版。
+- Forgejo（`origin`）上的 `gh-pages` 分支**不是服務**：該站（Forgejo 15.0.11／Gitea 1.22 基底）的 Pages 未啟用——
+  `/lawliet/Weather/pages`、`/lawliet/Weather/-/pages`、`/lawliet.pages` 皆 HTTP 404（repo 主頁 200）。
+  而該分支內容是 2026-08-29 的 **repo 原始檔快照**（29 檔，頂層是 `AGENTS.md`／`LICENSE`／`MANUAL_UPDATE.md` 等，不是 `public/` 產物）
+  → 既不服務、也與生產無關，只是定時器看不到的死拷貝；要清理就 `git push origin --delete gh-pages`（2026-10-31 記錄，尚未刪）。

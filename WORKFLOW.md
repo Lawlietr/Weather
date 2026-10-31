@@ -203,7 +203,7 @@ cd public && python3 -m http.server 8080
 5. **Actions 排程已于 2026-10-23 彻底停用（`schedule:` 已從 `build.yml` 移除，僅留 `workflow_dispatch`）**：直接原因是 **GitHub scheduler 不可靠**——2026-10-23 實測近 2 天 24 期排程只觸發 10 期、實際間隔 185–424 分（應為 120 分），每次 run 2.5–3.4 分鐘；同期本地 cron 10/10 準時、历時 33–58 秒。GitHub 側亦有延遲 5–7 小時／整期漏跑的公開回報（orgs/community discussion #201472）。
    歷史：2026/8/29 曾因 CWA 回傳 `MaxWindSpeed=None` 導致崩潰（`TypeError`）而暫停，2026/9/26 恢復——該 bug 已修復（`cwa.py` 加 `if ws is not None`），但排程可靠度問題非本 repo 可解。Actions `schedule` 只讀 default branch（`main`）°`build/build.sh` 的 CWA 前置檢查（3 次重試、失敗 `exit 1`）仍保留。唯一自動更新通道＝本地 cron（每 2 小時，見 §7）。
 6. **Cloudflare token 限區域或失效**：code 9109。去 CF 後台重開 token 並更新 GitHub Secret 即可；
-   或改用本地 cron 備用（`build/cron-enable.sh`）。⚠️ 2026-10-26 實測：**開發機（.15）的 `build/deploy.env` 已失效（CF API 403／9109）、部署機（.14）那份 source 時 `CWA_API_KEY` 報「請設定」＝模板不是鍵本體**；兩機實戰可用的 CF/CWA 鍵都在 `~/.zshrc.secrets`（開發機那份對 CF `/accounts` 與 `wea-testing` 實測 HTTP 200）。別再拿 `deploy.env` 去部署（見 §6 測試站）。
+   或改用本地 cron 備用（`build/cron-enable.sh`）。⚠️ 2026-10-31 更新：兩機的 `build/deploy.env` **已刪除**（開發機那份是失效 token、CF API 403／9109；部署機那份是 source 時用 `${VAR:?}` 中止腳本的模板）。金鑰一律取自 `~/.zshrc.secrets`，要兜底檔請 `cp build/deploy.env.example build/deploy.env && chmod 600`；兩機實戰可用的 CF/CWA 鍵都在 `~/.zshrc.secrets`（開發機那份對 CF `/accounts` 與 `wea-testing` 實測 HTTP 200）。別再拿 `deploy.env` 去部署（見 §6 測試站）。
 7. **「產生時間」時區陷阱**：`build/site.py` 必須保持
    `datetime.now(timezone(timedelta(hours=8)))`（固定 UTC+8）。若改回不帶時區的 `datetime.now()`，
    本機（`Asia/Taipei`）build 時間正確，但 **Actions runner 是 UTC，會慢 8 小時**（2026/8/27 曾發生）。

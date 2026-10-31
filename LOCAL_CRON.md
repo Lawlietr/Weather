@@ -3,7 +3,7 @@
 > **定位**：**本地 cron 是唯一自動 build＋部署通道**（本機＝**部署機 `192.168.100.14`**、Ubuntu LXC（hostname `hermes`）；2026-10-23 颱風期間改為**每小時**，2026-10-24 薔琵遠離後**降回每 2 小時**）。**本機 HEAD 常駐 `main`**：開發在另一台 `192.168.100.15` 的 `DEV` 分支，而 `build/deploy-cron.sh`/`deploy.sh` **不做 `git pull`**→ 開發機 merge 回 `main` 後，本機須 `git pull --ff-only origin main` 才會真正上線 → `WORKFLOW.md` §0.1。同日起 GitHub Actions 的 `schedule:` 已**完全移除**，僅留 `workflow_dispatch` 手動按鈕——因為 GitHub scheduler 實測不可靠（近 2 天 24 期只跑 10 期、間隔 185–424 分），詳 `.github/workflows/build.yml` 頭註與 `design/cf-cron.md`。
 > 歷史：2026/8/29 Actions 曾因 CWA 回傳 `MaxWindSpeed=None` 崩潰而暫停（已修復）、2026/9/26 恢復；2026-10-23 因排程可靠度問题彻底停用。
 > cron 工作項目以 `build/cron-enable.sh` 安裝（主力通道應常開）。
-> 最後更新：2026-10-31（金鑰來源改為 `~/.zshrc.secrets` 憑證集中檔；`build/deploy.env` 降為兜底）
+> 最後更新：2026-10-31（金鑰一律取自 `~/.zshrc.secrets`；兜底檔的範本改放 repo 內 `build/deploy.env.example`，兩機的 `build/deploy.env` 已刪）
 
 ---
 
@@ -16,7 +16,7 @@
 
 | | GitHub Actions（已停用排程，僅手動 dispatch） | 本地 cron（唯一自動通道） |
 |---|---|---|
-| 金鑰 | GitHub Secrets | `~/.zshrc.secrets`（憑證集中檔，600）；`build/deploy.env` 只做兜底 |
+| 金鑰 | GitHub Secrets | `~/.zshrc.secrets`（憑證集中檔，600）；兜底檔範本＝repo 內 `build/deploy.env.example` |
 | git 憑證 | Actions env | 本機已設定（Forgejo SSH / GitHub 直推） |
 | 依賴 | GitHub 伺服器 | **本機需保持醒著** |
 | 執行時間 | 約 3 分鐘 | 約 40 秒 |
@@ -31,7 +31,7 @@
 | 檔案 | 用途 |
 |---|---|
 | `~/.zshrc.secrets` | **金鑰本體**（`CWA_API_KEY`、`CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`，選用 `GH_PAT`）。不進 git、不同步、權限 600，由 `~/.zshrc` source 它（2026-10-29 定案：token 太多，不再塞 `~/.zshrc`）。 |
-| `build/deploy.env` | 金鑰**兜底**檔（本機、gitignore、600）。`deploy-cron.sh` 只在上面取不到時才 source 它；檔內以 `${VAR:?}` 防呆——值為空會直接終止腳本，因此缺鑰由 `deploy-cron.sh` 在 source 之前先擋並寫日誌。 |
+| `build/deploy.env.example` | 兜底檔**範本**（進 repo；內容全是註解佔位，不含金鑰）。要兜底時 `cp build/deploy.env.example build/deploy.env && chmod 600 build/deploy.env` 再填值——`deploy-cron.sh` 只在 `~/.zshrc.secrets`／`~/.zshrc`／`~/.bashrc` 都取不到金鑰時才 source 它。兩機目前已無 `build/deploy.env`（2026-10-31 刪除：開發機那份是失效 token、部署機那份是會以 `${VAR:?}` 中止腳本的模板）。缺鑰時 `deploy-cron.sh` 會先寫 `ERROR: 找不到金鑰 …` 進 `build/logs/` 再 exit 3。 |
 | `build/deploy-cron.sh` | cron 進入點。依序 grep `~/.zshrc.secrets`→`~/.zshrc`→`~/.bashrc` 的 export 行取金鑰、`flock` 防重疊、跑 `deploy.sh`、寫 `build/logs/`。支援 `--selfcheck`。 |
 | `build/cron.txt` | crontab 內容（排程行）。 |
 | `build/cron-enable.sh` | **安裝** cron（主力自動通道）。冪等。 |

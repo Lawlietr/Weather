@@ -19,10 +19,12 @@ echo "===================================================="
 echo " 安裝 Weather cron 自動部署（每 2 小時）  $(date +%Y/%m/%d\ %H:%M)"
 echo "===================================================="
 
-# 1. 檢查金鑰檔
+# 1. 金鑰來源提示（真正的把關在下面的 selfcheck）
+if [ ! -r "$HOME/.zshrc.secrets" ] && [ ! -r "$HOME/.zshrc" ] && [ ! -r "$HOME/.bashrc" ] && [ ! -r "$DEPLOY_DIR/deploy.env" ]; then
+  echo "⚠️  ~/.zshrc.secrets、~/.zshrc、~/.bashrc、$DEPLOY_DIR/deploy.env 都不存在 → 金鑰沒有來源，selfcheck 一定會失敗" >&2
+fi
 if [ ! -r "$DEPLOY_DIR/deploy.env" ]; then
-  echo "❌ $DEPLOY_DIR/deploy.env 不存在。金鑰通常放在 ~/.zshrc.secrets（deploy-cron.sh 會自動 grep）；本檔只做兜底，請建立並 chmod 600" >&2
-  exit 1
+  echo "ℹ️  沒有 build/deploy.env（這是兜底檔、gitignore）。需要時：cp build/deploy.env.example build/deploy.env && chmod 600 build/deploy.env"
 fi
 
 # 2. 建議先自檢
