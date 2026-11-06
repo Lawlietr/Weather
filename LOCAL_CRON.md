@@ -103,6 +103,8 @@ source ~/.zshrc.secrets
 4. Actions 偶發失敗 99% 是 Cloudflare token 限區域或失效；用 `--selfcheck` 可先確認是 token 問題還是本機問題（手動 dispatch 時同樣適用）。
 5. cron 環境極簡（不載入 shell rc），故 `deploy-cron.sh` 直接 grep `~/.zshrc.secrets`（其次 `~/.zshrc`、`~/.bashrc`）的 export 行；**三把金鑰齊全時不再 source `build/deploy.env`**，避免該檔的過時 token 覆寫（開發機那份 2026-10-26 實測 CF API 403／9109）。
 6. ⚠️ **金鑰只從固定檔名取**：把金鑰搬家（如 2026-10-29 從 `~/.zshrc` 移到 `~/.zshrc.secrets`）之後，一定要 `bash build/deploy-cron.sh --selfcheck` 驗一次。舊版腳本只 grep `~/.zshrc`，鑰搬走後 `build/deploy.env` 的 `${VAR:?}` 會把腳本在寫日誌前就終止——連續 18 期（2026-10-29 22:00～10-31 08:00）只在 cron 郵件留字、`build/logs` 一片空白。現版已改為先 log 再 exit 3。
+7. ⚠️ **cron PATH 不得寫死 node 的版本目錄名**（2026-11-06 修正）。舊版 `deploy-cron.sh` 寫死 `/root/.local/share/pi-node/node-v22.23.2-linux-x64/bin`。pi 升級 node 時會換掉目錄名並移除舊版（本機 2026-11-05 10:48 換成 `node-v24.22.2-linux-x64`），當天 12:00 起連續 10 期在 `npx -y wrangler` 得到 `rc=127`（`npx: command not found`）。⚠️ **一個 CF 失敗會讓兩個通道同時停擺**：`deploy.sh` 是 `set -euo pipefail`，[2/4] Cloudflare 掛了之後的 [3/4] gh-pages 也不會跑（本機自 11-05 08:00 起約 25 小時沒上線）。現版改以 `current` 符號連結優先、再補上現存的 `node-v*/bin`（依版本由新到舊），並在 build 前先 log「node 就緒」、找不到就 exit 4；`--selfcheck` 也驗 node/npx。
+8. **gh-pages 推送會偶發被拒**：`cannot lock ref 'refs/heads/gh-pages': is at <sha> but expected <sha>`（GitHub 端 ref 在「廣告 ref」與「上鎖」之間被其他程序動過；2026-11-04 20:00、11-05 02:00／06:00／10:00 實測各一次）。現版 `deploy.sh` 自動重試 3 次（間隔 5 秒，每次重讀遠端 ref 狀態）；失敗時 Cloudflare 已部署完成，只有鏡像站延後。
 
 ---
 
@@ -124,4 +126,10 @@ crontab -l | grep weather
 
 # 手動 build 驗證（不部署）
 ./build/deploy.sh --build-only
+
+# 停在 [2/4]、rc=127 → cron 找不到 node/npx（pi-node 升級改了目錄名，見 §六 7）
+ls -l /root/.local/share/pi-node/                 # 看現存版本目錄與 current 指向
+
+# 用近似 cron 的極簡環境自檢（驗證 PATH 與金鑰都能取到）
+env -i HOME=/root PATH=/usr/bin:/bin bash build/deploy-cron.sh --selfcheck
 ```

@@ -117,7 +117,24 @@ if [ "$NO_GH" -ne 1 ]; then
   git -C "$TMP" init -q -b gh-pages
   git -C "$TMP" add -A
   git -C "$TMP" commit -q -m "site update: $(date +%Y/%m/%d)"
-  git -C "$TMP" push -f "$GH_PUSH" gh-pages
+  # 推送需重試。GitHub 偶發拒絕整個 ref：`cannot lock ref 'refs/heads/gh-pages': is at <sha>
+  # but expected <sha>`（2026-11-04 20:00、2026-11-05 02:00／06:00／10:00 實測各一次）——
+  # 遠端 ref 在「廣告 ref 給本地」與「上鎖」之間被别的程序動過，本地持的是舊值。
+  # 重試會重新讀遠端 ref 狀態，實務上一試即成（下趟 cron 也常自行成功）。
+  gh_pushed=0
+  for gh_attempt in 1 2 3; do
+    if git -C "$TMP" push -f "$GH_PUSH" gh-pages; then
+      gh_pushed=1
+      break
+    fi
+    echo "    gh-pages 推送失敗（第 $gh_attempt/3 次），5 秒後重試"
+    sleep 5
+  done
+  if [ "$gh_pushed" -ne 1 ]; then
+    echo "❌ gh-pages 連續 3 次推送失敗（Cloudflare 已部署完成，gh-pages mirror 未更新）"
+    rm -rf "$TMP"
+    exit 1
+  fi
   rm -rf "$TMP"
 else
   echo

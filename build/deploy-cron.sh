@@ -32,8 +32,23 @@ mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/deploy-cron-$(date +%Y-%m-%d).log"
 LOCK_FILE="/tmp/weather-deploy.lock"
 
-# cron 環境 PATH 極簡，需補齊（含 node 與 python）
-export PATH="/root/.local/share/pi-node/node-v22.23.2-linux-x64/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+# cron 環境 PATH 極簡，需補齊（含 node 與 python）。
+# ⚠️ 不得寫死 node 的版本目錄名。pi 自帶的 node 升級會換掉目錄名（舊版會整個消失）：
+#    2026-11-05 10:48 pi-node 由 node-v22.23.2-linux-x64 換成 node-v24.22.2-linux-x64，
+#    寫死的 PATH 從當天 12:00 起連續 10 期在 deploy.sh 的 `npx -y wrangler` 得到 rc=127，
+#    Cloudflare 與 GitHub Pages 兩個通道全停（deploy.sh 是 set -e，[2/4] 掛了 [3/4] 也不跑）。
+#    改以 current 符號連結優先，再依版本由新到旧補上現存的 node-v*/bin 目錄。
+PI_NODE_HOME="${HOME}/.local/share/pi-node"
+node_path_candidates=("$PI_NODE_HOME/current/bin")
+while IFS= read -r _d; do node_path_candidates+=("$_d"); done \
+  < <(ls -d "$PI_NODE_HOME"/node-v*/bin 2>/dev/null | sort -Vr)
+node_path_candidates+=("$HOME/.hermes/node/bin")
+NODE_PATH_EXTRA=""
+for _d in "${node_path_candidates[@]}"; do
+  [ -x "$_d/node" ] || continue
+  NODE_PATH_EXTRA="${NODE_PATH_EXTRA:+$NODE_PATH_EXTRA:}$_d"
+done
+export PATH="${NODE_PATH_EXTRA:+$NODE_PATH_EXTRA:}/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
 # 金鑰環境變數：cron 不讀 shell rc，所以一律 grep `^export VAR=` 行。依序找，先找到即採用。
 # ~/.zshrc.secrets＝憑證集中檔（2026-10-29 起：token 太多，不再塞在 ~/.zshrc，改由 .zshrc source 此檔）。
@@ -65,6 +80,12 @@ do_selfcheck() {
   for k in CWA_API_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
     if [ -z "${!k:-}" ]; then log "SELFCHECK FAIL: 缺少 $k"; ok=0; fi
   done
+  # node／npx（Cloudflare Pages 部署靠 `npx -y wrangler`，缺它就一定部署不出去）
+  if command -v npx >/dev/null 2>&1 && command -v node >/dev/null 2>&1; then
+    log "SELFCHECK OK:  node 可用（$(node -v 2>/dev/null || echo 版本未知)；$(command -v node)）"
+  else
+    log "SELFCHECK FAIL: cron PATH 找不到 node/npx（pi-node 目錄名改變？查 $PI_NODE_HOME）"; ok=0
+  fi
   # 網路：CWA
   if curl -fsS -m 20 "https://opendata.cwa.gov.tw/api/v1/rest/datastore/W-C0034-005?Authorization=${CWA_API_KEY:-}&format=JSON" \
         | grep -q "TropicalCyclones" 2>/dev/null; then
@@ -147,6 +168,14 @@ if [ "${#missing[@]}" -gt 0 ]; then
   echo "❌ 缺少金鑰：${missing[*]}" >&2
   exit 3
 fi
+
+# ---- node 前置檢查（缺 npx 時 CF 必失敗，且 set -e 會連 gh-pages 一起不推）----
+if ! command -v npx >/dev/null 2>&1; then
+  log "ERROR: cron PATH 找不到 npx（查過 $PI_NODE_HOME/current/bin 與 $PI_NODE_HOME/node-v*/bin）。PATH=$PATH"
+  echo "❌ 找不到 npx：請確認 $PI_NODE_HOME 下的 node 目錄名（日誌：$LOG_FILE）" >&2
+  exit 4
+fi
+log "node 就緒：$(node -v 2>/dev/null || echo 版本未知) ← $(command -v node)"
 
 # ---- 防止重疊 ----
 exec 9>"$LOCK_FILE"
