@@ -16,7 +16,7 @@
 | 每次 run 耗時 | 2.5–3.4 分鐘 | — |
 | 對照：本地 cron | 每 2 小時 `:00:01` 起跑、**10/10 全部 END 成功**、历時 33–58 秒 | — |
 
-GitHub 2026 年确有排程大面積延遲／靜默丢單的公開回報（orgs/community discussion #201472：延遲 5–7 小時、整期漏跑；Status page 曾示「平均延遲約 3 小時」）。
+GitHub 2026 年确有排程大面積延遲／靜默丟單的公開回報（orgs/community discussion #201472：延遲 5–7 小時、整期漏跑；Status page 曾示「平均延遲約 3 小時」）。
 → **結論：`schedule:` 是 GitHub 側排程器的可靠度問題，非本 repo 設定問題。**
 
 ---

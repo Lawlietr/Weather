@@ -11,6 +11,13 @@ DEPLOY_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$DEPLOY_DIR/.." && pwd)"
 START="# >>> Weather cron managed >>>"
 TAG="# weather-deploy-cron"
+TS="$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$REPO_ROOT/build/logs"
+
+# 先備份「移除前」的 crontab。舊版把備份放在移除動作之後 → 備份檔永远是移除後的狀態
+# （2026-11-07 於開發機實測：2026-08-27／10-31／11-07 三份 crontab.backup.* 全是 0 位元組），
+# 無法用來恢復。現在 before/after 兩份都留，恢復用 before。
+crontab -l > "$REPO_ROOT/build/logs/crontab.before.$TS.txt" 2>/dev/null || true
 
 echo "===================================================="
 echo " 停用 Weather cron 備用排程  $(date +%Y/%m/%d\ %H:%M)"
@@ -24,8 +31,8 @@ else
   echo "（原本就沒有 Weather cron 工作項目）"
 fi
 
-mkdir -p "$REPO_ROOT/build/logs"
-crontab -l > "$REPO_ROOT/build/logs/crontab.backup.$(date +%Y%m%d-%H%M%S).txt" 2>/dev/null || true
+crontab -l > "$REPO_ROOT/build/logs/crontab.after.$TS.txt" 2>/dev/null || true
+echo "crontab 備份：build/logs/crontab.before.$TS.txt（移除前，恢復用）與 crontab.after.$TS.txt（移除後）"
 
 echo
 echo "目前 crontab："

@@ -1,9 +1,9 @@
 # LOCAL_CRON.md：本地自動部署（主力更新通道）
 
-> **定位**：**本地 cron 是唯一自動 build＋部署通道**（本機＝**部署機 `192.168.100.14`**、Ubuntu LXC（hostname `hermes`）；2026-10-23 颱風期間改為**每小時**，2026-10-24 薔琵遠離後**降回每 2 小時**）。**本機 HEAD 常駐 `main`**：開發在另一台 `192.168.100.15` 的 `DEV` 分支，而 `build/deploy-cron.sh`/`deploy.sh` **不做 `git pull`**→ 開發機 merge 回 `main` 後，本機須 `git pull --ff-only origin main` 才會真正上線 → `WORKFLOW.md` §0.1。現行**只推 Cloudflare Pages**，且 **GitHub Actions 完全不使用**（2026-11-07 刪除 `.github/workflows/build.yml`）：scheduler 實測不可靠（近 2 天 24 期只跑 10 期、間隔 185–424 分），再也不會回來。GitHub Pages 鏡像（`gh-pages` 分支）也於 2026-11-07 停用 → §四。
+> **定位**：**本地 cron 是唯一自動 build＋部署通道**（本機＝**部署機 `192.168.100.14`**、Ubuntu LXC（hostname `hermes`）；2026-10-23 颱風期間改為**每小時**，2026-10-24 薔琵遠離後**降回每 2 小時**）。**本機 HEAD 常駐 `main`**：開發在另一台 `192.168.100.15` 的 `DEV` 分支，而 `build/deploy-cron.sh`/`deploy.sh` **不做 `git pull`**→ 開發機 merge 回 `main` 後，本機須 `git pull --ff-only origin main` 才會真正上線 → `WORKFLOW.md` §0.1。現行**只推 Cloudflare Pages**，且 **GitHub Actions 完全不使用**（2026-11-07 刪除 `.github/workflows/build.yml`）：scheduler 實測不可靠（近 2 天 24 期只跑 10 期、間隔 185–424 分），再也不會回來。GitHub Pages 鏡像已於 2026-11-07 徹底移除（`gh-pages` 分支已從三邊刪除、Pages 站已關）→ §四。開發機不得裝部署 cron（2026-11-07 復查已關）→ §六 12。
 > 排程頻率：2026-10-23 薔琵期間曾改為每小時，2026-10-24 起固定每 2 小時。
 > cron 工作項目以 `build/cron-enable.sh` 安裝（主力通道應常開）。
-> 最後更新：2026-11-07（只推 Cloudflare Pages；Actions 與 gh-pages 鏡像停用；`/tmp` 殘留與 npm 快取的自動清理 → §5.1、§6 第 9–10 條）
+> 最後更新：2026-11-07（只推 Cloudflare Pages；Actions 與 gh-pages 鏡像已徹底移除（分支已刪、站已關）→ §四；`/tmp` 殘留、npm 快取、開發機 cron、`cron-disable.sh` 備份的自動清理與防呆 → §5.1、§6 第 9–13 條；本機落地順序 → §6 第 11 條）
 
 ---
 
@@ -117,18 +117,6 @@ source ~/.zshrc.secrets
 | agent 除錯暫存檔 | `/tmp/weather-scratch/`（單一目錄，規則 → `WORKFLOW.md` §8 第 3 條） | `cleanup_tmp()` 清超過 2 天未動的 |
 | npm／npx 快取（不在 `/tmp`） | `~/.npm`（其中 `_npx`） | `cleanup_tmp()` 清 14 天未碰的 `_npx` entries；整個 `~/.npm` 超過 **300 MB** 時跑 `npm cache clean --force`（下趟重抓 wrangler，多十幾秒） |
 
-⚠️ **2026-11-07 過渡期間**：這批改動已 commit 在 `DEV`（包括已刪除的 `.github/workflows/build.yml`），而本機（部署機）工作區刻意**保留同內容的未 commit 版本**（cron 每 2 小時就是跑這份，不能先還原）。開發機把 `DEV` merge 進 `main` 並 push 後，本機落地順序：
-
-```bash
-# 1) 還原本機未 commit 的修改（內容與 DEV 那份相同，不會倒退）。
-#    只還原狀態為 M 的檔案：已刪除的 .github/workflows/build.yml 不得 checkout，否則會被復活。
-git checkout -- $(git status --porcelain | awk '$1=="M"{print $2}')
-# 2) 拉進已合入 main 的 DEV 內容（含該 workflow 檔的刪除）
-git checkout main && git pull --ff-only origin main
-# 3) 確認未被復活
-ls .github/workflows/ 2>/dev/null || echo 'workflow 已移除（正確）'
-```
-
 舊版的三個缺陷（2026-11-07 修正前）：① `deploy.sh` 只有結尾一行 `rm -rf "$TMP"`，而腳本是 `set -euo pipefail` —— [3/4] 中途失敗（push 被拒、rsync／commit 錯）就提前 exit，**每次部署失敗都會在 `/tmp` 留一份完整 `public/` 副本**（無前綴的 `tmp.` ＋ 10 個亂碼字元，事後無法辨識是誰留的）；② `flock` 的 lock 檔永不刪除；③ 舊版 `WORKFLOW.md` §8 叫 agent 把查到的 JSON 存到 `/tmp` 頂層 → 實測堆了 70+ 個來源不明的 `cwa_*.json`／`*.html`／`*.py`（已清；現行規則改成只准寫 `/tmp/weather-scratch/`，見 §8 第 8 條）。
 ⚠️ 本機不是完全沒有清理：`systemd-tmpfiles-clean.timer` 每日跑，設定為 `D /tmp 1777 root root 30d`（2026-11-07 實測）——但 **30 天對本專案太慢也太粗**：一份 `public/` 副本數 MB，兩週就能積出十幾份，而且 30 天的窗口完全蓋不住「連續失敗的這段時間」。所以靠 `cleanup_tmp()` 自己掃（3 小時就清），不能等系統回收。
 
@@ -152,7 +140,28 @@ ls .github/workflows/ 2>/dev/null || echo 'workflow 已移除（正確）'
    ```
 
    ⚠️ **現行 cron 已不再建立任何 mktemp 目錄**（不推鏡像就跳過那段），正常運行的 `/tmp` 應該完全沒變化。
-10. **npm 快取自動清理**（2026-11-07）：`npx -y wrangler@latest` 會為每個新版 wrangler 留一份快取（實測 `~/.npm` 366 MB、`_npx` 104 MB）。`cleanup_tmp()` 先清 14 天未碰的 `_npx` entries；整個 `~/.npm` 超過 **300 MB** 就跑 `npm cache clean --force`（下趟重抓 wrangler，多十幾秒）。本機目前 366 MB → 下一期 cron 就會清一次，之後穩定在阈值以下。
+10. **npm 快取自動清理**（2026-11-07）：`npx -y wrangler@latest` 會為每個新版 wrangler 留一份快取（實測 `~/.npm` 366 MB、`_npx` 104 MB）。`cleanup_tmp()` 先清 14 天未碰的 `_npx` entries；整個 `~/.npm` 超過 **300 MB** 就跑 `npm cache clean --force`（下趟重抓 wrangler，多十幾秒）。2026-11-07 實測：該期日誌記「npm cache 366 MB > 300 MB -> npm cache clean --force」，跑後 `~/.npm` 降到 108 MB（其中 104 MB 是該期 npx 重抓的 wrangler），之後穩定低於閾值。
+11. **開發機 merge 進 `main` 後，本機（部署機）的落地順序**（2026-11-07 實測可用）：
+
+    ```bash
+    cd /root/opencode-stuffs/Weather
+    git pull --ff-only origin main            # 帶進 merge（含被刪除的檔案）
+    git status --porcelain                    # 應為空
+    ls .github/workflows/ 2>/dev/null || echo 'workflow 已移除（正確）'
+    ```
+
+    若本機工作區先前有**與 remote 內容相同**的未 commit 改動（直接在部署機改腳本留下的），先 stash 再 pull，確認沒丟東西才 drop：
+
+    ```bash
+    git stash push -u -m '<說明>'
+    git pull --ff-only origin main
+    git diff --stat stash@{0}                 # 空＝stash 內容與已落地內容完全一致
+    git stash drop
+    ```
+
+    ⚠️ 不要用 `git checkout -- $(git status --porcelain | awk '{print $2}')` 還原全部檔案：commit 裡**被刪除的檔案會被復活**，之後的 pull 就不是乾淨的 fast-forward。
+12. **開發機不得有部署 cron**（2026-11-07 復查）：那台的 HEAD 常在 `DEV`，cron 一生效就會把未合併內容推上生產。接手時現查：`ssh 192.168.100.15 'crontab -l | grep weather-deploy-cron'`（應無輸出）。已於當日 `bash build/cron-disable.sh` 關掉；規則 → `AGENTS.md` 鐵則 6、`design/dev-machine.md`。
+13. **`cron-disable.sh` 的備份**（2026-11-07 修正）：舊版在移除**之後**才寫備份 → `build/logs/crontab.backup.*` 恒為 0 位元組（2026-08-27／10-31／11-07 三份皆空），無法恢復。現行寫兩份：`crontab.before.<時間>.txt`（移除前，恢復用）與 `crontab.after.<時間>.txt`（移除後）。
 
 ---
 

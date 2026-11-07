@@ -1,7 +1,7 @@
 # 開發機 / 部署機 分工與環境細節（2026-10-23 實測定案）
 
 > **為什麼有這檔**：本倉儲跑在**兩台不同的機器**上。過去多個 session（含 2026-10-23 這次）只站在「部署機」看 repo，就誤判「`DEV` 上沒有進行中的功能」——因為部署機的本地分支指標可能嚴重過時，而開發機未 push 的工作在這裡完全看不見。本檔記錄兩台的實測差異，避免重複踩。
-> 規則本體在 `AGENTS.md`「兩台機器分工」（五條鐵則）、流程在 `WORKFLOW.md` §0.1；本檔放**環境細節與已知缺口**。
+> 規則本體在 `AGENTS.md`「兩台機器分工」（六條鐵則）、流程在 `WORKFLOW.md` §0.1；本檔放**環境細節與已知缺口**。
 
 ## 一、兩機對照（2026-10-23 實測）
 
@@ -13,7 +13,7 @@
 | repo 路徑 | `/root/opencode-stuffs/Weather`（同路徑） | `/root/opencode-stuffs/Weather` |
 | 目前分支 | **`DEV`**（`git status -sb` 首行 `## DEV`） | **`main`**（HEAD 常駐，勿切分支） |
 | 角色 | 功能開發、`build/` 改動、測試站驗證 | 每 2 小時 cron build＋部署生產三站；災情/颱風 markdown；ops 修正 |
-| cron | **空**（`crontab -l` 無任何項目）→ 不會部署 | `0 */2 * * * /bin/bash .../build/deploy-cron.sh`（`# weather-deploy-cron`，2026-10-24 起每 2 小時） |
+| cron | **應為空（不會部署）**。⚠️ 但**不是恒空、不得引用舊快照**：2026-11-07 復查發現該機存在生效的 `0 */2 * * * … build/deploy-cron.sh # weather-deploy-cron`（備份檔顯示至少 8/27、10/31 就裝過）。因其 `deploy-cron.sh` 是舊版、PATH 找不到 node，當日 00:00–18:00 十期全 `rc=127` → 從未真的部署、也未污染生產。已於當日 `bash build/cron-disable.sh` 關掉（現在 `crontab -l` 為空）。風險與規則 → `AGENTS.md` 鐵則 6 | `0 */2 * * * /bin/bash .../build/deploy-cron.sh`（`# weather-deploy-cron`，2026-10-24 起每 2 小時） |
 | git | 2.43.0 | 2.43.0 |
 | remotes | `origin`(Forgejo `ssh://fg/...`)／`github`(https)／`codeberg`(ssh) — 三邊同名 | 同三邊 |
 | Python | 3.12.3（系統版）；repo 內 `build/.venv` **已建立**（⚙ 2026-10-28 更新，舊行寫「未建立」已過時：開發機已兩度跑通 `./build/build.sh`，venv 在 `build/.venv`） | 3.12.3；`build/build.sh` 自動建 repo 內 `.venv`（⚠ `WORKFLOW.md` §0 舊寫「Python ≥ 3.14」與實測不符，已更正為 3.12） |
@@ -38,10 +38,11 @@
 ssh -o BatchMode=yes 192.168.100.15 'cd /root/opencode-stuffs/Weather && \
   git fetch --all --prune -q; git status -sb | head -5; git status --porcelain | wc -l; \
   git stash list; git log --oneline origin/main..DEV | head -20; \
-  git rev-list --count DEV..origin/main'
+  git rev-list --count DEV..origin/main; \
+  echo "cron 生效行數: $(crontab -l 2>/dev/null | grep -cE "^[0-9*/].*weather-deploy-cron")"'
 ```
 
-⚠ 從部署機對開發機**只做讀取**；要在開發機改東西（例如 `git merge origin/main` 同步 `DEV`）需先取得使用者同意——那是她正在開發的工作環境。
+⚠ 從部署機對開發機**只做讀取**；要在開發機改東西（例如 `git merge origin/main` 同步 `DEV`、或關掉那台的 cron）需先取得使用者同意——那是她正在開發的工作環境。**2026-11-07 已獲同意**在開發機執行：`DEV`→`main` 的 fast-forward merge（推三邊）、`git pull --ff-only origin DEV` 對齊本地 `DEV`、`bash build/cron-disable.sh`。當時開發機狀態：在 `DEV`、dirty 0、stash 0、`origin/DEV..DEV` = 0（無未 push 的開發中工作）。
 
 ## 三、由環境差异產生的操作結論
 
@@ -64,5 +65,6 @@ ssh -o BatchMode=yes 192.168.100.15 'cd /root/opencode-stuffs/Weather && \
 - [x] 開發機 `build/deploy.env` 時效 → **已查：失效**（2026-10-26 CF API 403／9109）。可用的鍵在 `~/.zshrc.secrets`。⚠️ 待辦：要嘛重發 token 後同步更新兩機的 `deploy.env`，要嘛把本機那份改掉／標成模板，避免下一個 session 又拿來用
 - [x] `DEV` 落後 `main` 23 commits → 2026-10-26 已處理（本地 `DEV` 曾落後 `origin/DEV` 20＋ commit、造成 push 非快進；已 `git rebase origin/DEV` 對齊後推送）。重疊檔以往是 `build/dgpa.py`、`site.py`、`i18n.py`、`deploy-cron.sh` → 開發前先 fetch 的鐵則繼續成立
 - [x] **兩機 `build/deploy.env` 一致性** → **2026-10-31 定案**：`build/deploy.env` 不再是金鑰本體（開發機那份是失效 token、部署機那份是無值模板）。金鑰一律放 `~/.zshrc.secrets`，`deploy-cron.sh` 依序 grep `~/.zshrc.secrets`→`~/.zshrc`→`~/.bashrc`，三鑰齊全就**不 source** `deploy.env`（不再被過時值覆寫）。⚠️ 反面教材：舊版只 grep `~/.zshrc`，10/29 鑰移到 `.zshrc.secrets` 後 cron 連續 18 期靜默失敗 → `LOCAL_CRON.md` §六.6
-- [ ] 開發機 `crontab -l` 仍空 ✓（2026-10-26 未變）、`git remote` 三邊都在 ✓；但**開發機的 `main` 常態落後 `origin/main` 數十個 commit** → 開發前先 `git fetch --all --prune`＋`git merge origin/main`（五條鐵則第 5 條），本輪 2026-10-26 又踩到一次（本地 DEV 落後 20＋ commit，造成 push 非快進）
+- [x] 開發機 `crontab -l` 是否仍空 → **2026-11-07 復查：不空、有生效的 weather 排程**（十期 rc=127、從未部署），已 `bash build/cron-disable.sh` 關掉。教訓寫進 `AGENTS.md` 鐵則 6：接手時一律現查、不得引用舊快照。另：舊版 `cron-disable.sh` 把備份寫在移除**之後** → 三份 `crontab.backup.*` 全是 0 位元組（無法恢復），已改為 `crontab.before.<時間>.txt`（移除前）＋`crontab.after.<時間>.txt`（移除後）
+- [ ] **開發機的 `main` 常態落後 `origin/main` 數十個 commit** → 開發前先 `git fetch --all --prune`＋`git merge origin/main`（六條鐵則第 5 條），2026-10-26 曾踩到（本地 `DEV` 落後 20＋ commit，造成 push 非快進）
 - [ ] 若日後要完全捨棄長期 `DEV`：改從 `main` 切 `feat/<名稱>` 短支，本檔改寫為「分支模型」記錄

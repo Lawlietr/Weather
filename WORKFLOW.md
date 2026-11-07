@@ -34,7 +34,7 @@
 | **開發機** | `192.168.100.15` | 功能開發（`DEV` 分支）、部署測試站 `wea-testing`、Playwright 驗證 |
 | **部署機** | `192.168.100.14`（hostname `hermes`、Ubuntu LXC；另有 `192.168.1.14`） | 本地 cron 每 2 小時 build＋部署生產三站；只做災情/颱風 markdown 與 ops，**不做功能開發** |
 
-守則（理由詳 AGENTS.md「兩台機器分工」五條鐵則；兩台機器的**環境細節、工具缺口與探測指令** → `design/dev-machine.md`）：
+守則（理由詳 AGENTS.md「兩台機器分工」六條鐵則；兩台機器的**環境細節、工具缺口與探測指令** → `design/dev-machine.md`）：
 
 ```bash
 # 開發機：開發前先把 main 的修正同步進 DEV（不是事後才同步）
@@ -50,6 +50,7 @@ cd /root/opencode-stuffs/Weather && git checkout main && git pull --ff-only orig
 - ⚠ `build/deploy-cron.sh` 與 `build/deploy.sh` **不做 `git pull`/`fetch`/`checkout`** → 只部署本機工作區 HEAD；**「已 push 到 remote」≠「已上線」**，部署機的 HEAD 才是生產內容。
 - ⚠ 判斷 `DEV` 狀態要看 `origin/DEV`（`git ls-remote`／`git fetch` 後），本機分支指標可能過時。
 - ⚠ 不要在部署機 `git checkout DEV`（會把落後 main 的內容自動推上生產）；需暫時停 cron：`bash build/cron-disable.sh`，測完 `bash build/cron-enable.sh`。
+- ⚠ **開發機也不能有部署 cron**（鐵則 6）。2026-11-07 復查：開發機存在生效的 `0 */2 * * * … # weather-deploy-cron`（因其腳本找不到 node，當日十期 rc=127、從未真的部署），已 `bash build/cron-disable.sh` 關掉。接手時現查 `ssh 192.168.100.15 'crontab -l | grep weather-deploy-cron'`（應無輸出）——不得引用文件裡的舊快照。
 
 ## 1. 例行更新流程（每次都要做）
 
