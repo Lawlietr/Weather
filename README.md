@@ -1,9 +1,11 @@
 # 🌦 Weather — 台灣天氣與災情總覽
 
-紀錄颱風動態與災情的 Markdown 倉儲，並以 build 腳本產出**純靜態網站**，已上線 Cloudflare Pages（自訂域名，主要通道）＋ GitHub Pages：
+紀錄颱風動態與災情的 Markdown 倉儲，並以 build 腳本產出**純靜態網站**，上線於 Cloudflare Pages（自訂域名，唯一公開管道）：
 
 > 🌐 <https://weather.avpclub.eu.org/>（繁中）｜<https://weather.avpclub.eu.org/ja/>（日文）
-> 其他端點：<https://weather.avpclub.uk/>、<https://weather.larch.dpdns.org/>、<https://lawlietr.github.io/Weather/>（同一份內容）
+> 其他端點：<https://weather.avpclub.uk/>、<https://weather.larch.dpdns.org/>
+>
+> GitHub Pages 鏡像（`lawlietr.github.io/Weather/`）自 2026-11-07 起不再更新，內容停在当期（不再推 `gh-pages`）。
 
 本站採**手動更新**、非即時，每頁標示「最後更新時間」。
 

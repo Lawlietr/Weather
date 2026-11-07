@@ -1,9 +1,9 @@
 # design/cf-cron.md — 排程／部署改到 Cloudflare 的評估（**未實作**）
 
 > 狀態：**僅評估記錄，2026-10-23 定案「不做」**。触发缘由＝GitHub Actions 排程名存實亡。
-> 對應動作（已執行）：Actions `schedule:` 停用 → 見 `.github/workflows/build.yml`；
-> 本地 cron 改**每小時** → 見 `build/cron.txt`、`LOCAL_CRON.md`。
-> 最後更新：2026-10-23 10:40
+> 對應動作（已執行）：Actions `schedule:` 停用→ 2026-10-23；**整支 workflow 於 2026-11-07 刪除**（現行 repo 內 `.github/workflows/` 為空，GitHub Actions 完全不使用）；本地 cron 2026-10-23 改每小時、2026-10-24 降回**每 2 小時** → 見 `build/cron.txt`、`LOCAL_CRON.md`。
+> ⚠️ 本檔內提到 `build.yml`／`workflow_dispatch`／GitHub Secrets 的段落是**当时的現况描述**；現行做法一律只看下面 §4。
+> 最後更新：2026-11-07
 
 ---
 
@@ -60,7 +60,8 @@ GitHub 2026 年确有排程大面積延遲／靜默丢單的公開回報（orgs/
 ## 4. 現行定案（2026-10-23 起）
 
 - **唯一自動通道＝本地 cron，每 2 小時整點**（`0 */2 * * *`，Asia/Taipei。2026-10-23 薈琵期間曾升為每小時 `0 * * * *`，10-24 遠離後降回）。
-- **Actions `schedule:` 已移除**，只留 `workflow_dispatch` 手動按鈕（不會自己跑）。
+- **Actions 已完全不使用**：`.github/workflows/build.yml` 於 2026-11-07 整支刪除（先前於 2026-10-23 移除 `schedule:`、只留 `workflow_dispatch`）。repo 內無 workflow 就不會有 run。
+- **不再推 `gh-pages` 鏡像**（2026-11-07）：推它就會觸發 GitHub 為 branch 來源 Pages 內建的 `pages build and deployment`，在 Actions 分頁每 2 小時留一條 run，容易被误判成「Actions 上又有自動部署」。現行只推 Cloudflare Pages → `LOCAL_CRON.md` §四。
 - **未實作任何 CF 側東西**（無 Worker、無新 Pages 專案、無 Cron Trigger）。
 - 日後若要重啟此案，先決定：(a) 只要「準時觸發」→ 變體 A；(b) 要「compute 也離開 GitHub」→ 變體 B 並先跑上面 5 項驗證。
 
@@ -71,4 +72,4 @@ GitHub 2026 年确有排程大面積延遲／靜默丢單的公開回報（orgs/
 - Forgejo（`origin`）上的 `gh-pages` 分支**不是服務**：該站（Forgejo 15.0.11／Gitea 1.22 基底）的 Pages 未啟用——
   `/lawliet/Weather/pages`、`/lawliet/Weather/-/pages`、`/lawliet.pages` 皆 HTTP 404（repo 主頁 200）。
   而該分支內容是 2026-08-29 的 **repo 原始檔快照**（29 檔，頂層是 `AGENTS.md`／`LICENSE`／`MANUAL_UPDATE.md` 等，不是 `public/` 產物）
-  → 既不服務、也與生產無關，只是定時器看不到的死拷貝；要清理就 `git push origin --delete gh-pages`（2026-10-31 記錄，尚未刪）。
+  → 既不服務、也與生產無關，只是定時器看不到的死拷貝；要清理就 `git push origin --delete gh-pages`（2026-10-31 記錄，尚未刪）。⚠️ 2026-11-07 起 cron 已**不再推 `gh-pages`**（三個 remote 上的 gh-pages 分支均停在最後一期）→ `LOCAL_CRON.md` §四。

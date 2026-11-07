@@ -1,18 +1,18 @@
 # 手動更新指南（Manual Update）
 
 本文件記錄「改完災情／颱風 markdown → build → 部署上線」的完整手動流程。
-自動化排程與完整 runbook 見 `WORKFLOW.md`（主力為本地 cron，Actions 為備援自動排程（台北時間奇數小時）＋手動 dispatch；cron 細節見 `LOCAL_CRON.md`）。
+自動化排程與完整 runbook 見 `WORKFLOW.md`（**本地 cron 是唯一的自動通道**，GitHub Actions 已完全不使用；cron 細節見 `LOCAL_CRON.md`）。
 
 > 快速版：改完 markdown 後只跑一支指令即可上線：
 > ```bash
 > ./build/deploy.sh
 > ```
 >
-> **環境現況（2026/9/1）**：GitHub repo `Lawlietr/Weather` **已設為公開**；
-> 金鑰存在本機環境（手動用）與 `build/deploy.env`（cron 用）。公開網站由
-> **Cloudflare Pages** 提供；GitHub Pages 為備用 mirror（目前 404）。
-> Forgejo 與 GitHub **main 同步**；**本地 cron 為主力自動更新**（每 2 小時，見
-> `LOCAL_CRON.md`），Actions 排程 2026/9/26 起啟用（台北時間奇數小時 00 分，備援）＋手動 dispatch。
+> **環境現況（2026-11-07）**：公開網站**只由 Cloudflare Pages 提供**（自訂域名 ×3）。
+> GitHub Pages 鏡像已停用（不再推 `gh-pages`）、GitHub Actions 已完全不使用（`build.yml` 已刪）。
+> 金鑰存在本機 `~/.zshrc.secrets`（手動與 cron 同一來源）。
+> 三個 git remote（Forgejo／GitHub／Codeberg）的 **repo 代碼與 markdown** 仍同步推 `main`，
+> 但那只是版本控制，**不產生網站**。
 
 ---
 
@@ -66,10 +66,10 @@ git push origin main
 ### 用 `deploy.sh` 的進階選項
 
 ```bash
-./build/deploy.sh                       # 完整：build + Cloudflare + GitHub Pages
+./build/deploy.sh                       # 完整：build ＋ 部署到 Cloudflare Pages
 ./build/deploy.sh --build-only          # 只 build，不部署
-./build/deploy.sh --no-cf               # build + GitHub Pages，跳 Cloudflare
-./build/deploy.sh --no-gh               # build + Cloudflare，跳 GitHub Pages
+./build/deploy.sh --no-cf               # 不部署任何一站（等同只 build）
+./build/deploy.sh --gh                  # 額外推 GitHub Pages 鏡像（已停用，見 §5）
 ./build/deploy.sh --preview             # build 後本機預覽，不部署
 ```
 
@@ -116,32 +116,34 @@ git push origin main
 |------|------|
 | CWA 回傳結構變動（KeyError／欄位缺失） | **先 dump 真實回傳結構再改解析**，勿照舊文件猜。差異對照見 `build/CWA_API.md` 與 `WORKFLOW.md` §5。 |
 | SSL 錯誤 `CERTIFICATE_VERIFY_FAILED` | 已知問題，build 已改走 curl；改 `cwa.py` 的 `_get_json` 時**不要改回 urllib**。 |
-| `wrangler` 找不到 | 用 `npx -y wrangler@latest …`（本機已裝 node，或 npx 自動抓）。 |
-| GitHub Pages push 被拒 | 確認已 `source ~/.zshrc`、git 憑證正常（Mac 用 keychain）。 |
+| `wrangler` 找不到 | 用 `npx -y wrangler@latest …`（本機已裝 node，或 npx 自動抓）。cron 的 PATH 已內建 node 候選路徑（見 `LOCAL_CRON.md` §6 第 7 條）。 |
+| 執行 `--gh` 時 push 被拒 | 確認已 `source ~/.zshrc.secrets`、本機 `github` remote 的 SSH 可用（或設 `GH_PAT` 走 token）。 |
 | deploy.sh 說缺少環境變數 | 重開 shell，或 `source ~/.zshrc.secrets` 讓金鑰生效。 |
 
 ---
 
-## 5. 部署說明（兩個公開託管）
+## 5. 部署說明（唯一通道＝Cloudflare Pages）
 
-### Cloudflare Pages（主要通道）
+### Cloudflare Pages
 - 專案：`weather`，自訂域名 `weather.avpclub.eu.org`、`weather.avpclub.uk`、`weather.larch.dpdns.org`（皆 proxied、自動 HTTPS）。
-- 更新：`npx -y wrangler@latest pages deploy public --project-name weather`
+- 更新：`npx -y wrangler@latest pages deploy public --project-name weather --branch main`
 - 憑證：`CLOUDFLARE_API_TOKEN`＋`CLOUDFLARE_ACCOUNT_ID`（在 `~/.zshrc.secrets` 憑證集中檔，不進 repo）。
 
-### GitHub Pages（平行託管）
-- 站點：<https://lawlietr.github.io/Weather/>（繁中）＋ `/ja/`（日文）。
-- 只收 `public/`：orphan `gh-pages` 分支、不與 main 共享 history。
-- 推送：`deploy.sh` 已在乾淨暫存目錄重做 orphan commit＋force push。
+### GitHub Pages（2026-11-07 起停用，不再是部署目標）
+- `deploy.sh` 預設**不推** `gh-pages`；镜像站 `lawlietr.github.io/Weather/` 的内容停在最後一期（2026-11-07）。
+- 为何停用：推 `gh-pages` 會觸發 GitHub 為 branch 來源 Pages 內建的 `pages build and deployment` workflow（Actions 分頁每 2 小時出現一期、易误判為「另有自動部署」），而該镜像不是正式管道、也不影響三個正式域名。
+- 真的要重建镜像：先在 GitHub repo 重新啟用 Pages（branch 來源 `gh-pages`），再跑 `./build/deploy.sh --gh`（憑證优先序：`GH_PAT` → 本機 `github` remote 的 SSH）。
 
-> 兩者為同一份 `public/` 的平行託管；`deploy.sh` 一次更新兩邊。
+> 只有一邊要上線：`public/` 只推 Cloudflare Pages。
+
+> ⚠️ `deploy.sh` 完成訊息與站內 canonical URL 都以 Cloudflare 域名為準；`llms.txt`／`llms-full.txt` 的 canonical base 也是 `https://weather.avpclub.eu.org`（`build/site.py` 的 `SITE_BASE`）。
 
 ---
 
 ## 6. 排程自動化（選用，非本文件範圍）
 
-- **GitHub Actions**：在 GitHub 伺服器上排程，不依賴本機開著。見 `WORKFLOW.md` §7。
-- **cron（unix）**：本機或 Ubuntu LXC/VM 上排 `deploy.sh`。需該機器常醒著。
+- **本地 cron（唯一自動通道）**：本機（部署機 `192.168.100.14`）每 2 小時跑 `build/deploy-cron.sh` → `deploy.sh` → Cloudflare Pages。需該機器常醒著；安裝/停用/自檢 → `LOCAL_CRON.md`。
+- **GitHub Actions：不使用**（2026-11-07 刪除 `.github/workflows/build.yml`）。scheduler 不可靠（2026-10-23 實測 24 期只跑 10 期、間隔 185–424 分）。
 - **災情更新**：由 LLM Agent 在有颱風／災害時觸發（查資料 → 更新 markdown → build → push），平常不自動跑。
 
 ---
@@ -150,7 +152,7 @@ git push origin main
 
 ```bash
 ./build/build.sh                          # 完整 build（抓 CWA + 產出 public/）
-./build/deploy.sh                         # build + 部署到 CF 與 GitHub Pages
+./build/deploy.sh                         # build ＋ 部署到 Cloudflare Pages
 ./build/deploy.sh --build-only            # 只 build
 cd public && python3 -m http.server 8080  # 本機預覽
 grep -rl 'CWA_API_KEY\|CLOUDFLARE' public/ # 金鑰零外洩檢查（應無輸出）

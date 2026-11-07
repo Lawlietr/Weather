@@ -1,28 +1,27 @@
 # LOCAL_CRON.md：本地自動部署（主力更新通道）
 
-> **定位**：**本地 cron 是唯一自動 build＋部署通道**（本機＝**部署機 `192.168.100.14`**、Ubuntu LXC（hostname `hermes`）；2026-10-23 颱風期間改為**每小時**，2026-10-24 薔琵遠離後**降回每 2 小時**）。**本機 HEAD 常駐 `main`**：開發在另一台 `192.168.100.15` 的 `DEV` 分支，而 `build/deploy-cron.sh`/`deploy.sh` **不做 `git pull`**→ 開發機 merge 回 `main` 後，本機須 `git pull --ff-only origin main` 才會真正上線 → `WORKFLOW.md` §0.1。同日起 GitHub Actions 的 `schedule:` 已**完全移除**，僅留 `workflow_dispatch` 手動按鈕——因為 GitHub scheduler 實測不可靠（近 2 天 24 期只跑 10 期、間隔 185–424 分），詳 `.github/workflows/build.yml` 頭註與 `design/cf-cron.md`。
-> 歷史：2026/8/29 Actions 曾因 CWA 回傳 `MaxWindSpeed=None` 崩潰而暫停（已修復）、2026/9/26 恢復；2026-10-23 因排程可靠度問题彻底停用。
+> **定位**：**本地 cron 是唯一自動 build＋部署通道**（本機＝**部署機 `192.168.100.14`**、Ubuntu LXC（hostname `hermes`）；2026-10-23 颱風期間改為**每小時**，2026-10-24 薔琵遠離後**降回每 2 小時**）。**本機 HEAD 常駐 `main`**：開發在另一台 `192.168.100.15` 的 `DEV` 分支，而 `build/deploy-cron.sh`/`deploy.sh` **不做 `git pull`**→ 開發機 merge 回 `main` 後，本機須 `git pull --ff-only origin main` 才會真正上線 → `WORKFLOW.md` §0.1。現行**只推 Cloudflare Pages**，且 **GitHub Actions 完全不使用**（2026-11-07 刪除 `.github/workflows/build.yml`）：scheduler 實測不可靠（近 2 天 24 期只跑 10 期、間隔 185–424 分），再也不會回來。GitHub Pages 鏡像（`gh-pages` 分支）也於 2026-11-07 停用 → §四。
+> 排程頻率：2026-10-23 薔琵期間曾改為每小時，2026-10-24 起固定每 2 小時。
 > cron 工作項目以 `build/cron-enable.sh` 安裝（主力通道應常開）。
-> 最後更新：2026-11-07（`/tmp` 殘留清理：`deploy.sh` 的 gh-pages 暫存目錄改為帶前綴＋EXIT trap，`deploy-cron.sh` 取得 lock 後掃舊殘留、退出時刪 lock 檔 → §5.1、§6 第 9 條）
+> 最後更新：2026-11-07（只推 Cloudflare Pages；Actions 與 gh-pages 鏡像停用；`/tmp` 殘留與 npm 快取的自動清理 → §5.1、§6 第 9–10 條）
 
 ---
 
 ## 一、這是什麼
 
-在機器本地排 `build/deploy.sh`（抓 CWA → build → 推 Cloudflare Pages ＋ GitHub Pages），
-**每小時一次（一天 24 次）**。執行前檢查 CWA 可用性（3 次重試，失敗則中止部署，不推舊資料）。
+在機器本地排 `build/deploy.sh`（抓 CWA → build → 推 **Cloudflare Pages**），
+**每 2 小時一次（一天 12 次）**。執行前檢查 CWA 可用性（3 次重試，失敗則中止部署，不推舊資料）。
 
-與 Actions 的對比（2026-10-23 實測數據）：
+為何不用 GitHub Actions（2026-10-23 實測數據，2026-11-07 正式移除 workflow）：
 
-| | GitHub Actions（已停用排程，僅手動 dispatch） | 本地 cron（唯一自動通道） |
+| | GitHub Actions | 本地 cron（現行唯一自動通道） |
 |---|---|---|
-| 金鑰 | GitHub Secrets | `~/.zshrc.secrets`（憑證集中檔，600）；兜底檔範本＝repo 內 `build/deploy.env.example` |
-| git 憑證 | Actions env | 本機已設定（Forgejo SSH / GitHub 直推） |
-| 依賴 | GitHub 伺服器 | **本機需保持醒著** |
+| 排程準度 | 24 期只跑 10 期、間隔 185–424 分（應為 120 分） | **每 2 小時整點，10/10 準時** |
 | 執行時間 | 約 3 分鐘 | 約 40 秒 |
-| 排程 | ~~每 2 小時 `schedule:`~~ → 2026-10-23 移除（延遲 185–424 分、24 期只跑 10 期） | **每 2 小時整點（`0 */2 * * *`）**（2026-10-24 由每小時降回；薔琵期間曾升為每小時） |
-| 啟用 | 僅手動（workflow_dispatch） | 常開（`cron-enable.sh` 安裝） |
-| 備註 | 若要重新利用 Actions compute：用 CF Worker Cron 打 dispatch（首選修法，未實作）→ `design/cf-cron.md` | 10/10 次準時、历時 33–58 秒 |
+| 金鑰 | GitHub Secrets（需與本機同步兩份） | `~/.zshrc.secrets`（600）；兜底範本＝`build/deploy.env.example` |
+| 其他 | 無法推 git 鏡像（無 SSH key） | 本機需保持醒著 |
+
+日后若要重新引入自動觸發，首選方案是用 Cloudflare Worker Cron 打一個手動觸發（**僅評估、未實作**）→ `design/cf-cron.md`。
 
 ---
 
@@ -69,42 +68,47 @@ crontab -l   # 確認 Weather 排程已移除
 不裝 cron，直接跑（金鑰取自環境，或先 `source ~/.zshrc.secrets`）：
 ```bash
 source ~/.zshrc.secrets
-./build/deploy.sh            # 完整（CF + GitHub Pages）
-./build/deploy.sh --no-gh    # 僅 Cloudflare
+./build/deploy.sh            # 完整（build ＋ 推 Cloudflare Pages）
 ./build/deploy.sh --build-only
+./build/deploy.sh --gh       # 額外重建 GitHub Pages 鏡像（已停用 → §四）
 ```
-> 若需推私有 GitHub Pages mirror，需在環境設 `GH_PAT`（個人AccessToken），`deploy.sh` 會自動走 `x-access-token` 驗證。
+> `--gh` 需要推 `gh-pages` 的憑證：優先 `GH_PAT`（token HTTPS），未設則用本機 `github` remote 的 SSH。cron 不取 `GH_PAT`、也不帶 `--gh`。
 
 ---
 
-## 四、部署範圍預設（2026-10-23 起）
+## 四、部署範圍預設（2026-11-07 定案）
 
-- **cron 一律完整部署**：Cloudflare Pages ＋ GitHub Pages（orphan `gh-pages`）。
-  以往 `GH_PAT` 未設就自動加 `--no-gh`，gh-pages 是靠 Actions 順手推的；**Actions 排程已停用，所以 gh-pages 必須由本地 cron 自己推**（否則 mirror 會開始變舊）。
-- **推送憑證優先序**（`build/deploy.sh`）：`GH_PAT`（token HTTPS）→ 本機 `git remote github`（**SSH，現行 cron 就是靠這個，已實測 push 成功**）→ https 預設（credential helper）。repo 公開，不需要 `GH_PAT`。
-- 只要 Cloudflare 時：手動跑 `./build/deploy.sh --no-gh`（cron 不再自動加此參數）。
+- **cron 只推 Cloudflare Pages**（`weather` 專案＋三個自訂域名），這是唯一上線通道。
+- ⚠️ **不再推 GitHub Pages 鏡像（orphan `gh-pages` 分支）**。理由：
+  1. 推 `gh-pages` 就會觸發 GitHub 為 branch 來源 Pages 內建的 `pages build and deployment` workflow——Actions 分頁每 2 小時出現一期，容易被误判為「又在 Actions 上設了自動部署」（2026-11-07 就是這樣被發現的）。
+  2. 鏡像不是正式管道，出了問題不影響三個正式域名；多一條 push 路就多一個失敗點（舊版這條路也正是 `/tmp` 垃圾的來源 → §5.1）。
+  3. 鏡像內容會停在最後一期（`lawlietr.github.io/Weather/` 停在 2026-11-07 的內容）——**對災情站台來說，舊資料比沒資料更危險**。
+- **建義順手清掉舊鏡像**（尚未執行，待使用者同意）：`git push origin --delete gh-pages && git push github --delete gh-pages`；Pages 站本身 `gh api -X DELETE repos/Lawlietr/Weather/pages`。
+- **手動重建鏡像（必要時）**：先在 GitHub repo 重新啟用 Pages（branch 來源 `gh-pages`），再跑 `./build/deploy.sh --gh`。
 
 ---
 
 ## 五、排程細節
 
 - 排程（`build/cron.txt`）：`0 */2 * * *`（台灣時間，**每 2 小時**；2026-10-23 颱風薔琵期間曾升為 `0 * * * *` 每小時，2026-10-24 薔琵遠離後降回每 2 小時）。Actions 側 `schedule:` 已移除，不再錯開、也不重複 publish。
-- ⚠️ **Actions 分頁仍會每 2 小時出現一期，但那不是本 repo 的部署 workflow**（2026-11-07 查證）：那批 run 名 `pages build and deployment`（workflow `pages-build-deployment`、來源 `dynamic/pages/pages-build-deployment`），是 GitHub 為「branch 來源的 Pages」內建的發布器，只要有人 push `gh-pages`（本地 cron 每 2 小時 force-push）就觸發一期。本 repo 的 `Build & Deploy`（workflow id 343566300）最後一期是 2026-10-23T01:01Z 的 `schedule` run #129，此後只有手動 dispatch。要讓 Actions 分頁彻底安静：只能不再推 `gh-pages`（捨掉鏡像站）或把 Pages 來源改成 Actions 來源（反而要多一個 workflow）→ `design/cf-cron.md`。
+- ⚠️ **不再推 `gh-pages` 後，Actions 分頁就不會再出現新 run**。之前每 2 小時那期是 GitHub 內建的 `pages build and deployment`（來源 `dynamic/pages/pages-build-deployment`），由 cron 的 gh-pages push 觸發，不讀我們的 workflow、不抓 CWA、不碰 Cloudflare。已刪除的 `build.yml`（workflow id 343566300）最後一期自動 run 為 2026-10-23T01:01Z（#129）。
+- 機器時區 `Asia/Taipei`（UTC+8），cron 直接用本地時間。
+- `deploy-cron.sh` 用 `flock`（`/tmp/weather-deploy.lock`）防止兩次重疊；退出時（含失敗）由 EXIT trap 刪掉該檔。
+- 日誌依天切檔：`build/logs/deploy-cron-YYYY-MM-DD.log`。
 
 ### 5.1 /tmp 的使用與清理（2026-11-07 定案）
 
 | 物件 | 位置 | 誰清 |
 |---|---|---|
 | 防重疊 lock | `/tmp/weather-deploy.lock` | `deploy-cron.sh` 取得 lock 後設 `trap ... EXIT`，跑完（含失敗）即刪。舊版不刪 → 每期留一個 0 位元組空檔 |
-| gh-pages 暫存目錄（一份 `public/` 副本、2200+ 檔／數 MB） | `${TMPDIR:-/tmp}/weather-gh-pages.XXXXXXXX` | `deploy.sh` 的 `trap 'rm -rf "$TMP"' EXIT`（正常與失敗退出都清）；被 SIGKILL／斷電時 trap 不會執行 → `deploy-cron.sh` 的 `cleanup_tmp()` 每期開工掃超過 3 小時的同前綴殘骸，並順帶清掉舊版無前綴的 `tmp.XXXXXXXX` 目錄（超過 3 天） |
+| gh-pages 暫存目錄（一份 `public/` 副本、2200+ 檔／數 MB）——**只在手動跑 `deploy.sh --gh` 時才建立**；cron 預設不推鏡像就不會建立它 | `${TMPDIR:-/tmp}/weather-gh-pages.XXXXXXXX` | `deploy.sh` 的 `trap 'rm -rf "$TMP"' EXIT`（正常與失敗退出都清）；被 SIGKILL／斷電時 trap 不會執行 → `deploy-cron.sh` 的 `cleanup_tmp()` 每期開工掃超過 3 小時的同前綴殘骸，並順帶清掉舊版無前綴的 `tmp.<10 個亂碼>` 目錄（超過 3 天） |
 | agent 除錯暫存檔 | `/tmp/weather-scratch/`（單一目錄，規則 → `WORKFLOW.md` §8 第 3 條） | `cleanup_tmp()` 清超過 2 天未動的 |
+| npm／npx 快取（不在 `/tmp`） | `~/.npm`（其中 `_npx`） | `cleanup_tmp()` 清 14 天未碰的 `_npx` entries；整個 `~/.npm` 超過 **300 MB** 時跑 `npm cache clean --force`（下趟重抓 wrangler，多十幾秒） |
 
-⚠️ **2026-11-07 過渡期間**：這批防呆改動已 commit 在 `DEV`，而本機（部署機）工作區刻意**保留同內容的未 commit 版本**（cron 每 2 小時就是跑這份，不能先還原）。開發機把 `DEV` merge 進 `main` 並 push 後，本機落地順序為：先 `git checkout -- build/deploy.sh build/deploy-cron.sh LOCAL_CRON.md WORKFLOW.md AGENTS.md .github/workflows/build.yml`（內容與 `DEV` 那份相同，不會倒退），再 `git checkout main && git pull --ff-only origin main`。
+⚠️ **2026-11-07 過渡期間**：這批防呆改動已 commit 在 `DEV`，而本機（部署機）工作區刻意**保留同內容的未 commit 版本**（cron 每 2 小時就是跑這份，不能先還原）。開發機把 `DEV` merge 進 `main` 並 push 後，本機落地順序為：先用 `git status --porcelain` 列出本機未 commit 的檔，再 `git checkout -- <那些檔>`（內容與 `DEV` 那份相同，不會倒退），最後 `git checkout main && git pull --ff-only origin main`（pull 會把已刪除的 `.github/workflows/build.yml` 一并帶回刪除狀態）。
 
-舊版的兩個缺陷（2026-11-07 修正前）：`deploy.sh` 只有結尾一行 `rm -rf "$TMP"`，而腳本是 `set -euo pipefail` —— [3/4] 中途失敗（push 被拒、rsync／commit 錯）就提前 exit，**每次部署失敗都會在 `/tmp` 留一份完整 `public/` 副本**；`flock` 的 lock 檔也永不刪除。兩者都是無可追溯的垃圾（無前綴、無人知道是誰留的）。
-- 機器時區 `Asia/Taipei`（UTC+8），cron 直接用本地時間。
-- `deploy-cron.sh` 用 `flock`（`/tmp/weather-deploy.lock`）防止兩次重疊。
-- 日誌依天切檔：`build/logs/deploy-cron-YYYY-MM-DD.log`。
+舊版的三個缺陷（2026-11-07 修正前）：① `deploy.sh` 只有結尾一行 `rm -rf "$TMP"`，而腳本是 `set -euo pipefail` —— [3/4] 中途失敗（push 被拒、rsync／commit 錯）就提前 exit，**每次部署失敗都會在 `/tmp` 留一份完整 `public/` 副本**（無前綴的 `tmp.` ＋ 10 個亂碼字元，事後無法辨識是誰留的）；② `flock` 的 lock 檔永不刪除；③ 舊版 `WORKFLOW.md` §8 叫 agent 把查到的 JSON 存到 `/tmp` 頂層 → 實測堆了 70+ 個來源不明的 `cwa_*.json`／`*.html`／`*.py`（已清；現行規則改成只准寫 `/tmp/weather-scratch/`，見 §8 第 8 條）。
+⚠️ 本機不是完全沒有清理：`systemd-tmpfiles-clean.timer` 每日跑，設定為 `D /tmp 1777 root root 30d`（2026-11-07 實測）——但 **30 天對本專案太慢也太粗**：一份 `public/` 副本數 MB，兩週就能積出十幾份，而且 30 天的窗口完全蓋不住「連續失敗的這段時間」。所以靠 `cleanup_tmp()` 自己掃（3 小時就清），不能等系統回收。
 
 ---
 
@@ -112,14 +116,21 @@ source ~/.zshrc.secrets
 
 1. **本機需保持醒著**；休眠/關機期間的排程不會補跑（cron 非 systemd timer 的 missed-run 補執）。
 2. **金鑰安全**：`~/.zshrc.secrets` 與 `build/deploy.env` 皆權限 600、不在 git（後者另 gitignore），絕不 commit。若懷疑洩漏，請到 Cloudflare/CWA 後台重設並更新 `~/.zshrc.secrets`。
-3. Actions 已無自動排程（2026-10-23 起），不會再與 cron 撞車或重複 publish；只有手動 dispatch 時才會多一次。
-4. Actions 偶發失敗 99% 是 Cloudflare token 限區域或失效；用 `--selfcheck` 可先確認是 token 問題還是本機問題（手動 dispatch 時同樣適用）。
+3. GitHub Actions **完全不使用**（2026-11-07 已刪除 `.github/workflows/build.yml`）：repo 內沒有 workflow 檔案就不會有 run，不與 cron 撞車、不重複 publish。
+4. 部署前的前置檢查用 `--selfcheck`（驗三把金鑰、驗 CWA 與 Cloudflare token、驗 node/npx）。舊版 Actions 失敗最常見的原因是 Cloudflare token 限區域或失效，同樣的檢查現在都在本機做。
 5. cron 環境極簡（不載入 shell rc），故 `deploy-cron.sh` 直接 grep `~/.zshrc.secrets`（其次 `~/.zshrc`、`~/.bashrc`）的 export 行；**三把金鑰齊全時不再 source `build/deploy.env`**，避免該檔的過時 token 覆寫（開發機那份 2026-10-26 實測 CF API 403／9109）。
 6. ⚠️ **金鑰只從固定檔名取**：把金鑰搬家（如 2026-10-29 從 `~/.zshrc` 移到 `~/.zshrc.secrets`）之後，一定要 `bash build/deploy-cron.sh --selfcheck` 驗一次。舊版腳本只 grep `~/.zshrc`，鑰搬走後 `build/deploy.env` 的 `${VAR:?}` 會把腳本在寫日誌前就終止——連續 18 期（2026-10-29 22:00～10-31 08:00）只在 cron 郵件留字、`build/logs` 一片空白。現版已改為先 log 再 exit 3。
-7. ⚠️ **cron PATH 不得寫死 node 的版本目錄名**（2026-11-06 修正）。舊版 `deploy-cron.sh` 寫死 `/root/.local/share/pi-node/node-v22.23.2-linux-x64/bin`。pi 升級 node 時會換掉目錄名並移除舊版（本機 2026-11-05 10:48 換成 `node-v24.22.2-linux-x64`），當天 12:00 起連續 10 期在 `npx -y wrangler` 得到 `rc=127`（`npx: command not found`）。⚠️ **一個 CF 失敗會讓兩個通道同時停擺**：`deploy.sh` 是 `set -euo pipefail`，[2/4] Cloudflare 掛了之後的 [3/4] gh-pages 也不會跑（本機自 11-05 08:00 起約 25 小時沒上線）。現版改以 `current` 符號連結優先、再補上現存的 `node-v*/bin`（依版本由新到舊），並在 build 前先 log「node 就緒」、找不到就 exit 4；`--selfcheck` 也驗 node/npx。
-8. **gh-pages 推送會偶發被拒**：`cannot lock ref 'refs/heads/gh-pages': is at <sha> but expected <sha>`（GitHub 端 ref 在「廣告 ref」與「上鎖」之間被其他程序動過；2026-11-04 20:00、11-05 02:00／06:00／10:00 實測各一次）。現版 `deploy.sh` 自動重試 3 次（間隔 5 秒，每次重讀遠端 ref 狀態）；失敗時 Cloudflare 已部署完成，只有鏡像站延後。
-9. **部署失敗不得在 `/tmp` 留殘骸**（2026-11-07 定案）：`deploy.sh` 的 mktemp 目錄帶 `weather-gh-pages.` 前綴且有 EXIT trap；`deploy-cron.sh` 退出時刪 lock 檔、開工時掃舊殘留（→ §5.1）。檢查當時有無殘留：`ls -d /tmp/weather-gh-pages.* /tmp/tmp.???????? 2>/dev/null`（應為空）。
-10. **`npx -y wrangler@latest` 會養大 npm 快取**（非 `/tmp`，但同屬部署副作用）：2026-11-07 實測 `~/.npm` 366 MB、其中 `~/.npm/_npx` 104 MB。要清就 `npm cache clean --force` 或刪 `~/.npm/_npx`（下趟會重下載）。未排入自動清理。
+7. ⚠️ **cron PATH 不得寫死 node 的版本目錄名**（2026-11-06 修正）。舊版 `deploy-cron.sh` 寫死 `/root/.local/share/pi-node/node-v22.23.2-linux-x64/bin`。pi 升級 node 時會換掉目錄名並移除舊版（本機 2026-11-05 10:48 換成 `node-v24.22.2-linux-x64`），當天 12:00 起連續 10 期在 `npx -y wrangler` 得到 `rc=127`（`npx: command not found`）。⚠️ **CF 部署失敗整個站台就不會更新**：`deploy.sh` 是 `set -euo pipefail`，[2/4] Cloudflare 掛了就不有上線（本機自 11-05 08:00 起約 25 小時沒上線）。現版改以 `current` 符號連結優先、再補上現存的 `node-v*/bin`（依版本由新到舊），並在 build 前先 log「node 就緒」、找不到就 exit 4；`--selfcheck` 也驗 node/npx。
+8. **gh-pages 鏡像已停用**（2026-11-07，見 §四），cron 不再推它。舊版的 push 重試（3 次、間隔 5 秒）只在手動 `--gh` 時才會用到——它存在的原因是 GitHub 偶發拒整個 ref：`cannot lock ref 'refs/heads/gh-pages': is at <sha> but expected <sha>`（2026-11-04 20:00、11-05 02:00／06:00／10:00 實測各一次）。
+9. **部署不得在 `/tmp` 留殘骸**（2026-11-07 定案）：`deploy.sh` 的 mktemp 目錄帶 `weather-gh-pages.` 前綴且有 EXIT trap；`deploy-cron.sh` 退出時刪 lock 檔、開工時掃舊殘留（→ §5.1）。檢查有無殘留（兩種都應為空）：
+
+   ```bash
+   ls -d /tmp/weather-gh-pages.* 2>/dev/null
+   find /tmp -maxdepth 1 -type d -regextype posix-extended -regex '.*/tmp\.[A-Za-z0-9_-]{8,12}'
+   ```
+
+   ⚠️ **現行 cron 已不再建立任何 mktemp 目錄**（不推鏡像就跳過那段），正常運行的 `/tmp` 應該完全沒變化。
+10. **npm 快取自動清理**（2026-11-07）：`npx -y wrangler@latest` 會為每個新版 wrangler 留一份快取（實測 `~/.npm` 366 MB、`_npx` 104 MB）。`cleanup_tmp()` 先清 14 天未碰的 `_npx` entries；整個 `~/.npm` 超過 **300 MB** 就跑 `npm cache clean --force`（下趟重抓 wrangler，多十幾秒）。本機目前 366 MB → 下一期 cron 就會清一次，之後穩定在阈值以下。
 
 ---
 

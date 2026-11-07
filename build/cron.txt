@@ -3,5 +3,5 @@
 # 排程：台灣時間**每 2 小時一次**（一天 12 次）。本機 cron 按本地時區（Asia/Taipei）計算。
 #   2026-10-23：颱風薔琵期間由每 2 小時改為每小時；
 #   2026-10-24：颱風薔琵遠離，降回颱風前的每 2 小時（`0 */2 * * *`）。
-# 實際執行 build/deploy-cron.sh（載入金鑰、build、推 CF / GitHub Pages、寫日誌）
+# 實際執行 build/deploy-cron.sh（載入金鑰、build、只推 Cloudflare Pages、寫日誌）
 0 */2 * * * /bin/bash /root/opencode-stuffs/Weather/build/deploy-cron.sh # weather-deploy-cron

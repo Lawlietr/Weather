@@ -2,12 +2,12 @@
 # ============================================================
 # Weather 本地自動部署 — cron 進入點
 # ------------------------------------------------------------
-# 用途：唯一自動 build＋部署通道（台灣時間每小時整點，2026-10-23 起）。
+# 用途：唯一自動 build＋部署通道（台灣時間每 2 小時整點，2026-10-24 起）。
 #       由 cron 呼叫（見 cron.txt / cron-enable.sh）。
 #
 # 功能：
 #   1. 載入金鑰（慣例來源＝~/.zshrc.secrets 憑證集中檔；build/deploy.env 只做兜底）
-#   2. 執行 ./build/deploy.sh（抓 CWA + build + 推 CF / GitHub Pages）
+#   2. 執行 ./build/deploy.sh（抓 CWA ＋ build ＋ 推 Cloudflare Pages）
 #   3. 全程寫入 build/logs/ 日誌（最多保留 5 天，超時自動刪除）
 #   4. flock 防止重疊執行
 #
@@ -15,11 +15,14 @@
 #   --selfcheck   僅驗證金鑰與網路/Cloudflare 可用性，不 build、不部署
 #   --help        顯示說明
 #
-# 部署範圍：
-#   預設＝完整部署（Cloudflare Pages ＋ GitHub Pages 的 gh-pages 分支）。
-#   GitHub 推送不需要 GH_PAT：本機走 github remote（SSH）；若設了 GH_PAT 則改走 token HTTPS。
-#   2026-10-23 起不再自動加 --no-gh：Actions 排程已停用，gh-pages 只能由本地 cron 推。
-#   （只要 Cloudflare 時，手動執行加 --no-gh 即可。）
+# 部署範圍（2026-11-07 定案）：
+#   預設＝只推 Cloudflare Pages（唯一上線通道）。
+#   ⚠️ 不再推 GitHub Pages 鏡像（orphan `gh-pages` 分支）：推它就會觸發 GitHub 為 branch 來源 Pages
+#      內建的 `pages build and deployment` workflow，而鏡像站不是正式管道。
+#      `build/deploy.sh --gh` 只留給手動重建鏡像用，cron 不帶該參數。
+#   GitHub Actions 完全不使用（2026-11-07 刪除 `.github/workflows/build.yml`）：
+#      scheduler 不可靠（2026-10-23 實測 24 期只跑 10 期、間隔 185–424 分）。
+#      日后若要自動觸發，首選是用 CF Worker Cron 打手動觸發（未實作）→ design/cf-cron.md。
 # ============================================================
 set -uo pipefail
 
@@ -54,7 +57,7 @@ export PATH="${NODE_PATH_EXTRA:+$NODE_PATH_EXTRA:}/usr/local/sbin:/usr/local/bin
 # ~/.zshrc.secrets＝憑證集中檔（2026-10-29 起：token 太多，不再塞在 ~/.zshrc，改由 .zshrc source 此檔）。
 SECRET_FILES=("$HOME/.zshrc.secrets" "$HOME/.zshrc" "$HOME/.bashrc")
 KEY_FROM=""
-for var in CWA_API_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID GH_PAT; do
+for var in CWA_API_KEY CLOUDFLARE_API_TOKEN CLOUDFLARE_ACCOUNT_ID; do
   for sf in "${SECRET_FILES[@]}"; do
     [ -r "$sf" ] || continue
     val=$(grep -E "^export ${var}=" "$sf" 2>/dev/null | tail -1 | sed "s/^export ${var}=//;s/^['\"]//;s/['\"]$//")
@@ -75,19 +78,33 @@ cleanup_logs() {
 
 # ---- /tmp 殘留清理 ----
 # 兩個來源（兩者都只在異常退出時才會殘留）：
-#   1. deploy.sh 的 gh-pages 暫存目錄 `${TMPDIR:-/tmp}/weather-gh-pages.XXXXXXXX`：
+#   1. deploy.sh 的 gh-pages 暫存目錄 `${TMPDIR:-/tmp}/weather-gh-pages.XXXXXXXX`（只在手動跑
+#      `deploy.sh --gh` 時才會建立；cron 預設不推鏡像就不會建立它）：
 #      腳本內建 EXIT trap 會清，但進程被 SIGKILL（OOM）或機器斷電時 trap 不會執行——
-#      殘留的是一份完整 public/ 副本（數 MB／期）。2026-11-07 之前的舊版無前綴（mktemp -d 直接產
-#      `tmp.XXXXXX`）也無 trap，每次部署失敗就留一份。
+#      殘留的是一份完整 public/ 副本（數 MB）。2026-11-07 之前的舊版無前綴（`mktemp -d` 直接產
+#      `tmp.` ＋ 10 個亂碼字元）也無 trap，每次部署失敗就留一份。
 #   2. agent 除錯用的暫存檔：一律寫在 /tmp/weather-scratch/（單一目錄，規則見 WORKFLOW.md §8 第 3 條），
 #      這裡掃超過 2 天未動的舊檔。
 # 呼叫時機：取得 flock 之後（保證不會删到同期還在使用的東西）。
 cleanup_tmp() {
   local tmpbase="${TMPDIR:-/tmp}"
   find "$tmpbase" -maxdepth 1 -name 'weather-gh-pages.*' -mmin +180 -exec rm -rf {} + 2>/dev/null
-  # 舊版（無前綴）留下的 mktemp 目錄：只刪 3 天以上、名字形如 tmp.XXXXXXXX 的目錄，不碰其他 tmp.* 檔
-  find "$tmpbase" -maxdepth 1 -type d -name 'tmp.????????' -mtime +3 -exec rm -rf {} + 2>/dev/null
+  # 舊版（無前綴）留下的 mktemp 目錄：只刪 3 天以上、名字形如 `tmp.` ＋ 8–12 個亂碼字元的目錄
+  # （GNU mktemp 預設是 10 字元；2026-11-07 實測），不碰其他 tmp.* 命名
+  find "$tmpbase" -maxdepth 1 -type d -regextype posix-extended \
+    -regex '.*/tmp\.[A-Za-z0-9_-]{8,12}' -mtime +3 -exec rm -rf {} + 2>/dev/null
   find "$tmpbase/weather-scratch" -mindepth 1 -mtime +2 -delete 2>/dev/null
+  # npx -y wrangler@latest 會為每個新 wrangler 版留一份快取（2026-11-07 實測 ~/.npm 366 MB、
+  # 其中 ~/.npm/_npx 104 MB）。清掉 14 天沒再碰的 entries；整個 ~/.npm 超過 400 MB 時一次清光
+  # （下趟會重抓 wrangler，多幾秒）。
+  if [ -d "$HOME/.npm" ]; then
+    find "$HOME/.npm/_npx" -maxdepth 1 -mindepth 1 -type d -mtime +14 -exec rm -rf {} + 2>/dev/null
+    npm_mb=$(du -sm "$HOME/.npm" 2>/dev/null | cut -f1)
+    if [ -n "${npm_mb:-}" ] && [ "$npm_mb" -gt 300 ]; then
+      log "npm cache ${npm_mb} MB > 300 MB -> npm cache clean --force"
+      npm cache clean --force >/dev/null 2>&1 || rm -rf "$HOME/.npm/_npx" 2>/dev/null
+    fi
+  fi
 }
 
 do_selfcheck() {
@@ -186,7 +203,7 @@ if [ "${#missing[@]}" -gt 0 ]; then
   exit 3
 fi
 
-# ---- node 前置檢查（缺 npx 時 CF 必失敗，且 set -e 會連 gh-pages 一起不推）----
+# ---- node 前置檢查（缺 npx 時 Cloudflare 部署必失敗）----
 if ! command -v npx >/dev/null 2>&1; then
   log "ERROR: cron PATH 找不到 npx（查過 $PI_NODE_HOME/current/bin 與 $PI_NODE_HOME/node-v*/bin）。PATH=$PATH"
   echo "❌ 找不到 npx：請確認 $PI_NODE_HOME 下的 node 目錄名（日誌：$LOG_FILE）" >&2
@@ -208,7 +225,7 @@ if command -v flock >/dev/null 2>&1; then
   trap 'rm -f "$LOCK_FILE"' EXIT
 fi
 
-log "START（GH_PAT=${GH_PAT:+set}；金鑰來源：${KEY_FROM:-deploy.env}）"
+log "START（金鑰來源：${KEY_FROM:-deploy.env}；部署目標：Cloudflare Pages）"
 
 # ---- 清理舊日誌與 /tmp 殘留 ----
 cleanup_logs
@@ -238,9 +255,7 @@ else
   log "⚠️  CWA_API_KEY 未設定，跳過 CWA 檢查"
 fi
 
-# ---- 執行部署（2026-10-23 起一律完整部署：CF ＋ gh-pages）----
-# GitHub Pages mirror 需由本地 cron 自己推（Actions 排程已停用，不再顺手推）。
-# 注：gh-pages 推送失败会让 rc 非 0（CF 已先部署完成、站台不受影响），下趟即重试。
+# ---- 執行部署（只推 Cloudflare Pages；gh-pages 鏡像與 Actions 自 2026-11-07 起不参与）----
 ./build/deploy.sh >> "$LOG_FILE" 2>&1
 rc=$?
 

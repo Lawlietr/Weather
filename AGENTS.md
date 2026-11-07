@@ -1,6 +1,6 @@
 # Weather - 台灣天氣與災情總覽
 
-紀錄颱風動態與災情的 Markdown 倉儲，並附靜態網站 build（產出 `public/`、`llms.txt`、`llms-full.txt`；主要 host 於 Cloudflare Pages 自訂域名，另同步 GitHub Pages；見下方「網站專案」）。
+紀錄颱風動態與災情的 Markdown 倉儲，並附靜態網站 build（產出 `public/`、`llms.txt`、`llms-full.txt`；**只 host 於 Cloudflare Pages 自訂域名**，見下方「網站專案」）。
 
 ## ⚠️ 時間意識（極度重要）
 
@@ -183,7 +183,7 @@
   4. **本機 `DEV` 只是 `origin/DEV` 的追蹤快照**（2026-10-23 已 `git branch -f DEV origin/DEV` 對齊至 `bca1b0d`），**不得在本機 checkout `DEV` 開發**：當時 `DEV` 落後 `main` 22 commits（含 `build/dgpa.py` 87 行、`site.py`、`i18n.py`、`cron.txt` 等生產修正與薔琵事件檔），一旦本機 HEAD 切到 `DEV`，cron 就把倒退內容推上三個生產站。⚠️ **落後數字會隨每次 merge 變動，不得引用舊數字**——2026-10-27 於開發機實測：`git fetch --all --prune` 後 `origin/DEV` 與 `origin/main` **同頂 `9f2103c`**（即已同步）；要判斷落後量一律現查 `git rev-list --count DEV..main`。真需在本機驗證功能：先確認 `DEV` 已 merge 最新 `main`，並暫時 `bash build/cron-disable.sh`，測完 `cron-enable.sh`。
   5. **開發機上開發前先將 `origin/main` merge 進 `DEV`**（不是事後才同步）：`main` 持續有 `build/` 修正落地，越晚同步重疊衝突越大，事後解衝突很容易把生產修正解回舊版、再 merge 回 `main` 造成永久倒退。（舊註「現行重疊檔＝`dgpa.py`/`site.py`/`i18n.py`/`deploy-cron.sh`」為 2026-10-23 快照，2026-10-27 已不成立（兩分支同頂）——**規則不變，清單會變**。）
 - **開發流程（2026/9/16 重申：勿直接 commit/push `main`；2026-10-23 補：開發在開發機 `192.168.100.15`，不在本機）**：所有開發在 `DEV` 分支 commit→build＋部署測試站 `wea-testing`、真瀏覽器（Playwright）驗證→**經使用者同意後**才將 `DEV` 合併進 `main` 並推 `main`（三邊 remote 皆推，見上「Remotes」條）。生產自動部署（`build/deploy-cron.sh`→`deploy.sh`）**以 repo 目前 checkout 為準、無分支邏輯**：開發機上的 `DEV` 工作因物理分離不會進生產（見上條 2），**但本機 HEAD 切到 `DEV` 就會**（見上條 4）；合併回 `main` 後需到本機 `git pull --ff-only origin main` 才恢復生產為已合併狀態（見上條 3）。
-- 無 lint/test 指令；**排程狀態（2026-10-23 定案、2026-10-24 降頻）**：**唯一自動 build＋部署通道＝本地 cron，每 2 小時整點**（`0 */2 * * *`，Asia/Taipei；CWA 前置檢查 3 次重試、失敗中止；薔琵颱風期間 10/23 曾升為每小時 `0 * * * *`，10/24 薔琵遠離後降回每 2 小時）。**GitHub Actions 的 `schedule:` 已彻底停用並從 `build.yml` 移除**，只留 `workflow_dispatch` 手動按鈕——2026-10-23 實測近 2 天 24 期排程只觸發 10 期、間隔 185–424 分（應 120 分），而本地 cron 10/10 準時、约 40 秒完成（GitHub scheduler 延遲為上游已知問題）。歷史：2026/8/29 曾因 CWA 回傳 `MaxWindSpeed=None` 崩潰（TypeError，已修復）而暫停，2026/9/26 恢復，2026-10-23 因排程可靠度彻底停用。CF 側替代方案（Worker Cron／git-backed Pages build／Containers）僅評估、**未實作** → `design/cf-cron.md`。部署指令 → `WORKFLOW.md` §7
+- 無 lint/test 指令；**排程狀態（2026-10-23 定案、2026-10-24 降頻）**：**唯一自動 build＋部署通道＝本地 cron，每 2 小時整點**（`0 */2 * * *`，Asia/Taipei；CWA 前置檢查 3 次重試、失敗中止；薔琵颱風期間 10/23 曾升為每小時 `0 * * * *`，10/24 薔琵遠離後降回每 2 小時）。**`.github/workflows/build.yml` 已整支刪除（2026-11-07）——GitHub Actions 完全不使用**：先前的 `schedule:` 於 2026-10-23 因排程可靠度停用（實測 24 期只觸發 10 期、間隔 185–424 分，而本地 cron 10/10 準時、约 40 秒完成；GitHub scheduler 延遲為上游已知問題），只留手動按鈕；同日又發現 Actions 分頁每 2 小時的 `pages build and deployment` 其實是 GitHub 為 branch 來源 Pages 內建的發布器（由推 `gh-pages` 觸發），容易被误判成「又在 Actions 上設了自動部署」，所以连同 `gh-pages` 推送一起停。CF 側替代方案（Worker Cron 打手動觸發）僅評估、**未實作** → `design/cf-cron.md`。部署指令 → `WORKFLOW.md` §6/§7
 
 ---
 
@@ -228,7 +228,7 @@
 
 ---
 
-## 網站專案（已上線：Cloudflare Pages ×3 自訂域名；GitHub Pages 備用 mirror）
+## 網站專案（已上線：Cloudflare Pages ×3 自訂域名；GitHub Pages 鏡像已停用）
 
 - **文件分工**：見上方「參考索引」表（runbook → `WORKFLOW.md`；CWA 欄位 → `build/CWA_API.md`；手動路徑 → `MANUAL_UPDATE.md`；本地 cron → `LOCAL_CRON.md`；構想與待辦 → `TODO.md` 帳本＋`design/` 各功能設計檔）。
 - **⚠️ 更新災情前必看 `WORKFLOW.md` §8「Agent 效率規範」**：先查 repo 既有檔案／`ctx_search`／`cwa_cache.json`，只查會變的資料，同一資料一個 session 只查一次。
@@ -238,12 +238,12 @@
 
 ### 不變項（改動前先確認）
 
-- **更新模式**：本地 cron（**每 2 小時整點**）為**唯一**自動 build＋部署通道；Actions 自 2026-10-23 起無自動排程，僅手動 dispatch（排程狀態與 CF 替代方案評估 → `WORKFLOW.md` §7、`design/cf-cron.md`）。⚠️ **不得因看到 Actions 分頁每 2 小時出現一期而误以為排程又被啟用**：那批 `pages build and deployment` 是 GitHub 為 branch 來源 Pages 內建的發布器，由本地 cron 推 `gh-pages` 觸發，不讀 `build.yml`、不抓 CWA、不碰 Cloudflare（自證指令 → `WORKFLOW.md` §7）。**災情新聞人工把關、不自動推 RSS**（→ `WORKFLOW.md` §1、`MANUAL_UPDATE.md`）。**除錯暫存檔一律寫 `/tmp/weather-scratch/`、不在 `/tmp` 頂層建檔**；部署的 gh-pages 暫存目錄與 lock 檔由腳本自行清理（→ `LOCAL_CRON.md` §5.1）。
+- **更新模式**：本地 cron（**每 2 小時整點**）為**唯一**自動 build＋部署通道，而且**只推 Cloudflare Pages**。GitHub Actions **完全不使用**（2026-11-07 刪除 `.github/workflows/build.yml`；scheduler 2026-10-23 實測不可靠：24 期只跑 10 期、間隔 185–424 分），GitHub Pages 鏡像（orphan `gh-pages`）也於 2026-11-07 **停推** → `WORKFLOW.md` §6/§7、`LOCAL_CRON.md` §四。⚠️ 不得把 Actions 分頁每 2 小時的 `pages build and deployment` 误認為自動部署——那是 GitHub 為 branch 來源 Pages 內建的發布器，由推 `gh-pages` 觸發（不推就不會再出現）。**災情新聞人工把關、不自動推 RSS**（→ `WORKFLOW.md` §1、`MANUAL_UPDATE.md`）。**除錯暫存檔一律寫 `/tmp/weather-scratch/`、不在 `/tmp` 頂層建檔**；部署的暫存目錄與 lock 檔由腳本自行清理 → `LOCAL_CRON.md` §5.1。
 - **金鑰**：CWA Key、Cloudflare 憑證分散在 (1) 本機 `~/.zshrc.secrets`（**憑證集中檔**、600、`~/.zshrc` 只 source 它——2026-10-29 定案，token 多、不塞 `.zshrc`）、(2) GitHub Secrets（dispatch）、(3) `build/deploy.env`（600、gitignore、**只做兜底**，需要時由 repo 內 `build/deploy.env.example` 複製；`deploy-cron.sh` 取到金鑰就不 source 它）；**不寫進任何輸出檔案、不進 `public/`、不進網站**。
 - **非即時**：首頁顯示「**產生時間**」（i18n key `updated`），由 `build/site.py` 以**固定 UTC+8** 產生（`datetime.now(timezone(timedelta(hours=8)))`）；**不可改回不帶時區的 `datetime.now()`**（Actions runner 是 UTC、會慢 8 小時）。「產生時間」＝網頁何時生成，**不等於氣象／災情資料已更新**。
 - **CWA 不支援 CORS**：氣象資料全部 build 時本機抓取寫入靜態 HTML；前端零外部請求、首頁零 JS。
 - **授權僅針對網站專案**（2026/8/28 修正）：網站程式 **GNU AGPLv3**（`LICENSE`）、網站內容（含 `llms.txt`／`llms-full.txt`）**CC BY-NC-SA 4.0**（`LICENSE-CONTENT`，不得商用）；**倉儲本身**（`build/` 腳本、`災情/`、`颱風/`、文件）**不以此兩授權釋出**；CWA 資料以官方條款為準。
-- **`/map/` 底圖三層堆疊（2026-10-27 定案，§2-7c）**：兜底陸地層（自訂 pane、`zIndex=1`）→ 離線瓦片 tilePane（`leaflet.css` 為 **200**，不是 Leaflet「預設 2」）→ 告警 polygon／雨量點 overlay（400）。由此推出四條不得破壞的條件：① `errorTileUrl` 的佔位底 `tiles/_blank.png` **必須全透明**（實色底會蓋住陸地層，§2-7a 舊版踩過）；② 陸地層 `interactive: false`（不得搶走 polygon 的命中）；③ 改 `tiles.MAP_MAX_BOUNDS`／`ZOOMS` 後**必須重跑 `python3 build/make_taiwan_geo.py`**——兜底層範圍由 `tiles.zoom_bbox()` 推導，不重跑就不會跟著長；④ 站根**必須有 `public/.nojekyll`**（由 `site.py` 產）——gh-pages 是 branch 來源、GitHub 會跑 Jekyll，而 Jekyll **忽略檔名以 `_` 開頭的檔**，少了它鏡像上的 `_blank.png` 會 404（CF 正常，2026-10-27 實測）。
+- **`/map/` 底圖三層堆疊（2026-10-27 定案，§2-7c）**：兜底陸地層（自訂 pane、`zIndex=1`）→ 離線瓦片 tilePane（`leaflet.css` 為 **200**，不是 Leaflet「預設 2」）→ 告警 polygon／雨量點 overlay（400）。由此推出四條不得破壞的條件：① `errorTileUrl` 的佔位底 `tiles/_blank.png` **必須全透明**（實色底會蓋住陸地層，§2-7a 舊版踩過）；② 陸地層 `interactive: false`（不得搶走 polygon 的命中）；③ 改 `tiles.MAP_MAX_BOUNDS`／`ZOOMS` 後**必須重跑 `python3 build/make_taiwan_geo.py`**——兜底層範圍由 `tiles.zoom_bbox()` 推導，不重跑就不會跟著長；④ 站根**必須有 `public/.nojekyll`**（由 `site.py` 產）——**僅在重新啟用 GitHub Pages 鏡像時相關**（gh-pages 是 branch 來源、GitHub 會跑 Jekyll，而 Jekyll 忽略檔名以 `_` 開頭的檔；2026-10-27 實測鏡像上的 `_blank.png` 404、CF 正常）。鏡像自 2026-11-07 停推，但仍持續產出此檔，以便鏡像隨時可重建。
 - **LLM 友善產出**：build 必產 `llms.txt`＋`llms-full.txt`，canonical base URL `https://weather.avpclub.eu.org`（`build/site.py` 之 `SITE_BASE`）。
 
 ### 網站結構（實作細節 → `design/site.md`／`design/map.md`）
@@ -253,6 +253,7 @@
 
 ### 部署（指令、域名與救回方式詳 `WORKFLOW.md` §6）
 
-- **Cloudflare Pages**（主要公開通道，`weather.avpclub.eu.org` 等 3 自訂域名）＋ **GitHub Pages**（備用 mirror，orphan `gh-pages` 分支、只收 `public/`）。
+- **Cloudflare Pages**（**唯一公開通道**，`weather.avpclub.eu.org` 等 3 自訂域名）。
+- **GitHub Pages 鏡像：2026-11-07 起不再推送**（orphan `gh-pages` 分支）。推它就會觸發 GitHub 內建的 Pages 發布器（Actions 分頁每期一條、易误判為另有自動部署），而它不是正式管道。重建／彻底清掉的指令 → `LOCAL_CRON.md` §四。
 - **測試站**：`wea-testing` 專案（`weatesting.avpclub.eu.org`），DEV 預覽專用、**純手動部署**、不在自動部署範圍；指令與重建守則→`WORKFLOW.md` §6。
-- **GitHub 公開 repo 不接收**：build 腳本、災情/颱風 markdown 原文、內部倉庫資訊、金鑰——一律不外流到 `gh-pages` 或任何公開輸出。
+- **GitHub 公開 repo 不接收**：build 腳本、災情/颱風 markdown 原文、內部倉庫資訊、金鑰——一律不外流到 `gh-pages`（已停推）或任何公開**網站產出**。

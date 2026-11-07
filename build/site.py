@@ -978,11 +978,12 @@ def build_misc_files(events, ts, groups):
     (OUT / "robots.txt").write_text(
         "User-agent: *\nAllow: /\n\nSitemap: " + SITE_BASE + "/sitemap.xml\n", encoding="utf-8")
 
-    # --- .nojekyll（**GitHub Pages 鏡像必放**，2026-10-27 實測）---
+    # --- .nojekyll（只在 GitHub Pages 鏡像上必需；鏡像 2026-11-07 起停推，但繼續產出此檔）---
     # gh-pages 是 orphan 分支直接 push（＝ Pages 的 branch 來源），GitHub 對 branch 來源會跑 Jekyll，
     # 而 Jekyll **忽略檔名以 `_` 開頭的檔/資料夾**。後果：`assets/tiles/_blank.png`（缺瓦片佔位底）
     # 在 lawlietr.github.io 上 404（CF 上 200）——舊的 `_ocean.png` 同樣一直 404，只在鏡像上沒發現。
     # 放一個空 .nojekyll 就關掉 Jekyll 處理，`public/` 原樣發佈。
+    # ⚠️ 只有決定彻底不再重啟鏡像時才可拿掉（否則 `./build/deploy.sh --gh` 會重現 `_` 開頭資產 404）。
     (OUT / ".nojekyll").write_text("", encoding="utf-8")
 
     # --- 站對外 AGENTS.md（agent instruction：when-to-use/引用格式）---
@@ -1112,7 +1113,7 @@ def main():
                 p.unlink()
     OUT.mkdir(parents=True, exist_ok=True)
     # 固定使用台灣時間（UTC+8），不依賴執行 build 機器的本地時區
-    # （GitHub Actions runner 跑在 UTC，用 datetime.now() 會慢 8 小時）。
+    # （任何非 UTC+8 的執行環境都會差好幾小時；現行只有本機 cron 與手動部署，皆為 Asia/Taipei）。
     ts = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=8))).strftime("%Y/%-m/%-d %H:%M")
     events = load_events()
     if not events:

@@ -1,23 +1,28 @@
 #!/bin/bash
 # ============================================================
-# 手動更新：Build + 部署到 Cloudflare Pages 與 GitHub Pages
+# 手動更新：Build ＋ 部署到 Cloudflare Pages
 # ------------------------------------------------------------
 # 用途：改完 災情/ 或 颱風/ 的 markdown 後，跑這支即可
-#       「抓 CWA → 產出 public/ → 推到兩個公開託管」。
+#       「抓 CWA → 產出 public/ → 推到公開託管（Cloudflare Pages）」。
 #
 # 日誌：所有輸出同步寫入 build/logs/deploy-YYYY-MM-DD.log
 #       若發生問題，之後可檢視除錯。
 #
 # 用法：
-#   ./deploy.sh                       # 完整流程（build + CF + GitHub Pages）
+#   ./deploy.sh                       # 完整流程（build ＋ 部署到 Cloudflare Pages）
 #   ./deploy.sh --build-only          # 只 build，不部署
-#   ./deploy.sh --no-cf               # build + GitHub Pages，跳過 Cloudflare
-#   ./deploy.sh --no-gh               # build + Cloudflare，跳過 GitHub Pages
+#   ./deploy.sh --no-cf               # 只 build，不部署任何一站（罕用）
+#   ./deploy.sh --gh                  # 額外推 GitHub Pages 鏡像（見下）
 #   ./deploy.sh --preview             # build 後本機預覽，不部署
+#
+# ⚠️ GitHub Pages 鏡像（orphan `gh-pages` 分支）自 2026-11-07 起不再推送：
+#   現行唯一上線通道＝Cloudflare Pages（由本地 cron 每 2 小時更新）。GitHub Actions 完全不使用（見 `.github/`）。
+#   `--gh` 只留給「手動重建鏡像」用：需同時在 GitHub repo 重新啟用 Pages（branch 來源 gh-pages）才會真的上線。
+#   （舊參數 `--no-gh` 保留為無作用別名——不推已是預設。）
 #
 # 需要環境變數（慣例：~/.zshrc source 的憑證集中檔 ~/.zshrc.secrets）：
 #   CWA_API_KEY、CLOUDFLARE_API_TOKEN、CLOUDFLARE_ACCOUNT_ID
-# 選用：GH_PAT（GitHub token；留空則改用本機 git remote github 的 SSH 推 gh-pages）
+# 選用（僅 `--gh` 時）：GH_PAT（GitHub token；留空則改用本機 git remote github 的 SSH 推 gh-pages）
 #
 # 金鑰一律不進 repo、不寫進任何輸出檔案。
 # ============================================================
@@ -36,7 +41,7 @@ exec > >(exec tee -a "$LOG_FILE") 2> >(exec tee -a "$LOG_FILE" >&2)
 
 CF_PROJECT="weather"
 GH_REPO="https://github.com/Lawlietr/Weather.git"
-# gh-pages 推送憑證優先序：GH_PAT（token HTTPS）→ 本機 git remote github（SSH，2026-10-23 起 cron 靠這個）→ https 預設。
+# `--gh` 時的推送憑證優先序：GH_PAT（token HTTPS）→ 本機 git remote github（SSH）→ https 預設。
 GH_PUSH="$(git remote get-url github 2>/dev/null || echo "$GH_REPO")"
 if [ -n "${GH_PAT:-}" ]; then
   GH_PUSH="https://x-access-token:${GH_PAT}@github.com/Lawlietr/Weather.git"
@@ -44,14 +49,16 @@ fi
 
 BUILD_ONLY=0
 NO_CF=0
-NO_GH=0
+# 鏡像推送改為預設關閉（2026-11-07：gh-pages 不再推）；要推得明確給 --gh。
+PUSH_GH=0
 PREVIEW=0
 
 for arg in "$@"; do
   case "$arg" in
     --build-only) BUILD_ONLY=1 ;;
     --no-cf)      NO_CF=1 ;;
-    --no-gh)      NO_GH=1 ;;
+    --gh)         PUSH_GH=1 ;;
+    --no-gh)      : ;;   # 已是預設，保留為相容別名（舊指令與舊文件仍可能帶這參數）
     --preview)    PREVIEW=1 ;;
     -h|--help)
       grep '^# *' "$0" | sed 's/^# *//'
@@ -108,10 +115,10 @@ else
   echo "==> [2/4] 跳過 Cloudflare（--no-cf）"
 fi
 
-# --- [3/4] GitHub Pages（orphan gh-pages 分支）---
-if [ "$NO_GH" -ne 1 ]; then
+# --- [3/4] GitHub Pages 鏡像（2026-11-07 起預設不推，僅 --gh 時推）---
+if [ "$PUSH_GH" -eq 1 ]; then
   echo
-  echo "==> [3/4] 部署到 GitHub Pages（orphan gh-pages）"
+  echo "==> [3/4] 部署到 GitHub Pages 鏡像（已明確指定 --gh）"
   # ⚠️ TMP 一律帶可辨識的前綴，且任何路徑退出都要清掉。
   #    本腳本是 set -euo pipefail：rsync／git commit／push 任一失敗就提前中止，屆時只有結尾那行
   #    rm -rf 不會執行 → /tmp 遺留一份完整 public/ 副本（2200+ 檔、每期數 MB，2026-11-07 前長期堆積）。
@@ -143,14 +150,16 @@ if [ "$NO_GH" -ne 1 ]; then
   rm -rf "$TMP"
 else
   echo
-  echo "==> [3/4] 跳過 GitHub Pages（--no-gh）"
+  echo "==> [3/4] 跳過 GitHub Pages 鏡像（2026-11-07 起預設不推；要手動重建鏡像才加 --gh）"
 fi
 
 # --- [4/4] 完成 ---
 echo
 echo "===================================================="
-echo " ✅ 完成。上線網址："
+echo " ✅ 完成。上線網址（唯一通道＝Cloudflare Pages）："
 echo "     Cloudflare：https://weather.avpclub.eu.org"
-echo "     GitHub：   https://lawlietr.github.io/Weather/"
 echo "     日文版：     https://weather.avpclub.eu.org/ja/"
+if [ "$PUSH_GH" -eq 1 ]; then
+  echo "     GitHub 鏡像（僅本次有推）：https://lawlietr.github.io/Weather/"
+fi
 echo "===================================================="
