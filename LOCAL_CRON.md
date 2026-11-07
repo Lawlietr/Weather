@@ -105,7 +105,17 @@ source ~/.zshrc.secrets
 | agent 除錯暫存檔 | `/tmp/weather-scratch/`（單一目錄，規則 → `WORKFLOW.md` §8 第 3 條） | `cleanup_tmp()` 清超過 2 天未動的 |
 | npm／npx 快取（不在 `/tmp`） | `~/.npm`（其中 `_npx`） | `cleanup_tmp()` 清 14 天未碰的 `_npx` entries；整個 `~/.npm` 超過 **300 MB** 時跑 `npm cache clean --force`（下趟重抓 wrangler，多十幾秒） |
 
-⚠️ **2026-11-07 過渡期間**：這批防呆改動已 commit 在 `DEV`，而本機（部署機）工作區刻意**保留同內容的未 commit 版本**（cron 每 2 小時就是跑這份，不能先還原）。開發機把 `DEV` merge 進 `main` 並 push 後，本機落地順序為：先用 `git status --porcelain` 列出本機未 commit 的檔，再 `git checkout -- <那些檔>`（內容與 `DEV` 那份相同，不會倒退），最後 `git checkout main && git pull --ff-only origin main`（pull 會把已刪除的 `.github/workflows/build.yml` 一并帶回刪除狀態）。
+⚠️ **2026-11-07 過渡期間**：這批改動已 commit 在 `DEV`（包括已刪除的 `.github/workflows/build.yml`），而本機（部署機）工作區刻意**保留同內容的未 commit 版本**（cron 每 2 小時就是跑這份，不能先還原）。開發機把 `DEV` merge 進 `main` 並 push 後，本機落地順序：
+
+```bash
+# 1) 還原本機未 commit 的修改（內容與 DEV 那份相同，不會倒退）。
+#    只還原狀態為 M 的檔案：已刪除的 .github/workflows/build.yml 不得 checkout，否則會被復活。
+git checkout -- $(git status --porcelain | awk '$1=="M"{print $2}')
+# 2) 拉進已合入 main 的 DEV 內容（含該 workflow 檔的刪除）
+git checkout main && git pull --ff-only origin main
+# 3) 確認未被復活
+ls .github/workflows/ 2>/dev/null || echo 'workflow 已移除（正確）'
+```
 
 舊版的三個缺陷（2026-11-07 修正前）：① `deploy.sh` 只有結尾一行 `rm -rf "$TMP"`，而腳本是 `set -euo pipefail` —— [3/4] 中途失敗（push 被拒、rsync／commit 錯）就提前 exit，**每次部署失敗都會在 `/tmp` 留一份完整 `public/` 副本**（無前綴的 `tmp.` ＋ 10 個亂碼字元，事後無法辨識是誰留的）；② `flock` 的 lock 檔永不刪除；③ 舊版 `WORKFLOW.md` §8 叫 agent 把查到的 JSON 存到 `/tmp` 頂層 → 實測堆了 70+ 個來源不明的 `cwa_*.json`／`*.html`／`*.py`（已清；現行規則改成只准寫 `/tmp/weather-scratch/`，見 §8 第 8 條）。
 ⚠️ 本機不是完全沒有清理：`systemd-tmpfiles-clean.timer` 每日跑，設定為 `D /tmp 1777 root root 30d`（2026-11-07 實測）——但 **30 天對本專案太慢也太粗**：一份 `public/` 副本數 MB，兩週就能積出十幾份，而且 30 天的窗口完全蓋不住「連續失敗的這段時間」。所以靠 `cleanup_tmp()` 自己掃（3 小時就清），不能等系統回收。
