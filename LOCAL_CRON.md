@@ -76,15 +76,27 @@ source ~/.zshrc.secrets
 
 ---
 
-## 四、部署範圍預設（2026-11-07 定案）
+## 四、部署範圍與鏡像（2026-11-07 定案，已執行）
 
 - **cron 只推 Cloudflare Pages**（`weather` 專案＋三個自訂域名），這是唯一上線通道。
-- ⚠️ **不再推 GitHub Pages 鏡像（orphan `gh-pages` 分支）**。理由：
-  1. 推 `gh-pages` 就會觸發 GitHub 為 branch 來源 Pages 內建的 `pages build and deployment` workflow——Actions 分頁每 2 小時出現一期，容易被误判為「又在 Actions 上設了自動部署」（2026-11-07 就是這樣被發現的）。
-  2. 鏡像不是正式管道，出了問題不影響三個正式域名；多一條 push 路就多一個失敗點（舊版這條路也正是 `/tmp` 垃圾的來源 → §5.1）。
-  3. 鏡像內容會停在最後一期（`lawlietr.github.io/Weather/` 停在 2026-11-07 的內容）——**對災情站台來說，舊資料比沒資料更危險**。
-- **建義順手清掉舊鏡像**（尚未執行，待使用者同意）：`git push origin --delete gh-pages && git push github --delete gh-pages`；Pages 站本身 `gh api -X DELETE repos/Lawlietr/Weather/pages`。
-- **手動重建鏡像（必要時）**：先在 GitHub repo 重新啟用 Pages（branch 來源 `gh-pages`），再跑 `./build/deploy.sh --gh`。
+- ⚠️ **GitHub Pages 鏡像已徹底移除**（不再推、分支已刪、站已關）。理由：
+  1. 推 `gh-pages` 就會觸發 GitHub 為 branch 來源 Pages 內建的 `pages build and deployment` workflow——Actions 分頁每 2 小時出現一期，容易被誤判為「又在 Actions 上設了自動部署」（2026-11-07 就是這樣被發現的）。
+  2. 鏡像不是正式管道，多一條 push 路就多一個失敗點（舊版這條路也正是 `/tmp` 垃圾的來源 → §5.1）。
+  3. 停在最後一期的舊災情挂在网上有誤導風險——**舊資料比沒資料更危險**。
+- **已做的事（2026-11-07）**：
+  1. cron 不再推鏡像（`build/deploy.sh` 預設關閉，要推得明確給 `--gh`）。
+  2. `.github/workflows/build.yml` 已從 repo 刪除（`DEV` commit `9c0a901`）。
+  3. `gh-pages` 分支已從 **origin 與 github 刪除**（codeberg 本來就沒有這分支）；本地追蹤指標已 prune。
+     三邊現在只剩 `main` 與 `DEV`。
+  4. **Pages 站隨分支刪除而自動關闭**：`gh api repos/Lawlietr/Weather/pages` → 404。
+     ⚠️ 反過來說無效：先跑 `gh api -X DELETE repos/Lawlietr/Weather/pages` 會被 GitHub 拒
+     （422 `Deactivating GitHub pages for this repository is not allowed`）——**刪分支才是有效路徑**。
+     舊內容之後仍由 GitHub CDN 發了一段（`cache-control: max-age=600`、`last-modified` 為舊值），
+     數十分鐘後才全部轉 404。
+- **兩個收尾提醒**：
+  - `Build & Deploy` 這筆 workflow 記錄要等 `DEV` 合入 `main` 才會從 Actions 清單消失（GitHub 的清單看 default branch）；但不會有新 run。
+  - `pages build and deployment` 是 GitHub 内建的（不在 repo），不再推 `gh-pages` 就不會再觸發。
+- **若将来要重建鏡像**：`./build/deploy.sh --gh` 會重建 `gh-pages` 分支，但 **Pages 要在 GitHub 設定（或 API）重新啟用**才會真的上線；並保留 `public/.nojekyll`（Jekyll 會忽略 `_` 開頭資產 → `design/map.md` §2-7c）。
 
 ---
 
@@ -131,7 +143,7 @@ ls .github/workflows/ 2>/dev/null || echo 'workflow 已移除（正確）'
 5. cron 環境極簡（不載入 shell rc），故 `deploy-cron.sh` 直接 grep `~/.zshrc.secrets`（其次 `~/.zshrc`、`~/.bashrc`）的 export 行；**三把金鑰齊全時不再 source `build/deploy.env`**，避免該檔的過時 token 覆寫（開發機那份 2026-10-26 實測 CF API 403／9109）。
 6. ⚠️ **金鑰只從固定檔名取**：把金鑰搬家（如 2026-10-29 從 `~/.zshrc` 移到 `~/.zshrc.secrets`）之後，一定要 `bash build/deploy-cron.sh --selfcheck` 驗一次。舊版腳本只 grep `~/.zshrc`，鑰搬走後 `build/deploy.env` 的 `${VAR:?}` 會把腳本在寫日誌前就終止——連續 18 期（2026-10-29 22:00～10-31 08:00）只在 cron 郵件留字、`build/logs` 一片空白。現版已改為先 log 再 exit 3。
 7. ⚠️ **cron PATH 不得寫死 node 的版本目錄名**（2026-11-06 修正）。舊版 `deploy-cron.sh` 寫死 `/root/.local/share/pi-node/node-v22.23.2-linux-x64/bin`。pi 升級 node 時會換掉目錄名並移除舊版（本機 2026-11-05 10:48 換成 `node-v24.22.2-linux-x64`），當天 12:00 起連續 10 期在 `npx -y wrangler` 得到 `rc=127`（`npx: command not found`）。⚠️ **CF 部署失敗整個站台就不會更新**：`deploy.sh` 是 `set -euo pipefail`，[2/4] Cloudflare 掛了就不有上線（本機自 11-05 08:00 起約 25 小時沒上線）。現版改以 `current` 符號連結優先、再補上現存的 `node-v*/bin`（依版本由新到舊），並在 build 前先 log「node 就緒」、找不到就 exit 4；`--selfcheck` 也驗 node/npx。
-8. **gh-pages 鏡像已停用**（2026-11-07，見 §四），cron 不再推它。舊版的 push 重試（3 次、間隔 5 秒）只在手動 `--gh` 時才會用到——它存在的原因是 GitHub 偶發拒整個 ref：`cannot lock ref 'refs/heads/gh-pages': is at <sha> but expected <sha>`（2026-11-04 20:00、11-05 02:00／06:00／10:00 實測各一次）。
+8. **gh-pages 鏡像已移除**（2026-11-07，見 §四）：cron 不再推它，分支已從 origin/github 刪除、Pages 站已關。舊版的 push 重試（3 次、間隔 5 秒）只在手動 `--gh` 時才會用到——它存在的原因是 GitHub 偶發拒整個 ref：`cannot lock ref 'refs/heads/gh-pages': is at <sha> but expected <sha>`（2026-11-04 20:00、11-05 02:00／06:00／10:00 實測各一次）。
 9. **部署不得在 `/tmp` 留殘骸**（2026-11-07 定案）：`deploy.sh` 的 mktemp 目錄帶 `weather-gh-pages.` 前綴且有 EXIT trap；`deploy-cron.sh` 退出時刪 lock 檔、開工時掃舊殘留（→ §5.1）。檢查有無殘留（兩種都應為空）：
 
    ```bash

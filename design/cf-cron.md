@@ -61,7 +61,7 @@ GitHub 2026 年确有排程大面積延遲／靜默丢單的公開回報（orgs/
 
 - **唯一自動通道＝本地 cron，每 2 小時整點**（`0 */2 * * *`，Asia/Taipei。2026-10-23 薈琵期間曾升為每小時 `0 * * * *`，10-24 遠離後降回）。
 - **Actions 已完全不使用**：`.github/workflows/build.yml` 於 2026-11-07 整支刪除（先前於 2026-10-23 移除 `schedule:`、只留 `workflow_dispatch`）。repo 內無 workflow 就不會有 run。
-- **不再推 `gh-pages` 鏡像**（2026-11-07）：推它就會觸發 GitHub 為 branch 來源 Pages 內建的 `pages build and deployment`，在 Actions 分頁每 2 小時留一條 run，容易被误判成「Actions 上又有自動部署」。現行只推 Cloudflare Pages → `LOCAL_CRON.md` §四。
+- **不再推 `gh-pages` 鏡像**（2026-11-07）：推它就會觸發 GitHub 為 branch 來源 Pages 內建的 `pages build and deployment`，在 Actions 分頁每 2 小時留一條 run，容易被誤判成「Actions 上又有自動部署」。現行只推 Cloudflare Pages → `LOCAL_CRON.md` §四。
 - **未實作任何 CF 側東西**（無 Worker、無新 Pages 專案、無 Cron Trigger）。
 - 日後若要重啟此案，先決定：(a) 只要「準時觸發」→ 變體 A；(b) 要「compute 也離開 GitHub」→ 變體 B 並先跑上面 5 項驗證。
 
@@ -72,4 +72,4 @@ GitHub 2026 年确有排程大面積延遲／靜默丢單的公開回報（orgs/
 - Forgejo（`origin`）上的 `gh-pages` 分支**不是服務**：該站（Forgejo 15.0.11／Gitea 1.22 基底）的 Pages 未啟用——
   `/lawliet/Weather/pages`、`/lawliet/Weather/-/pages`、`/lawliet.pages` 皆 HTTP 404（repo 主頁 200）。
   而該分支內容是 2026-08-29 的 **repo 原始檔快照**（29 檔，頂層是 `AGENTS.md`／`LICENSE`／`MANUAL_UPDATE.md` 等，不是 `public/` 產物）
-  → 既不服務、也與生產無關，只是定時器看不到的死拷貝；要清理就 `git push origin --delete gh-pages`（2026-10-31 記錄，尚未刪）。⚠️ 2026-11-07 起 cron 已**不再推 `gh-pages`**（三個 remote 上的 gh-pages 分支均停在最後一期）→ `LOCAL_CRON.md` §四。
+  → 既不服務、也與生產無關，只是定時器看不到的死拷貝。⚠️ **已清理（2026-11-07）**：`git push origin --delete gh-pages` 與 `git push github --delete gh-pages` 均已執行，三邊只剩 `main`/`DEV`；GitHub Pages 站也已關（→ `LOCAL_CRON.md` §四）。

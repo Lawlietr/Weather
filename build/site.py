@@ -598,7 +598,7 @@ def parse_row_time(s, fallback_mtime, year_hint=None, month_hint=None):
     常見格式：2026/7/10 05:30、2026/7/11、2026/7/11 下午、2026/7/12 凌晨4時、2026/7/24～25（取首日）。
     不帶年份的「M/D」依檔案路徑的 {YYYY}/{MM}/ 目錄推定年份（repo 慣例），
     跨年情境用月份差距修正：檔案在 12 月而日期在 1 月 → 下年度；反之 → 上年度。
-    解析失敗時回退到事件檔 mtime（回傳值为 mtime 時由呼叫端計入 warning）。"""
+    解析失敗時回退到事件檔 mtime（回傳值為 mtime 時由呼叫端計入 warning）。"""
     fallback = datetime.datetime.fromtimestamp(fallback_mtime)
     m = re.search(r"(20\d{2})/(\d{1,2})/(\d{1,2})", s or "")
     if not m:
@@ -813,7 +813,7 @@ def fix_md_links(html, ev, base, index):
             return m.group(2)
         fixed += 1
         if name_hit:
-            # 路徑候選都没中、靠檔名才對應到 → 來源 md 的相對層級寫錯了（例：少寫一層 ../），
+            # 路徑候選都沒中、靠檔名才對應到 → 來源 md 的相對層級寫錯了（例：少寫一層 ../），
             # 仍能上線但印出來提醒（不改事件正文，AGENTS.md：僅結構錯誤可改既有內容）。
             print(f"[note] 事件 {ev['name']} 的 .md 連結層級不對（靠檔名兜底）：{link}")
         return f'<a href="{base}{"/".join(target)}">{m.group(2)}</a>'
@@ -983,7 +983,7 @@ def build_misc_files(events, ts, groups):
     # 而 Jekyll **忽略檔名以 `_` 開頭的檔/資料夾**。後果：`assets/tiles/_blank.png`（缺瓦片佔位底）
     # 在 lawlietr.github.io 上 404（CF 上 200）——舊的 `_ocean.png` 同樣一直 404，只在鏡像上沒發現。
     # 放一個空 .nojekyll 就關掉 Jekyll 處理，`public/` 原樣發佈。
-    # ⚠️ 只有決定彻底不再重啟鏡像時才可拿掉（否則 `./build/deploy.sh --gh` 會重現 `_` 開頭資產 404）。
+    # ⚠️ 只有決定徹底不再重啟鏡像時才可拿掉（否則 `./build/deploy.sh --gh` 會重現 `_` 開頭資產 404）。
     (OUT / ".nojekyll").write_text("", encoding="utf-8")
 
     # --- 站對外 AGENTS.md（agent instruction：when-to-use/引用格式）---

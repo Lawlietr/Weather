@@ -9,7 +9,7 @@
 > ```
 >
 > **環境現況（2026-11-07）**：公開網站**只由 Cloudflare Pages 提供**（自訂域名 ×3）。
-> GitHub Pages 鏡像已停用（不再推 `gh-pages`）、GitHub Actions 已完全不使用（`build.yml` 已刪）。
+> GitHub Pages 鏡像已移除（`gh-pages` 分支已刪、Pages 站已關）、GitHub Actions 已完全不使用（`build.yml` 已刪）。
 > 金鑰存在本機 `~/.zshrc.secrets`（手動與 cron 同一來源）。
 > 三個 git remote（Forgejo／GitHub／Codeberg）的 **repo 代碼與 markdown** 仍同步推 `main`，
 > 但那只是版本控制，**不產生網站**。
@@ -129,10 +129,10 @@ git push origin main
 - 更新：`npx -y wrangler@latest pages deploy public --project-name weather --branch main`
 - 憑證：`CLOUDFLARE_API_TOKEN`＋`CLOUDFLARE_ACCOUNT_ID`（在 `~/.zshrc.secrets` 憑證集中檔，不進 repo）。
 
-### GitHub Pages（2026-11-07 起停用，不再是部署目標）
-- `deploy.sh` 預設**不推** `gh-pages`；镜像站 `lawlietr.github.io/Weather/` 的内容停在最後一期（2026-11-07）。
-- 为何停用：推 `gh-pages` 會觸發 GitHub 為 branch 來源 Pages 內建的 `pages build and deployment` workflow（Actions 分頁每 2 小時出現一期、易误判為「另有自動部署」），而該镜像不是正式管道、也不影響三個正式域名。
-- 真的要重建镜像：先在 GitHub repo 重新啟用 Pages（branch 來源 `gh-pages`），再跑 `./build/deploy.sh --gh`（憑證优先序：`GH_PAT` → 本機 `github` remote 的 SSH）。
+### GitHub Pages（已於 2026-11-07 移除，不再是部署目標）
+- `deploy.sh` 預設**不推** `gh-pages`；`gh-pages` 分支已從 origin/github **刪除**（codeberg 無此分支），`lawlietr.github.io/Weather/` 已不可用（站已關，`gh api repos/Lawlietr/Weather/pages` → 404）。
+- 為何移除：推 `gh-pages` 會觸發 GitHub 為 branch 來源 Pages 內建的 `pages build and deployment` workflow（Actions 分頁每 2 小時出現一期、易誤判為「另有自動部署」），而該鏡像不是正式管道、也不影響三個正式域名；停在最後一期的舊災情挂在网上比沒資料更危險。
+- 真的要重建鏡像：先在 GitHub repo 重新啟用 Pages（branch 來源 `gh-pages`），再跑 `./build/deploy.sh --gh`（憑證優先序：`GH_PAT` → 本機 `github` remote 的 SSH）。
 
 > 只有一邊要上線：`public/` 只推 Cloudflare Pages。
 

@@ -5,7 +5,7 @@
 > 🌐 <https://weather.avpclub.eu.org/>（繁中）｜<https://weather.avpclub.eu.org/ja/>（日文）
 > 其他端點：<https://weather.avpclub.uk/>、<https://weather.larch.dpdns.org/>
 >
-> GitHub Pages 鏡像（`lawlietr.github.io/Weather/`）自 2026-11-07 起不再更新，內容停在当期（不再推 `gh-pages`）。
+> GitHub Pages 鏡像已於 2026-11-07 移除（`gh-pages` 分支已刪、Pages 站已關），<https://lawlietr.github.io/Weather/> 不再可用。
 
 本站採**手動更新**、非即時，每頁標示「最後更新時間」。
 

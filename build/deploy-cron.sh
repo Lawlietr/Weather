@@ -40,7 +40,7 @@ LOCK_FILE="/tmp/weather-deploy.lock"
 #    2026-11-05 10:48 pi-node 由 node-v22.23.2-linux-x64 換成 node-v24.22.2-linux-x64，
 #    寫死的 PATH 從當天 12:00 起連續 10 期在 deploy.sh 的 `npx -y wrangler` 得到 rc=127，
 #    Cloudflare 與 GitHub Pages 兩個通道全停（deploy.sh 是 set -e，[2/4] 掛了 [3/4] 也不跑）。
-#    改以 current 符號連結優先，再依版本由新到旧補上現存的 node-v*/bin 目錄。
+#    改以 current 符號連結優先，再依版本由新到舊補上現存的 node-v*/bin 目錄。
 PI_NODE_HOME="${HOME}/.local/share/pi-node"
 node_path_candidates=("$PI_NODE_HOME/current/bin")
 while IFS= read -r _d; do node_path_candidates+=("$_d"); done \
@@ -85,7 +85,7 @@ cleanup_logs() {
 #      `tmp.` ＋ 10 個亂碼字元）也無 trap，每次部署失敗就留一份。
 #   2. agent 除錯用的暫存檔：一律寫在 /tmp/weather-scratch/（單一目錄，規則見 WORKFLOW.md §8 第 3 條），
 #      這裡掃超過 2 天未動的舊檔。
-# 呼叫時機：取得 flock 之後（保證不會删到同期還在使用的東西）。
+# 呼叫時機：取得 flock 之後（保證不會刪到同期還在使用的東西）。
 cleanup_tmp() {
   local tmpbase="${TMPDIR:-/tmp}"
   find "$tmpbase" -maxdepth 1 -name 'weather-gh-pages.*' -mmin +180 -exec rm -rf {} + 2>/dev/null
@@ -255,7 +255,7 @@ else
   log "⚠️  CWA_API_KEY 未設定，跳過 CWA 檢查"
 fi
 
-# ---- 執行部署（只推 Cloudflare Pages；gh-pages 鏡像與 Actions 自 2026-11-07 起不参与）----
+# ---- 執行部署（只推 Cloudflare Pages；gh-pages 鏡像與 Actions 自 2026-11-07 起不参與）----
 ./build/deploy.sh >> "$LOG_FILE" 2>&1
 rc=$?
 

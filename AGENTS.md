@@ -183,7 +183,7 @@
   4. **本機 `DEV` 只是 `origin/DEV` 的追蹤快照**（2026-10-23 已 `git branch -f DEV origin/DEV` 對齊至 `bca1b0d`），**不得在本機 checkout `DEV` 開發**：當時 `DEV` 落後 `main` 22 commits（含 `build/dgpa.py` 87 行、`site.py`、`i18n.py`、`cron.txt` 等生產修正與薔琵事件檔），一旦本機 HEAD 切到 `DEV`，cron 就把倒退內容推上三個生產站。⚠️ **落後數字會隨每次 merge 變動，不得引用舊數字**——2026-10-27 於開發機實測：`git fetch --all --prune` 後 `origin/DEV` 與 `origin/main` **同頂 `9f2103c`**（即已同步）；要判斷落後量一律現查 `git rev-list --count DEV..main`。真需在本機驗證功能：先確認 `DEV` 已 merge 最新 `main`，並暫時 `bash build/cron-disable.sh`，測完 `cron-enable.sh`。
   5. **開發機上開發前先將 `origin/main` merge 進 `DEV`**（不是事後才同步）：`main` 持續有 `build/` 修正落地，越晚同步重疊衝突越大，事後解衝突很容易把生產修正解回舊版、再 merge 回 `main` 造成永久倒退。（舊註「現行重疊檔＝`dgpa.py`/`site.py`/`i18n.py`/`deploy-cron.sh`」為 2026-10-23 快照，2026-10-27 已不成立（兩分支同頂）——**規則不變，清單會變**。）
 - **開發流程（2026/9/16 重申：勿直接 commit/push `main`；2026-10-23 補：開發在開發機 `192.168.100.15`，不在本機）**：所有開發在 `DEV` 分支 commit→build＋部署測試站 `wea-testing`、真瀏覽器（Playwright）驗證→**經使用者同意後**才將 `DEV` 合併進 `main` 並推 `main`（三邊 remote 皆推，見上「Remotes」條）。生產自動部署（`build/deploy-cron.sh`→`deploy.sh`）**以 repo 目前 checkout 為準、無分支邏輯**：開發機上的 `DEV` 工作因物理分離不會進生產（見上條 2），**但本機 HEAD 切到 `DEV` 就會**（見上條 4）；合併回 `main` 後需到本機 `git pull --ff-only origin main` 才恢復生產為已合併狀態（見上條 3）。
-- 無 lint/test 指令；**排程狀態（2026-10-23 定案、2026-10-24 降頻）**：**唯一自動 build＋部署通道＝本地 cron，每 2 小時整點**（`0 */2 * * *`，Asia/Taipei；CWA 前置檢查 3 次重試、失敗中止；薔琵颱風期間 10/23 曾升為每小時 `0 * * * *`，10/24 薔琵遠離後降回每 2 小時）。**`.github/workflows/build.yml` 已整支刪除（2026-11-07）——GitHub Actions 完全不使用**：先前的 `schedule:` 於 2026-10-23 因排程可靠度停用（實測 24 期只觸發 10 期、間隔 185–424 分，而本地 cron 10/10 準時、约 40 秒完成；GitHub scheduler 延遲為上游已知問題），只留手動按鈕；同日又發現 Actions 分頁每 2 小時的 `pages build and deployment` 其實是 GitHub 為 branch 來源 Pages 內建的發布器（由推 `gh-pages` 觸發），容易被误判成「又在 Actions 上設了自動部署」，所以连同 `gh-pages` 推送一起停。CF 側替代方案（Worker Cron 打手動觸發）僅評估、**未實作** → `design/cf-cron.md`。部署指令 → `WORKFLOW.md` §6/§7
+- 無 lint/test 指令；**排程狀態（2026-10-23 定案、2026-10-24 降頻）**：**唯一自動 build＋部署通道＝本地 cron，每 2 小時整點**（`0 */2 * * *`，Asia/Taipei；CWA 前置檢查 3 次重試、失敗中止；薔琵颱風期間 10/23 曾升為每小時 `0 * * * *`，10/24 薔琵遠離後降回每 2 小時）。**`.github/workflows/build.yml` 已整支刪除（2026-11-07）——GitHub Actions 完全不使用**：先前的 `schedule:` 於 2026-10-23 因排程可靠度停用（實測 24 期只觸發 10 期、間隔 185–424 分，而本地 cron 10/10 準時、约 40 秒完成；GitHub scheduler 延遲為上游已知問題），只留手動按鈕；同日又發現 Actions 分頁每 2 小時的 `pages build and deployment` 其實是 GitHub 為 branch 來源 Pages 內建的發布器（由推 `gh-pages` 觸發），容易被誤判成「又在 Actions 上設了自動部署」，所以连同 `gh-pages` 推送一起停。CF 側替代方案（Worker Cron 打手動觸發）僅評估、**未實作** → `design/cf-cron.md`。部署指令 → `WORKFLOW.md` §6/§7
 
 ---
 
@@ -228,7 +228,7 @@
 
 ---
 
-## 網站專案（已上線：Cloudflare Pages ×3 自訂域名；GitHub Pages 鏡像已停用）
+## 網站專案（已上線：Cloudflare Pages ×3 自訂域名；GitHub Pages 鏡像已移除）
 
 - **文件分工**：見上方「參考索引」表（runbook → `WORKFLOW.md`；CWA 欄位 → `build/CWA_API.md`；手動路徑 → `MANUAL_UPDATE.md`；本地 cron → `LOCAL_CRON.md`；構想與待辦 → `TODO.md` 帳本＋`design/` 各功能設計檔）。
 - **⚠️ 更新災情前必看 `WORKFLOW.md` §8「Agent 效率規範」**：先查 repo 既有檔案／`ctx_search`／`cwa_cache.json`，只查會變的資料，同一資料一個 session 只查一次。
@@ -238,7 +238,7 @@
 
 ### 不變項（改動前先確認）
 
-- **更新模式**：本地 cron（**每 2 小時整點**）為**唯一**自動 build＋部署通道，而且**只推 Cloudflare Pages**。GitHub Actions **完全不使用**（2026-11-07 刪除 `.github/workflows/build.yml`；scheduler 2026-10-23 實測不可靠：24 期只跑 10 期、間隔 185–424 分），GitHub Pages 鏡像（orphan `gh-pages`）也於 2026-11-07 **停推** → `WORKFLOW.md` §6/§7、`LOCAL_CRON.md` §四。⚠️ 不得把 Actions 分頁每 2 小時的 `pages build and deployment` 误認為自動部署——那是 GitHub 為 branch 來源 Pages 內建的發布器，由推 `gh-pages` 觸發（不推就不會再出現）。**災情新聞人工把關、不自動推 RSS**（→ `WORKFLOW.md` §1、`MANUAL_UPDATE.md`）。**除錯暫存檔一律寫 `/tmp/weather-scratch/`、不在 `/tmp` 頂層建檔**；部署的暫存目錄與 lock 檔由腳本自行清理 → `LOCAL_CRON.md` §5.1。
+- **更新模式**：本地 cron（**每 2 小時整點**）為**唯一**自動 build＋部署通道，而且**只推 Cloudflare Pages**。GitHub Actions **完全不使用**（2026-11-07 刪除 `.github/workflows/build.yml`；scheduler 2026-10-23 實測不可靠：24 期只跑 10 期、間隔 185–424 分），GitHub Pages 鏡像（orphan `gh-pages`）也於 2026-11-07 **停推** → `WORKFLOW.md` §6/§7、`LOCAL_CRON.md` §四。⚠️ 不得把 Actions 分頁每 2 小時的 `pages build and deployment` 誤認為自動部署——那是 GitHub 為 branch 來源 Pages 內建的發布器，由推 `gh-pages` 觸發（不推就不會再出現）。**災情新聞人工把關、不自動推 RSS**（→ `WORKFLOW.md` §1、`MANUAL_UPDATE.md`）。**除錯暫存檔一律寫 `/tmp/weather-scratch/`、不在 `/tmp` 頂層建檔**；部署的暫存目錄與 lock 檔由腳本自行清理 → `LOCAL_CRON.md` §5.1。
 - **金鑰**：CWA Key、Cloudflare 憑證分散在 (1) 本機 `~/.zshrc.secrets`（**憑證集中檔**、600、`~/.zshrc` 只 source 它——2026-10-29 定案，token 多、不塞 `.zshrc`）、(2) GitHub Secrets（dispatch）、(3) `build/deploy.env`（600、gitignore、**只做兜底**，需要時由 repo 內 `build/deploy.env.example` 複製；`deploy-cron.sh` 取到金鑰就不 source 它）；**不寫進任何輸出檔案、不進 `public/`、不進網站**。
 - **非即時**：首頁顯示「**產生時間**」（i18n key `updated`），由 `build/site.py` 以**固定 UTC+8** 產生（`datetime.now(timezone(timedelta(hours=8)))`）；**不可改回不帶時區的 `datetime.now()`**（Actions runner 是 UTC、會慢 8 小時）。「產生時間」＝網頁何時生成，**不等於氣象／災情資料已更新**。
 - **CWA 不支援 CORS**：氣象資料全部 build 時本機抓取寫入靜態 HTML；前端零外部請求、首頁零 JS。
@@ -249,11 +249,11 @@
 ### 網站結構（實作細節 → `design/site.md`／`design/map.md`）
 
 - **首頁**：「目前風險狀態列」（由 CWA 目前生效中警報／特報自動推導，**與事件 `severity` 無關**）→ 氣象彙整（颱風/警報特報/雨量/風力；卡片排序、過時氣旋淘汰、特報 TTL 等 → `design/site.md`）→ 事件 Hero＋各縣市災情總覽（build 時跨事件依縣聚合、純靜態無資料庫）→ 過去事件封存。
-- **災防告警地圖 `/map/`**：cbph 4 類告警官方 polygon＋**颱風軌跡／風圈層**（§2-4b：觀測實線＋預報虛線＋15 m/s 風圈（四象限非正圓）＋70% 暴風半徑；風圈 polygon 不得可點、氣旋層必在雨量點之上，否則真氣旋靠近時軌跡会被雨量點蓋住）＋自託 Leaflet＋離線瓦片；資料全 build 時嵌入、**前端零外部請求**；瓦片之下另有一層**兜底陸地層**（缺瓦片時仍有陸地參考，見上方不變項）（細節與待辦 → `design/map.md`）。
+- **災防告警地圖 `/map/`**：cbph 4 類告警官方 polygon＋**颱風軌跡／風圈層**（§2-4b：觀測實線＋預報虛線＋15 m/s 風圈（四象限非正圓）＋70% 暴風半徑；風圈 polygon 不得可點、氣旋層必在雨量點之上，否則真氣旋靠近時軌跡會被雨量點蓋住）＋自託 Leaflet＋離線瓦片；資料全 build 時嵌入、**前端零外部請求**；瓦片之下另有一層**兜底陸地層**（缺瓦片時仍有陸地參考，見上方不變項）（細節與待辦 → `design/map.md`）。
 
 ### 部署（指令、域名與救回方式詳 `WORKFLOW.md` §6）
 
 - **Cloudflare Pages**（**唯一公開通道**，`weather.avpclub.eu.org` 等 3 自訂域名）。
-- **GitHub Pages 鏡像：2026-11-07 起不再推送**（orphan `gh-pages` 分支）。推它就會觸發 GitHub 內建的 Pages 發布器（Actions 分頁每期一條、易误判為另有自動部署），而它不是正式管道。重建／彻底清掉的指令 → `LOCAL_CRON.md` §四。
+- **GitHub Pages 鏡像：已徹底移除（2026-11-07）**。`deploy.sh` 預設不推（要明確才加 `--gh`）；`gh-pages` 分支已從 origin/github **刪除**（codeberg 無此分支），Pages 站已關（`gh api repos/Lawlietr/Weather/pages` → 404）。理由：推它就會觸發 GitHub 內建的 Pages 發布器（Actions 分頁每期一條、易誤判為另有自動部署），而它不是正式管道；停在最後一期的舊災情挂在网上比沒資料更危險。重建與已執行步驟的細節 → `LOCAL_CRON.md` §四。
 - **測試站**：`wea-testing` 專案（`weatesting.avpclub.eu.org`），DEV 預覽專用、**純手動部署**、不在自動部署範圍；指令與重建守則→`WORKFLOW.md` §6。
-- **GitHub 公開 repo 不接收**：build 腳本、災情/颱風 markdown 原文、內部倉庫資訊、金鑰——一律不外流到 `gh-pages`（已停推）或任何公開**網站產出**。
+- **GitHub 公開 repo 不接收**：build 腳本、災情/颱風 markdown 原文、內部倉庫資訊、金鑰——一律不外流到任何公開**網站產出**（`gh-pages` 鏡像已刪除，三邊只剩 `main` 與 `DEV`）。

@@ -8,9 +8,9 @@
 
 ⚠️ 已知限制（不算斷鏈、但如實標出）：`404.html` 的相對連結。Cloudflare Pages 對
 「任何深度」的未匹配路徑都送同一份 top-level 404.html，瀏覽器會以**被請求的 URL**
-為基準解析相對連結 → 深路徑的 404 頁側欄連結可能再次 404。改成絕對 URL 會讓
-GitHub Pages 鏡像（`/Weather/` 前綴，2026-11-07 起停推、尚未刪除）跳回 CF 域名，
-故刻意保留相對寫法（見 TODO §12）。
+為基準解析相對連結 → 深路徑的 404 頁側欄連結可能再次 404。改成絕對 URL 會讓 GitHub Pages
+鏡像（`/Weather/` 前綴）跳回 CF 域名；鏡像已於 2026-11-07 移除（`gh-pages` 分支已刪、
+Pages 站已關），但 `404.html` 仍在輸出中，故刻意保留相對寫法（見 TODO §12）。
 """
 import argparse
 import sys

@@ -113,7 +113,7 @@
 
 另外測 z11 拖到 maxBounds 四邊（東/西/南/北各拖到底）：全部零 404、海色佔位瓦片 0 張 → **可拖範圍內瓦片完整**。`.leaflet-container` 與 `#map` 實測 `rgb(170,211,223)`＝海色 ✓。截圖目視：右側出現石垣市/西表石垣國立公園（z8）與與那國町、沖繩縣界（z11）——不再是一片空白。
 
-⚠️ 副作用：`public/assets/tiles` 25 MB（部署變大，CF Pages／gh-pages 同步時留意上傳時間）。原註「2560px 以上 ultrawide 在 z8 最外側會露海色」——⚙ **2026-10-27 實測更正**：z8 瓦片實際涵蓋 **115.31–127.97°E**（`tiles.tile_list()` 實際網格，比 `zoom_bbox()` 的 115.73–126.87 更寬，因網格以 1.4° 對齊），所以 2560 視窗在 z8 **只有左側約 18px（≈0.1°）缺瓦片**（右側不缺），該處已由 §2-7c 兜底陸地層補上海岸線（見下方「兜底陸地層」節的 on/off 截圖差異 0.405%、差異全在 x 3–18）。真正會露出海色的主要場景是**瓦片抓取失敗**與**未來改 `ZOOMS`/`MAP_MAX_BOUNDS`**。
+⚠️ 副作用：`public/assets/tiles` 25 MB（部署變大，上 CF Pages 時留意上傳時間）。原註「2560px 以上 ultrawide 在 z8 最外側會露海色」——⚙ **2026-10-27 實測更正**：z8 瓦片實際涵蓋 **115.31–127.97°E**（`tiles.tile_list()` 實際網格，比 `zoom_bbox()` 的 115.73–126.87 更寬，因網格以 1.4° 對齊），所以 2560 視窗在 z8 **只有左側約 18px（≈0.1°）缺瓦片**（右側不缺），該處已由 §2-7c 兜底陸地層補上海岸線（見下方「兜底陸地層」節的 on/off 截圖差異 0.405%、差異全在 x 3–18）。真正會露出海色的主要場景是**瓦片抓取失敗**與**未來改 `ZOOMS`/`MAP_MAX_BOUNDS`**。
 
 ⚠️ 2026-10-27 更正（做 §2-7c 時才發現）：上述 `_ocean.png`（570 bytes、實色）已廢——不透明的佔位底住在 tilePane 裡，會**蓋住下方的兜底陸地層**。現行＝全透明 `_blank.png`，見下方「兜底陸地層」節。
 
@@ -175,14 +175,14 @@
 
 **正式站上線後複驗**（2026-10-27 15:49 透過 `build/deploy-cron.sh` 於部署機手動跑一次，`rc=0`；build：2,200 瓦片全快取命中、失敗 0、零 warning）：四个託管（`weather.avpclub.eu.org`／`.uk`／`.larch.dpdns.org`／`lawlietr.github.io/Weather`）＋ ja 頁皆 **land 79 paths（pane z=1）＜ tile z=200 ＜ overlay 2,632 paths**、容器底色海色、`_blank.png` HTTP 200／334 B／colorType 6、land pane 內命中 0、**零 4xx、零 console error**（load 1.0–2.1 s）。瓦片全滅情境（route abort）：三邊都看到 20 張 errorTile 全走透明佔位底、兜底 land 79 條可見。
 
-⚠️ **上線時發現並已修：GitHub Pages 鏡像會漏掉 `_` 開頭的資產**。實測 `_blank.png` 在鏡像上 404（同路徑在 CF 200），而 `map/index.html`、`assets/tiles/8/214_110.png`、`leaflet.css` 均 200，gh-pages tree 內唯一的 `_` 開頭檔就是它——gh-pages 屬於 Pages 的 **branch 來源**，GitHub 會跑 Jekyll，而 Jekyll 忽略 `_` 開頭的檔/資料夾（舊 `_ocean.png` 也一直在鏡像上 404，只是没人發現）。修法：`site.py` 於站根產空檔 **`public/.nojekyll`**（commit `94963c6`），重新部署後鏡像 `_blank.png` 已是 200、`.nojekyll` 200。`public/` 2,242 檔／14.03 MiB。
+⚠️ **上線時發現並已修：GitHub Pages 鏡像會漏掉 `_` 開頭的資產**。實測 `_blank.png` 在鏡像上 404（同路徑在 CF 200），而 `map/index.html`、`assets/tiles/8/214_110.png`、`leaflet.css` 均 200，gh-pages tree 內唯一的 `_` 開頭檔就是它——gh-pages 屬於 Pages 的 **branch 來源**，GitHub 會跑 Jekyll，而 Jekyll 忽略 `_` 開頭的檔/資料夾（舊 `_ocean.png` 也一直在鏡像上 404，只是沒人發現）。修法：`site.py` 於站根產空檔 **`public/.nojekyll`**（commit `94963c6`），重新部署後鏡像 `_blank.png` 已是 200、`.nojekyll` 200。`public/` 2,242 檔／14.03 MiB。
 
 **邊界與坑（改視野前必读）**
 - 兜底層只蓋 `zoom_bbox` 聯集 ⊕ 0.5° ＝ **(115.2, 19.6)~(127.4, 27.8)**。窗外不含：沖繩本島（127.7°E）、呂宋 main（18.5°N 以南）、東沙（116.7°E 已在窗内但未在 NE 10m land 出小島）。
 - ⚠️ **改 `tiles.MAP_MAX_BOUNDS`／`ZOOMS` 後必須重跑 `python3 build/make_taiwan_geo.py`**，否则兜底層不會跟著長——就是 §2-7「maxBounds 比瓦片寬」漂移教訓的翻版（產生器頭部已寫這條）。
 - 矩形裁剪會在窗邊留下**沿裁剪邊的直線邊**（大陸/大島被窗切開處），屬預期，該處本就是視野邊緣。
 - 來源授權：Natural Earth 公有領域（與 `ISLANDS` 同）；不需署名但也無需隱晦。
-- ⚠️ **檔名以 `_` 開頭 → GitHub Pages 鏡像會 404**（2026-10-27 實測；**鏡像自 2026-11-07 起停推**，本條只在重建鏡像時適用 → `LOCAL_CRON.md` §四）：gh-pages 是 orphan 分支直推＝Pages 的 **branch 來源**，GitHub 對 branch 來源會跑 Jekyll，而 Jekyll **忽略 `_` 開頭的檔/資料夾**——實測 `assets/tiles/_blank.png` 在 `lawlietr.github.io` 404、同一路徑在 CF 上 200（鏡像上瓦片與 `leaflet.css` 皆 200，tree 內唯一的 `_` 開頭檔就是它）。舊 `_ocean.png` 也一直在鏡像上 404（只是從沒人發現）。**修法：`build/site.py` 已在站根產 `public/.nojekyll`（空檔）關掉 Jekyll**；WORKFLOW §3 ⑤ 已加檢查。若日後再出現 `_` 開頭的資產，只要 `.nojekyll` 在就不會再被漏。
+- ⚠️ **檔名以 `_` 開頭 → GitHub Pages 鏡像會 404**（2026-10-27 實測；**鏡像已於 2026-11-07 移除：`gh-pages` 分支已刪、Pages 站已關**，本條只在重建鏡像時適用 → `LOCAL_CRON.md` §四）：gh-pages 是 orphan 分支直推＝Pages 的 **branch 來源**，GitHub 對 branch 來源會跑 Jekyll，而 Jekyll **忽略 `_` 開頭的檔/資料夾**——實測 `assets/tiles/_blank.png` 在 `lawlietr.github.io` 404、同一路徑在 CF 上 200（鏡像上瓦片與 `leaflet.css` 皆 200，tree 內唯一的 `_` 開頭檔就是它）。舊 `_ocean.png` 也一直在鏡像上 404（只是從沒人發現）。**修法：`build/site.py` 已在站根產 `public/.nojekyll`（空檔）關掉 Jekyll**；WORKFLOW §3 ⑤ 已加檢查。若日後再出現 `_` 開頭的資產，只要 `.nojekyll` 在就不會再被漏。
 
 ## 颱風軌跡／風圈層（§2-4b，✅ 2026-10-28 定案並實作、**已合併 `main` ＋ 已上線正式站**）
 

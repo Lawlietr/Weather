@@ -3,9 +3,9 @@
 > **讀者**：接手本專案的 agent 或人工操作者。
 > **定位**：「怎麼做」的逐步流程。專案規範（檔案格式、CWA API 結構、設計原則）在
 > `AGENTS.md`，本文件不重複，只引用。
-> 最後更新：2026-11-07（部署面重組：只推 Cloudflare Pages、**刪除 `.github/workflows/build.yml`（Actions 完全不使用）**、不再推 `gh-pages` 鏡像；§6／§7 同步修正。暫存檔與 `/tmp` 殘留規則 → `LOCAL_CRON.md` §5.1、本檔 §8 第 8 條。詳細變更史見 git history）
+> 最後更新：2026-11-07（部署面重組：只推 Cloudflare Pages、**刪除 `.github/workflows/build.yml`（Actions 完全不使用）**、**GitHub Pages 鏡像已徹底移除（不再推、`gh-pages` 分支已從三邊刪除、Pages 站已關）**；§6／§7 同步修正。暫存檔與 `/tmp` 殘留規則 → `LOCAL_CRON.md` §5.1、本檔 §8 第 8 條。詳細變更史見 git history）
 > 
-> **環境現況（2026-11-07）**：公開網站**只由 Cloudflare Pages 提供**（三個自訂域名）。GitHub Pages 鏡像已停用（不再推 `gh-pages`）、**GitHub Actions 完全不使用**（`.github/workflows/build.yml` 已刪除）。
+> **環境現況（2026-11-07）**：公開網站**只由 Cloudflare Pages 提供**（三個自訂域名）。GitHub Pages 鏡像已移除（`gh-pages` 分支已從 origin/github 刪除、Pages 站已關，→ `LOCAL_CRON.md` §四）、**GitHub Actions 完全不使用**（`.github/workflows/build.yml` 已刪除；Actions 分頁不應再有新 run）。
 > 金鑰（`CWA_API_KEY`、`CLOUDFLARE_API_TOKEN`、`CLOUDFLARE_ACCOUNT_ID`）一律放本機 `~/.zshrc.secrets`（手動與 cron 共用同一來源）。
 > 三個 git remote（Forgejo／GitHub／Codeberg）的代碼與 markdown 仍同步推 `main`（→ §0.1），但那只是版本控制，**不產生網站**。
 
@@ -202,7 +202,7 @@ cd public && python3 -m http.server 8080
    快取值為 `null`/缺失時 `cwa.py` 會跳過該來源，屬預期行為。
 4. 公開 GitHub repo 只應收到 `public/` 靜態產物，**不收 markdown 原文與 build 腳本**
    （金鑰不進輸出已驗證，但流程上仍分開）。
-5. **GitHub Actions 已完全不使用（2026-11-07 刪除 `.github/workflows/build.yml`）**：直接原因是 **GitHub scheduler 不可靠**——2026-10-23 實測近 2 天 24 期排程只觸發 10 期、實際間隔 185–424 分（應為 120 分），每次 run 2.5–3.4 分鐘；同期本地 cron 10/10 準時、历時 33–58 秒。另有一層误判風險：Actions 分頁每 2 小時的 `pages build and deployment` 是 GitHub 為 branch 來源 Pages 內建的發布器（由推 `gh-pages` 觸發），不是我們的部署——不推 `gh-pages` 就不會再出現。⚙️ 技術備註（日后若要重新引入 Actions 會再踩）：Actions `schedule` 只讀 default branch（`main`）。GitHub 側亦有延遲 5–7 小時／整期漏跑的公開回報（orgs/community discussion #201472）。
+5. **GitHub Actions 已完全不使用（2026-11-07 刪除 `.github/workflows/build.yml`）**：直接原因是 **GitHub scheduler 不可靠**——2026-10-23 實測近 2 天 24 期排程只觸發 10 期、實際間隔 185–424 分（應為 120 分），每次 run 2.5–3.4 分鐘；同期本地 cron 10/10 準時、历時 33–58 秒。另有一層誤判風險：Actions 分頁每 2 小時的 `pages build and deployment` 是 GitHub 為 branch 來源 Pages 內建的發布器（由推 `gh-pages` 觸發），不是我們的部署——不推 `gh-pages` 就不會再出現。⚙️ 技術備註（日后若要重新引入 Actions 會再踩）：Actions `schedule` 只讀 default branch（`main`）。GitHub 側亦有延遲 5–7 小時／整期漏跑的公開回報（orgs/community discussion #201472）。
    `build/build.sh` 的 CWA 前置檢查（3 次重試、失敗 `exit 1`）仍保留——不管從哪裡触发都不推舊資料。
    唯一自動更新通道＝本地 cron（每 2 小時，見 §7）。舊版曾因 `MaxWindSpeed=None` 讓 build 崩潰（`TypeError`），已修復（`cwa.py` 加 `if ws is not None`）。
 6. **Cloudflare token 限區域或失效**：code 9109。去 CF 後台重開 token 並更新 GitHub Secret 即可；
@@ -219,8 +219,8 @@ cd public && python3 -m http.server 8080
 - **內部**：`git push origin main` → Forgejo（`ssh://fg/lawliet/Weather.git`）。
 - **GitHub Pages 鏡像：已停用（2026-11-07）**，不再是部署目標。
   - `build/deploy.sh` 預設不推 orphan `gh-pages` 分支（要手動重建才加 `--gh`）； cron 也不推。
-  - 停用理由與後果、以及重建／彻底清掉的指令 → `LOCAL_CRON.md` §四。重點：推 `gh-pages` 就會觸發 GitHub 內建的 Pages 發布器（Actions 分頁每期一條，易误判為「Actions 又在自動部署」），而鏡像不是正式管道。
-  - 現狀：`lawlietr.github.io/Weather/` 停在最後一期（2026-11-07）的鏡像與 `gh-pages` 分支尚未删除，等你决定是否一併清掉。
+  - 停用理由與後果、以及重建／徹底清掉的指令 → `LOCAL_CRON.md` §四。重點：推 `gh-pages` 就會觸發 GitHub 內建的 Pages 發布器（Actions 分頁每期一條，易誤判為「Actions 又在自動部署」），而鏡像不是正式管道。
+  - 現狀（**已執行**，2026-11-07）：`gh-pages` 分支已從 origin 與 github **刪除**（codeberg 無此分支），GitHub Pages 站已隨分支刪除而**關闭**（`gh api repos/Lawlietr/Weather/pages` → 404）；舊內容由 GitHub CDN 再發了數十分鐘後全部轉 404。⚠️ 順序教訓：先跑 `gh api -X DELETE …/pages` 會被 422 拒（`Deactivating GitHub pages … not allowed`），**刪分支才是有效路徑** → `LOCAL_CRON.md` §四。
 
 - **Cloudflare Pages**（公開，2026/8/26 已上線，**唯一上線通道**）：
   - 專案：`weather`（子域名 `weather-9kb.pages.dev`），自訂域名 ×3（皆已掛上，proxied on、自動 HTTPS）：
@@ -234,7 +234,7 @@ cd public && python3 -m http.server 8080
     需環境變數 `CLOUDFLARE_API_TOKEN`＋`CLOUDFLARE_ACCOUNT_ID`（已設在 `~/.zshrc.secrets`，金鑰不進 repo）。
     ⚠️ 自動部署（cron）與手動部署用的是同一支 `deploy.sh`：別繞過它直接跑 wrangler（會跳過 CWA 前置檢查與日誌）。
   - 自訂域名 DNS 紀錄（如重建需重設）：三個 zone 各一筆 CNAME `weather.* → weather-9kb.pages.dev`（proxied on）。
-  - 公開 repo `Lawlietr/Weather` 的 `gh-pages` 分支（只裝 `public/`）**自 2026-11-07 起不再推送**；repo 的代碼與 markdown 仍照 §0.1 推 `main`。
+  - 公開 repo `Lawlietr/Weather` 的 `gh-pages` 分支（只裝 `public/`）**已於 2026-11-07 刪除**（三邊現只剩 `main` 與 `DEV`）；repo 的代碼與 markdown 仍照 §0.1 推 `main`。
 - **測試站（2026/9/13 上線，DEV 預覽專用）**：
   - 專案：`wea-testing`，自訂域名 <https://weatesting.avpclub.eu.org/>（DNS CNAME `weatesting.avpclub.eu.org → wea-testing.pages.dev`、proxied on 已建；**CF API 不接受 `.eu.org` 多層 TLD（8000015），自訂域名只能在 dashboard 加**——Workers & Pages → wea-testing → Custom domains）。
   - **純手動部署，不在任何自動部署範圍**（cron／`deploy.sh` 只推 `weather` 專案）：
@@ -257,7 +257,7 @@ cd public && python3 -m http.server 8080
 - **兩台機器**：開發＝`192.168.100.15`（`DEV`），部署＝`192.168.100.14`（本機、cron 每 2 小時）。開發機的 `DEV` 不會進生產；但 merge 回 `main` 後要到部署機 `git pull --ff-only origin main` 才會上線 → 見 §0.1。
 - **手動**：`MANUAL_UPDATE.md`（改 markdown → `./build/deploy.sh` → 上線）。
 - **本地 cron（唯一自動通道，每 2 小時整點）**：本機或 Ubuntu LXC/VM 排 `build/deploy-cron.sh`（CWA 前置檢查 3 次重試、失敗中止、不推舊資料）。安裝/停用/自檢、金鑰（`build/deploy.env`）、日誌等細節見 `LOCAL_CRON.md`。2026-10-23 由每 2 小時提高為每小時（颱風期間加頻；`build/cron.txt` 行 `0 * * * *`），2026-10-24 薔琵遠離後**降回每 2 小時**（`0 */2 * * *`）。
-- **GitHub Actions：完全不使用**（2026-11-07 刪除 `.github/workflows/build.yml`，repo 內已沒有任何 workflow 檔案）。先前的教訓：`schedule:` 於 2026-10-23 因排程不可靠停用（24 期只跑 10 期、間隔 185–424 分），同日改僅留手動 dispatch；同日進一步發現在 Actions 分頁每 2 小時出現的 `pages build and deployment` 其實是 **GitHub 為 branch 來源 Pages 內建的發布器**，由本地 cron 推 `gh-pages` 觸發（不讀我們的 workflow、不抓 CWA、不碰 Cloudflare），容易误判成「Actions 上又有自動部署」。**现行做法：不再推 `gh-pages`（→ §6、`LOCAL_CRON.md` §四），所以 Actions 分頁不會再出現新 run。**日后若要重新引入自動觸發，首選是 CF Worker Cron 打一個手動觸發（**僅評估、未實作**，含變體 A/B/C 與待驗證項 → `design/cf-cron.md`）。自證目前狀態：
+- **GitHub Actions：完全不使用**（2026-11-07 刪除 `.github/workflows/build.yml`，repo 內已沒有任何 workflow 檔案）。先前的教訓：`schedule:` 於 2026-10-23 因排程不可靠停用（24 期只跑 10 期、間隔 185–424 分），同日改僅留手動 dispatch；同日進一步發現在 Actions 分頁每 2 小時出現的 `pages build and deployment` 其實是 **GitHub 為 branch 來源 Pages 內建的發布器**，由本地 cron 推 `gh-pages` 觸發（不讀我們的 workflow、不抓 CWA、不碰 Cloudflare），容易誤判成「Actions 上又有自動部署」。**现行做法：不再推 `gh-pages`（→ §6、`LOCAL_CRON.md` §四），所以 Actions 分頁不會再出現新 run。**日后若要重新引入自動觸發，首選是 CF Worker Cron 打一個手動觸發（**僅評估、未實作**，含變體 A/B/C 與待驗證項 → `design/cf-cron.md`）。自證目前狀態：
 
   ```bash
   ls .github/workflows/                 # 應為空（沒有任何自訂 workflow）
@@ -284,7 +284,7 @@ cd public && python3 -m http.server 8080
 5. **寫檔一次成型**：長內容分段寫或先存 `/tmp/weather-scratch/` 再 `cp`，避免 write 工具 output token 截斷重來（8/28 實測發生）。
 6. **完成定義**：git status 乾淨（或 diff 已確認）＋ build ＋ deploy ＋ 推 `origin` 與 `github`。deploy 之後不要再做「驗證」式查詢。
 7. **事件檔不得整檔覆寫（10/25 事故）**：改 `颱風/**`、`災情/**` 前先 `read` 現檔＋`git log --oneline -5 -- <該檔>`；只用 `edit` 附加／原地改，`write` 僅用於新建。commit 前自查上一版與現行的行數・不重複連結數（應只增不減），並用 `git show HEAD:"$f" | while IFS= read -r l; do grep -qF -- "$l" "$f" || echo "LOST: ${l:0:60}"; done` 確認零遺失。**发现行數/連結變少 → 不得 commit**，先用 `git show HEAD~1:"$f"` 還原舊內容再重新附加（参 `AGENTS.md`「事件檔防呆」）。
-8. **暫存檔只准寫 `/tmp/weather-scratch/`（2026-11-07 定案）**：旧版第 3、5 條只說「存 `/tmp`」，結果本機 `/tmp` 長期堆了 70+ 個來源不明的 `cwa_*.json`／`*.html`／`*.py`（8 MB），與部署殘留混在一起、無人能判斷能不能删。現行規則：開工先 `mkdir -p /tmp/weather-scratch`，所有除錯用的 JSON／HTML／草稿一律寫在該目錄（檔名帶日期），**session 收尾前自行刪除**；沒清也由 `deploy-cron.sh` 的 `cleanup_tmp()` 掃超過 2 天未動的（→ `LOCAL_CRON.md` §5.1）。⚠️ 不要在 `/tmp` 頂層直接建檔（那層混了系統與工具檔案，清掃無法安全辨識）。
+8. **暫存檔只准寫 `/tmp/weather-scratch/`（2026-11-07 定案）**：舊版第 3、5 條只說「存 `/tmp`」，結果本機 `/tmp` 長期堆了 70+ 個來源不明的 `cwa_*.json`／`*.html`／`*.py`（8 MB），與部署殘留混在一起、無人能判斷能不能刪。現行規則：開工先 `mkdir -p /tmp/weather-scratch`，所有除錯用的 JSON／HTML／草稿一律寫在該目錄（檔名帶日期），**session 收尾前自行刪除**；沒清也由 `deploy-cron.sh` 的 `cleanup_tmp()` 掃超過 2 天未動的（→ `LOCAL_CRON.md` §5.1）。⚠️ 不要在 `/tmp` 頂層直接建檔（那層混了系統與工具檔案，清掃無法安全辨識）。
 
 ## 附：快速指令參考
 

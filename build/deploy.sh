@@ -102,7 +102,7 @@ if [ "$BUILD_ONLY" -eq 1 ]; then
   exit 0
 fi
 
-# 兩邊都不推時明確告知，避免误以為已上線（鏡像預設關閉，所以 --no-cf 等於完全不部署）
+# 兩邊都不推時明確告知，避免誤以為已上線（鏡像預設關閉，所以 --no-cf 等於完全不部署）
 if [ "$NO_CF" -eq 1 ] && [ "$PUSH_GH" -ne 1 ]; then
   echo
   echo "⚠️  [2/4] 跳過 Cloudflare（--no-cf）、[3/4] 也不推鏡像 → 本次沒有部署任何一站。"
