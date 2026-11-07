@@ -73,6 +73,23 @@ cleanup_logs() {
   find "$LOG_DIR" -name 'deploy-*.log' -mtime +5 -delete 2>/dev/null
 }
 
+# ---- /tmp 殘留清理 ----
+# 兩個來源（兩者都只在異常退出時才會殘留）：
+#   1. deploy.sh 的 gh-pages 暫存目錄 `${TMPDIR:-/tmp}/weather-gh-pages.XXXXXXXX`：
+#      腳本內建 EXIT trap 會清，但進程被 SIGKILL（OOM）或機器斷電時 trap 不會執行——
+#      殘留的是一份完整 public/ 副本（數 MB／期）。2026-11-07 之前的舊版無前綴（mktemp -d 直接產
+#      `tmp.XXXXXX`）也無 trap，每次部署失敗就留一份。
+#   2. agent 除錯用的暫存檔：一律寫在 /tmp/weather-scratch/（單一目錄，規則見 WORKFLOW.md §8 第 3 條），
+#      這裡掃超過 2 天未動的舊檔。
+# 呼叫時機：取得 flock 之後（保證不會删到同期還在使用的東西）。
+cleanup_tmp() {
+  local tmpbase="${TMPDIR:-/tmp}"
+  find "$tmpbase" -maxdepth 1 -name 'weather-gh-pages.*' -mmin +180 -exec rm -rf {} + 2>/dev/null
+  # 舊版（無前綴）留下的 mktemp 目錄：只刪 3 天以上、名字形如 tmp.XXXXXXXX 的目錄，不碰其他 tmp.* 檔
+  find "$tmpbase" -maxdepth 1 -type d -name 'tmp.????????' -mtime +3 -exec rm -rf {} + 2>/dev/null
+  find "$tmpbase/weather-scratch" -mindepth 1 -mtime +2 -delete 2>/dev/null
+}
+
 do_selfcheck() {
   log "SELFCHECK 開始"
   local ok=1
@@ -185,12 +202,17 @@ if command -v flock >/dev/null 2>&1; then
     echo "⏭️  已有部署進行中，本次跳過"
     exit 0
   fi
+  # 取得 lock 後才設清除陷阱：結束（含部署失敗）即刪 lock 檔，
+  # 避免 /tmp/weather-deploy.lock 每期跑完都留下一個 0 位元組空檔。
+  # （`exec 9>"$LOCK_FILE"` 本身就建立該檔，舊版只在退出時不管它 → 長期在 /tmp 堆垃圾。）
+  trap 'rm -f "$LOCK_FILE"' EXIT
 fi
 
 log "START（GH_PAT=${GH_PAT:+set}；金鑰來源：${KEY_FROM:-deploy.env}）"
 
-# ---- 清理舊日誌 ----
+# ---- 清理舊日誌與 /tmp 殘留 ----
 cleanup_logs
+cleanup_tmp
 
 # ---- CWA 前置檢查（避免 build 失敗卻仍部署舊資料） ----
 if [ -n "${CWA_API_KEY:-}" ]; then

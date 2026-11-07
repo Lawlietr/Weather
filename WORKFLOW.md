@@ -264,6 +264,15 @@ cd public && python3 -m http.server 8080
 - **手動**：`MANUAL_UPDATE.md`（改 markdown → `./build/deploy.sh` → 上線）。
 - **本地 cron（唯一自動通道，每 2 小時整點）**：本機或 Ubuntu LXC/VM 排 `build/deploy-cron.sh`（CWA 前置檢查 3 次重試、失敗中止、不推舊資料）。安裝/停用/自檢、金鑰（`build/deploy.env`）、日誌等細節見 `LOCAL_CRON.md`。2026-10-23 由每 2 小時提高為每小時（颱風期間加頻；`build/cron.txt` 行 `0 * * * *`），2026-10-24 薔琵遠離後**降回每 2 小時**（`0 */2 * * *`）。
 - **GitHub Actions：2026-10-23 起無自動排程**（`schedule:` 已從 `.github/workflows/build.yml` 移除，只保留 `workflow_dispatch` 手動按鈕）。原因與實測數據 → `build.yml` 頭註、`LOCAL_CRON.md`、`design/cf-cron.md`。要重新利用 Actions compute 的首選修法是用 CF Worker Cron 打 dispatch（**僅評估、未實作**，含變體 A/B/C 與待驗證項 → `design/cf-cron.md`）。
+- ⚠️ **Actions 分頁每 2 小時一期不等於「Actions 在自動部署」**（2026-11-07 查證）：那批 run 是 GitHub 為 branch 來源 Pages 內建的 `pages build and deployment`（workflow `pages-build-deployment`），由本地 cron 的 `gh-pages` push 觸發；它不抓 CWA、不碰 Cloudflare、不讀 `build.yml`。本 repo 的 `Build & Deploy` 最後一期排程 run 為 2026-10-23T01:01Z（#129）。自證指令：
+
+  ```bash
+  # 我們自己的 workflow（id 343566300）近期 run 與其 event
+  gh api repos/Lawlietr/Weather/actions/workflows/343566300/runs?per_page=5 \
+    --jq '.workflow_runs[]|"\(.run_number) \(.created_at) \(.event) \(.status) \(.conclusion) \(.head_branch)"'
+  # 確認 Pages 來源是 branch（那就是內建 run 的來源）
+  gh api repos/Lawlietr/Weather/pages --jq '{build_type, source}'
+  ```
 - **更新 agent**：負責「查 CWA API/新聞 → 更新 markdown → build → push」。
   輸入就是本文件 §1～§3；agent 不需懂解析細節，照 check 清單驗收即可。
 - **地圖紅警層（CWA，2026/8/28 定案、2026/9/1 補 cbph API 實測；gazetteer（9/1）＋cbph→`build/map.geo.json`（9/2）＋`/map/` 骨架（9/2，DEV）均已完成；步驟 4 觀測層拆 3 小批（9/16 定案：4a 雨量站點層實作中、4b 颱風軌跡/風圈、4c 特報陸地紅區用**自託縣界 GeoJSON**——gazetteer 只有中心點座標、無邊界多邊形））**：全自動——build 時抓 CWA（**cbph 災防告警 polygon**（`cbph.cwa.gov.tw/api/`，免 key、官方座標、免 gazetteer；`build/cbph.py` 已掛 `site.py` 流水線，任何類型失敗只 warning、不中斷 build）＋特報/雨量站/氣旋）合成 `map.geo.json`（build 中間檔、gitignore）與 `/map/` 頁（`build/map_page.py`＋自託 Leaflet 1.9.4＋離線瓦片 `build/tiles.py`；瓦片來源 `tile.openstreetmap.de`——OSM 官方 server 對本機 IP 假 200 封鎖，見 `tiles.py` 頭註），掛在**現有每 2 小時排程**上，不新增排程/agent/金鑰；陸地特報紅區仍靠 gazetteer（`build/gazetteer.json`，存 repo）轉換文字。細節見 `design/map.md`；災情新聞點層（§2b）維持人工把關。
@@ -279,11 +288,12 @@ cd public && python3 -m http.server 8080
    2. **context-mode 知識庫**：`ctx_search`（前幾天的 API 結構、抓取結果都自動存了）；`ctx_stats` 可看存了什麼。
    3. **`cwa_cache.json`**（gitignored 本機快取）：上一次 build 的 CWA 資料。
 2. **只查會變的**：颱風位置/強度（每 3~6 小時才變）、當前警報狀態（`Warning_Content.js` 或 W-C0034-001 最後一報）、當日雨量。**不重查**：生成時間、歷史軌跡（已入檔）、API 結構（已入檔＋§5）、RSS 來源清單（`build/rss_sources.json`）。
-3. **同一資料一個 session 只查一次**：查到的 JSON 存 `/tmp`，後續用本機檔案處理（python），不重複 curl/RSS 全量掃描。
+3. **同一資料一個 session 只查一次**：查到的 JSON 存 `/tmp/weather-scratch/`（見第 8 條），後續用本機檔案處理（python），不重複 curl/RSS 全量掃描。
 4. **災情新聞用 `build/rss_candidates.json`**：build 已自動抓 RSS（候選清單：關鍵詞 flag 在前、48h 窗口、跨來源去重）；**不要**再手動 curl feed 或 web 搜尋逐家掃（除非候選清單過舊、不足，或無 active 事件需要補充）。手動 web 搜尋仍限一次，命中 0~2 條即停。
-5. **寫檔一次成型**：長內容分段寫或先存 `/tmp` 再 `cp`，避免 write 工具 output token 截斷重來（8/28 實測發生）。
+5. **寫檔一次成型**：長內容分段寫或先存 `/tmp/weather-scratch/` 再 `cp`，避免 write 工具 output token 截斷重來（8/28 實測發生）。
 6. **完成定義**：git status 乾淨（或 diff 已確認）＋ build ＋ deploy ＋ 推 `origin` 與 `github`。deploy 之後不要再做「驗證」式查詢。
 7. **事件檔不得整檔覆寫（10/25 事故）**：改 `颱風/**`、`災情/**` 前先 `read` 現檔＋`git log --oneline -5 -- <該檔>`；只用 `edit` 附加／原地改，`write` 僅用於新建。commit 前自查上一版與現行的行數・不重複連結數（應只增不減），並用 `git show HEAD:"$f" | while IFS= read -r l; do grep -qF -- "$l" "$f" || echo "LOST: ${l:0:60}"; done` 確認零遺失。**发现行數/連結變少 → 不得 commit**，先用 `git show HEAD~1:"$f"` 還原舊內容再重新附加（参 `AGENTS.md`「事件檔防呆」）。
+8. **暫存檔只准寫 `/tmp/weather-scratch/`（2026-11-07 定案）**：旧版第 3、5 條只說「存 `/tmp`」，結果本機 `/tmp` 長期堆了 70+ 個來源不明的 `cwa_*.json`／`*.html`／`*.py`（8 MB），與部署殘留混在一起、無人能判斷能不能删。現行規則：開工先 `mkdir -p /tmp/weather-scratch`，所有除錯用的 JSON／HTML／草稿一律寫在該目錄（檔名帶日期），**session 收尾前自行刪除**；沒清也由 `deploy-cron.sh` 的 `cleanup_tmp()` 掃超過 2 天未動的（→ `LOCAL_CRON.md` §5.1）。⚠️ 不要在 `/tmp` 頂層直接建檔（那層混了系統與工具檔案，清掃無法安全辨識）。
 
 ## 附：快速指令參考
 

@@ -10,6 +10,14 @@ name: Build & Deploy
 #
 # 歷史：2026/8/29 曾因 CWA 回傳 MaxWindSpeed=None 崩潰而停用排程（TypeError，已修復），
 #       2026/9/26 恢復、2026-10-23 因上述排程可靠度問題彻底停用。
+#       本 workflow 最後一期自動排程 run＝#129、2026-10-23T01:01Z（event: schedule）；此後無任何排程 run。
+#
+# ⚠️ 勿把 Actions 分頁的每 2 小時条目誤認為「Actions 上的自動部署」：
+#   那批 run 名為 `pages build and deployment`（workflow `pages-build-deployment`、來源
+#   `dynamic/pages/pages-build-deployment`），是 **GitHub 為 branch 來源的 Pages 內建的工作**，
+#   只要有人 push `gh-pages` 就會跑（它是 Pages 發布器本身，關不掉，除非改用 Actions 來源或不再推 gh-pages）。
+#   本地 cron 每 2 小時 force-push 一次 gh-pages → Actions 分頁就會多一期。它不讀 build.yml、
+#   不抓 CWA、不碰 Cloudflare，也不會在我們的 workflow 上迴圈（push 用的 GITHUB_TOKEN 不觸發 workflow 事件）。
 #
 # ⚠️ GitHub Actions 的 YAML parser 已把 on 當關鍵字，不需要加引號。
 on:
@@ -56,8 +64,10 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
-      - name: 部署到 GitHub Pages（orphan gh-pages，私有 mirror）
-        # 改用 git orphan push 取代 peaceiris，避免觸發 GitHub Pages 內建 workflow 造成迴圈
+      - name: 部署到 GitHub Pages（orphan gh-pages，備用 mirror）
+        # 用 git orphan push 取代 peaceiris 的 action：peaceiris 的 push 會再觸發一層 workflow，
+        # 容易形成迴圈。⚠️ 但 GitHub 為 branch 來源 Pages 內建的 `pages-build-deployment` 一定會跑
+        # （那是 Pages 自己的發布器）——它不會回頭觸發本 workflow，所以不會迴圈。
         run: |
           TMP="$(mktemp -d)"
           rsync -a --delete --exclude '.DS_Store' ./public/ "$TMP/"

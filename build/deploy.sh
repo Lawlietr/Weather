@@ -112,7 +112,13 @@ fi
 if [ "$NO_GH" -ne 1 ]; then
   echo
   echo "==> [3/4] 部署到 GitHub Pages（orphan gh-pages）"
-  TMP="$(mktemp -d)"
+  # ⚠️ TMP 一律帶可辨識的前綴，且任何路徑退出都要清掉。
+  #    本腳本是 set -euo pipefail：rsync／git commit／push 任一失敗就提前中止，屆時只有結尾那行
+  #    rm -rf 不會執行 → /tmp 遺留一份完整 public/ 副本（2200+ 檔、每期數 MB，2026-11-07 前長期堆積）。
+  #    EXIT trap 蓋住正常與失敗兩種退出；前綴 `weather-gh-pages.` 讓被 SIGKILL／斷電留下的殘骸可辨識，
+  #    由 build/deploy-cron.sh 每期開工掃掉（見其 cleanup_tmp）。
+  TMP="$(mktemp -d "${TMPDIR:-/tmp}/weather-gh-pages.XXXXXXXX")"
+  trap 'rm -rf "$TMP"' EXIT
   rsync -a --delete --exclude '.DS_Store' public/ "$TMP/"
   git -C "$TMP" init -q -b gh-pages
   git -C "$TMP" add -A
@@ -132,8 +138,7 @@ if [ "$NO_GH" -ne 1 ]; then
   done
   if [ "$gh_pushed" -ne 1 ]; then
     echo "❌ gh-pages 連續 3 次推送失敗（Cloudflare 已部署完成，gh-pages mirror 未更新）"
-    rm -rf "$TMP"
-    exit 1
+    exit 1   # TMP 由上面的 EXIT trap 清理，不再手動 rm
   fi
   rm -rf "$TMP"
 else
