@@ -123,6 +123,7 @@ def fetch_marine_alert():
             "typhoon_name": meta.get("颱風名稱", ""),
             "content": content,
             "effective": i.get("effective", ""),
+            "expires": i.get("expires", ""),  # CAP 到期時間；實測 W-C0034-001 有帶
         })
     return out
 
@@ -135,9 +136,10 @@ def fetch_reports():
         info = r.get("datasetInfo", {})
         vt = info.get("validTime", {})
         if isinstance(vt, dict):
-            valid = f'{vt.get("startTime", "")} ~ {vt.get("endTime", "")}'
+            v_start, v_end = vt.get("startTime", ""), vt.get("endTime", "")
+            valid = f'{v_start} ~ {v_end}'
         else:
-            valid = vt
+            valid, v_start, v_end = (vt or ""), "", ""
         content = (r.get("contents") or {}).get("content", {})
         if isinstance(content, dict):
             content = content.get("contentText", "")
@@ -158,6 +160,8 @@ def fetch_reports():
         out.append({
             "name": info.get("datasetDescription", ""),
             "valid": valid,
+            "valid_start": v_start,
+            "valid_end": v_end,
             "issue": info.get("issueTime", ""),
             "content": content,
             "phenomena": [p for p in phen if p],
@@ -726,6 +730,45 @@ def is_lifted_report(r):
     return not r.get("phenomena") and bool(LIFT_RE.search(r.get("content") or ""))
 
 
+# 特報的「有效時間」判定（2026-11-14 定案）。
+# CWA `W-C0033-002` 只留**最新一筆**記錄（實測三個部署期各只回傳 1 筆），而強風／低溫等
+# 特報常常**不發正式解除報**。CWA 的兩種做法都不給「解除」文字：
+#   ① 改發效期較短的新報（2026-11-11 16:16 把 10:29 那報的「有效至 11/12 23:00」縮成
+#      「有效至 11/11 23:00」）；② 等下次有事件才發新報（鋒面 → 11/14 10:23 才換掉）。
+# 結果那筆 11/11 16:16 的記錄在 feed 裡一路留了 **2 天 11 小時**，首頁風險列連續 **30 期**
+# 掛🟡「陸上強風特報（有效至 2026-11-11 16:16 ~ 2026-11-11 23:00）」。`is_lifted_report()`
+# 只看文字線索，永遠判不到這種情況——所以必須另外比對 `validTime.endTime`。
+# 若 CWA 之後長時間不發新報（無風、無事件），這筆過期記錄會**無限期**掛著。
+EXPIRED_TTL_HOURS = 24
+
+
+def report_expiry_raw(r):
+    """特報有效結束時間的原始字串。新記錄讀 `valid_end`；
+    舊快取（`cwa_cache.json` 無該欄）退回把 `valid` 按 '~' 切尾段。回傳 '' 表示沒有。"""
+    s = (r.get("valid_end") or "").strip()
+    if not s:
+        v = (r.get("valid") or "").strip()
+        s = v.split("~")[-1].strip() if "~" in v else v
+    return s
+
+
+def report_expiry(r):
+    """特報有效結束點（tz-aware datetime）；無結束時間或解析失敗 → None。"""
+    return _ts_parse(report_expiry_raw(r))
+
+
+def alert_expiry(m):
+    """海上颱風警報（CAP）的到期點；`expires` 缺欄 → None（退回舊行為：只認解除報）。"""
+    return _ts_parse(m.get("expires") or "")
+
+
+def alert_is_current(m, now=None):
+    """海上颱風警報目前是否仍在效期內。CAP 已到 `expires` 而 CWA 還未發 END 報 → False；
+    缺 `expires` 欄（舊快取）→ True，行為不減。"""
+    exp = alert_expiry(m)
+    return not (exp is not None and (now or datetime.now(TZ_TW)) > exp)
+
+
 def alert_typhoon_names(m):
     """從海上颱風警報（CAP）一筆記錄抽出它指的是哪個颱風。
     實測（2026-10-24 20:30 解除報）：parameter/typhoon-info 的「颱風名稱」欄是空的，
@@ -739,10 +782,13 @@ def alert_typhoon_names(m):
     return names
 
 
-def typhoon_alert_state(c, marine):
-    """這個熱帶氣旋目前與「颱風警報」的關係：active / lifted / none。
+def typhoon_alert_state(c, marine, now=None):
+    """這個熱帶氣旋目前與「颱風警報」的關係：active / expired / lifted / none。
 
-    - active：有**未解除**的海上（或陸上）颱風警報指名它
+    - active：有**未解除且在效期內**的海上（或陸上）颱風警報指名它
+    - expired：只有 CAP `expires` 已到點、但 CWA 尚未發解除報的那筆指名它
+      （CWA 對活動警報每 3 小時發新報、解警一定發 END，實務未遇過；
+      這裡是防 API 延遲／缺 END 時把已過效期的警報當危險信號）
     - lifted：只有「解除颱風警報／END」那筆指名它（警報已解除，但 CWA 仍持續發布定位）
     - none：從沒為它發過警報（例如外海僅有分析資料的煙花）
     注意：CWA 的 W-C0034-001 只留「最新一筆」CAP，所以 lifted 的判斷依據就是那筆 END；
@@ -759,6 +805,8 @@ def typhoon_alert_state(c, marine):
             continue
         if "解除" in (m.get("title") or "") or m.get("category") == "END":
             state = "lifted" if state == "none" else state
+        elif not alert_is_current(m, now):
+            state = "expired" if state == "none" else state
         else:
             return "active"
     return state
@@ -774,20 +822,22 @@ def current_risk_level(lang, data, stale, mode):
     - 生效中熱帶氣旋（**僅計入警報未解除的**，見 typhoon_alert_state）：
       max wind >= 24.5 m/s → red，否則 yellow
       （過時氣旋依 TYPHOON_STALE_HOURS 淘汰，與首頁颱風卡同規則，避免已消散氣旋推高狀態列）
-    - 海上颱風警報（未解除）→ red
-    - 災害性天氣特報（未解除，見 is_lifted_report）：沿用 _sev_color 分級（紅/黃），綠色級別不計入
+    - 海上颱風警報（未解除且在 CAP `expires` 效期內）→ red
+    - 災害性天氣特報（未解除、且在 `validTime.endTime` 效期內，見 is_lifted_report／
+      report_expiry）：沿用 _sev_color 分級（紅/黃），綠色級別不計入
     雨量觀測值不計入：那是「過去累計」，不是當前危險信號。
 
     回傳 (level, items)：level ∈ red/yellow/green/neutral/unknown（mode=none → unknown）；
     items = [(level, i18n_key, params), ...]。無生效中項目時：
-    - 有已解除（且未超過 LIFTED_TTL_HOURS）的警報/特報 → neutral，附最近解除紀錄；
-    - 連解除紀錄都無 → green（risk_none）。
+    - 有已解除（LIFTED_TTL_HOURS）或已過效期（EXPIRED_TTL_HOURS）的警報/特報
+      → neutral，附最近紀錄（兩者皆從有效結束時間起算）；
+    - 連這種紀錄都無 → green（risk_none）。
     stale 供呼叫端標註舊資料。
     """
     if mode == "none":
         return "unknown", []
     items = []
-    lifted_recent = []  # 已解除且未過 TTL 的警報/特報（供中性狀態列註記）
+    lifted_recent = []  # 已解除或已過效期、且未過各自 TTL 的警報/特報（供中性狀態列註記）
     d = data or {}
     now = datetime.now(TZ_TW)
     for c in filter_typhoon_stale(d.get("typhoons", []), d.get("marine_alert", []), now=now):
@@ -797,12 +847,13 @@ def current_risk_level(lang, data, stale, mode):
         # 只有「警報生效中」的氣旋才是危險信號。CWA 對已解除警報的氣旋（薔琵 25日08時
         # 仍在定位）與純外海追蹤的氣旋（煙花，從未發警報）都持續給分析資料，
         # 但那不是危險信號——舊碼把兩支都算進去，造成解警後風險列仍顯示「生效中」。
-        state = typhoon_alert_state(c, d.get("marine_alert", []))
+        state = typhoon_alert_state(c, d.get("marine_alert", []), now=now)
         if state != "active":
-            if state == "lifted":
+            if state in ("lifted", "expired"):
                 ts = _ts_parse((fixes[-1] or {}).get("DateTime"))
                 if ts is not None and (now - ts) <= timedelta(hours=LIFTED_TTL_HOURS):
-                    lifted_recent.append(f'{(c.get("name") or "")} 颱風警報（已解除）')
+                    note = t(lang, "note_lifted") if state == "lifted" else t(lang, "note_expired")
+                    lifted_recent.append(f'{(c.get("name") or "")} {t(lang, "marine_badge")}（{note}）')
             continue
         wind = _num((fixes[-1] or {}).get("MaxWindSpeed"))
         level = "red" if (wind is not None and wind >= 24.5) else "yellow"
@@ -815,19 +866,39 @@ def current_risk_level(lang, data, stale, mode):
     for m in d.get("marine_alert", []):
         if not m.get("title"):
             continue
+        exp = alert_expiry(m)
         if "解除" not in m["title"] and m.get("category") != "END":
-            items.append(("red", "risk_marine", {"title": m["title"]}))
+            if exp is not None and now > exp:
+                # CAP 已到 `expires` 但 CWA 尚未發 END 報：已過效期的警報也不是現在的危險信號。
+                if (now - exp) <= timedelta(hours=EXPIRED_TTL_HOURS):
+                    lifted_recent.append(f'{m["title"]}（{t(lang, "expired_at", ts=_t(m.get("expires")))}'
+                                         f'，{t(lang, "note_expired")}）')
+            else:
+                items.append(("red", "risk_marine", {"title": m["title"]}))
         else:  # 已解除（解除/END）：不計入風險，只供中性狀態列註記
             ts = _ts_parse(m.get("effective"))
             if ts is not None and (now - ts) <= timedelta(hours=LIFTED_TTL_HOURS):
-                lifted_recent.append(f'{m["title"]}（生效 {_t(m.get("effective"))}）')
+                lifted_recent.append(f'{m["title"]}（{t(lang, "effective", ts=_t(m.get("effective")))}'
+                                     f'，{t(lang, "note_lifted")}）')
     for r in d.get("reports", []):
         if not r.get("name"):
             continue
+        end_raw = report_expiry_raw(r)
+        end = _ts_parse(end_raw)
         if is_lifted_report(r):
-            ts = _ts_parse(r.get("issue"))
+            # TTL 基準改用有效結束點（CWA 發解除報時該報自己的 endTime 就是解除時刻），
+            # 缺 endTime 才退回發布時間。
+            ts = end or _ts_parse(r.get("issue"))
             if ts is not None and (now - ts) <= timedelta(hours=LIFTED_TTL_HOURS):
-                lifted_recent.append(f'{r["name"]}（發布 {_t(r["issue"])}）')
+                lifted_recent.append(f'{r["name"]}（{t(lang, "issued", ts=_t(r.get("issue")))}'
+                                     f'，{t(lang, "note_lifted")}）')
+            continue
+        if end is not None and now > end:
+            # 已過 CWA 自己的有效時間、但內文無解除字樣（緣由見 EXPIRED_TTL_HOURS 註解）：
+            # 不計入紅/黃；超過 EXPIRED_TTL_HOURS 連中性列的註記也不留。
+            if (now - end) <= timedelta(hours=EXPIRED_TTL_HOURS):
+                lifted_recent.append(f'{r["name"]}（{t(lang, "valid_until", ts=_t(end_raw))}'
+                                     f'，{t(lang, "note_expired")}）')
             continue
         cls = _sev_color(r["name"], r["phenomena"])
         if cls == "sev-green":
@@ -859,6 +930,8 @@ def filter_typhoon_stale(typhoons, marine, now=None):
         if not m.get("title"):
             continue
         if "解除" in m["title"] or m.get("category") == "END":
+            continue
+        if not alert_is_current(m, now):  # CAP 已到 expires：不再為舊氣旋撐 TTL
             continue
         has_active = True
         n = (m.get("typhoon_name") or "").strip()
@@ -920,10 +993,11 @@ def render_typhoon_card(lang, typhoons, stale_at=None, marine=None):
         no = t(lang, "typhoon_no", year=c.get("year", ""), no=c.get("no", "")) if c.get("no") else ""
         no = f'　<span class="muted">{no}</span>' if no else ""
         cat = t(lang, _classify(wind)) if _classify(wind) else "—"
-        # 警報狀態 badge：active=警報生效中、lifted=警報已解除、none=未發警報（仍持續定位）
+        # 警報狀態 badge：active=生效中、expired=已過效期未發解除報、lifted=已解除、none=未發警報
         st = typhoon_alert_state(c, marine or [])
         badge_cls, badge_key = {"active": ("sev-red", "state_active"),
                                 "lifted": ("sev-grey", "state_lifted"),
+                                "expired": ("sev-grey", "state_expired"),
                                 "none": ("sev-grey", "state_watch")}[st]
         state_tag = f'<span class="badge {badge_cls}">{t(lang, badge_key)}</span>'
         blocks.append(f"""
@@ -961,8 +1035,12 @@ LIFTED_TTL_HOURS = 48
 def render_alert_card(lang, marine, reports, stale_at=None, now=None):
     """警報/特報卡：皆無 → 整張卡隱藏（回傳空字串）。
 
-    海上颱風警報與災害性天氣特報混排、按時間倒序（最新在最上）；
-    已解除（解除/END）項目置底、灰色 badge，超過 LIFTED_TTL_HOURS 則整筆移除。
+    海上颱風警報與災害性天氣特報混排、按時間倒序（最新在最上）。
+    兩種「不再是危險信號」的項目都轉 `sev-grey` 置底：
+    - 已解除（標題含解除/END）：超過 LIFTED_TTL_HOURS 則整筆移除（TTL 以有效結束點為準，
+      缺該欄才退回發布/生效時間）。
+    - 已過效期（CWA 未發解除報、但 `validTime.endTime`/CAP `expires` 已過）：
+      超過 EXPIRED_TTL_HOURS 則整筆移除。
     """
     now = now or datetime.now(TZ_TW)
     items = []
@@ -973,12 +1051,16 @@ def render_alert_card(lang, marine, reports, stale_at=None, now=None):
         ts = _ts_parse(m.get("effective"))
         if lifted and ts is not None and (now - ts) > timedelta(hours=LIFTED_TTL_HOURS):
             continue
-        cls = "sev-grey" if lifted else "sev-red"
-        note = t(lang, "lifted_note") if lifted else ""
+        exp = alert_expiry(m)
+        expired = (not lifted) and exp is not None and now > exp
+        if expired and (now - exp) > timedelta(hours=EXPIRED_TTL_HOURS):
+            continue
+        cls = "sev-grey" if (lifted or expired) else "sev-red"
+        note = t(lang, "lifted_note") if lifted else (t(lang, "expired_note") if expired else "")
         body = ""
         if m.get("content"):
             body = f'<details><summary class="muted">{t(lang, "view_full")}</summary><pre class="report-text">{m["content"].strip()}</pre></details>'
-        items.append((lifted, ts, f'<div class="alert-item"><span class="badge {cls}">{t(lang, "marine_badge")}</span>　'
+        items.append((lifted or expired, ts, f'<div class="alert-item"><span class="badge {cls}">{t(lang, "marine_badge")}</span>　'
                      f'<b>{m["title"]}</b>'
                      + (t(lang, "report_no", n=m["report_no"]) if m.get("report_no") else "")
                      + (f'｜{t(lang, "typhoon_label", n=m["typhoon_name"])}' if m.get("typhoon_name") else "")
@@ -989,20 +1071,24 @@ def render_alert_card(lang, marine, reports, stale_at=None, now=None):
         if not r.get("name"):
             continue
         lifted = is_lifted_report(r)
-        ts = _ts_parse(r.get("issue"))
+        end = report_expiry(r)
+        ts = end or _ts_parse(r.get("issue"))
         if lifted and ts is not None and (now - ts) > timedelta(hours=LIFTED_TTL_HOURS):
             continue
-        cls = "sev-grey" if lifted else _sev_color(r["name"], r["phenomena"])
-        note = t(lang, "lifted_note") if lifted else ""
+        expired = (not lifted) and end is not None and now > end
+        if expired and (now - end) > timedelta(hours=EXPIRED_TTL_HOURS):
+            continue
+        cls = "sev-grey" if (lifted or expired) else _sev_color(r["name"], r["phenomena"])
+        note = t(lang, "lifted_note") if lifted else (t(lang, "expired_note") if expired else "")
         phen = "、".join(r["phenomena"])
         body = ""
         if r.get("content"):
             body = f'<details><summary class="muted">{t(lang, "view_full")}</summary><pre class="report-text">{r["content"].strip()}</pre></details>'
-        items.append((lifted, ts, f'<div class="alert-item"><span class="badge {cls}">{r["name"]}</span>　'
+        items.append((lifted or expired, ts, f'<div class="alert-item"><span class="badge {cls}">{r["name"]}</span>　'
                      f'<b>{phen}</b>{note}　'
                      f'<span class="meta">{t(lang, "issued", ts=_t(r["issue"]))}｜{t(lang, "valid", ts=_t_range(r["valid"]))}</span>'
                      + (f'<div>{t(lang, "affected", a="、".join(r["areas"]))}</div>' if r["areas"] else "") + body + '</div>'))
-    # 未解除在前、已解除置底；同組內按時間倒序（ts 無法解析者視為最新，保顯示）
+    # 未解除且在效期內在前、已解除／已過效期置底；同組內按時間倒序（ts 無法解析者視為最新，保顯示）
     def _k(it):
         return (it[1] or now).timestamp()
     items = sorted((i for i in items if not i[0]), key=_k, reverse=True) + \

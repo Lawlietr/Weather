@@ -95,6 +95,76 @@
   各縣市災情聚合與事件頁連結不受影響。
 - 注意：`/map/` 的地圖層仍走原始 `fetch_typhoons()` 全量軌跡（見上節 TTL 定案），本修正只影響首頁卡片與風險列。
 
+## 特報/警報的「有效時間」判定（✅ 2026-11-14 定案並實作、DEV）
+
+**問題**（生產站實測）：首頁頂部風險列掛了「陸上強風特報（有效至 2026-11-11 16:16 ~ 2026-11-11 23:00）」
+**2 天 11 小時**，把全站風險推成 🟡「警戒生效中」。逐期比對 Cloudflare Pages 部署（每 2 小時一期的
+preview URL，共 50 期）得到：11/11 18:00 → 11/14 10:00 共 33 個排程檔（11/14 00:00 那期部署失敗
+`rc=1`，wrangler 上傳階段）、**32 期渲染同一筆**，其中自 11/12 00:00 起的 **30 期是明確誤報**。
+該筆最後在 11/14 12:00 期消失——但**不是我們判出來的**，是 CWA 在 11/14 10:23 因鋒面發了新一報、
+把舊記錄頂掉。
+
+**根因**（三層）：
+1. CWA `W-C0033-002` 只留**最新一筆**記錄（實測三個不同日期的 feed 回傳都各只有 1 筆、卡面也只有
+   1 個 `alert-item`）。舊記錄離開 feed 的**唯一**途徑是被下一報頂掉。
+2. 強風/低溫等特報常常**不發正式解除報**。CWA 的兩種動作都不給「解除」文字：
+   ① 改發效期較短的新報——11/11 10:29 那報原本寫「有效至 11/12 23:00」，16:16 改發後縮成
+     「有效至 11/11 23:00」；② 下次有事件才發新報。
+3. 我們的「生效與否」只看文字（`is_lifted_report()`：名稱含「解除」，或 `phenomena` 空且內文符合
+   `LIFT_RE`），`current_risk_level()` 與 `render_alert_card()` **從不比較 `validTime.endTime` 與現在**。
+   `LIFTED_TTL_HOURS = 48` 只對「已解除」生效，救不到這種筆。
+
+為何不能只等 CWA 自己清掉：CWA 發新報的時機由**天氣**決定。真有強風時誤報看起來最合理、最難被發現；
+而**平靜無事件的日子才是它掛最久、最顯眼**的時候——若 CWA 一週不發特報，那筆過期的 🟡 就會掛一週。
+清除時間沒有上限，與我們的正確性無關。
+
+**定案**：CWA 給的 `validTime.endTime`（特報）與 CAP `expires`（海上颱風警報）就是「何時失效」的權威值。
+過該時點一律**不計入危險信號**，即使內文沒有任何解除字樣。
+
+**實作**（`build/cwa.py`）：
+- `report_expiry_raw(r)` / `report_expiry(r)`：讀新欄 `valid_end`（`fetch_reports` 新增 `valid_start` 與 `valid_end` 兩欄）；舊 `cwa_cache.json` 無該欄時退回把 `valid` 字串按 `~` 切尾段（相容舊快取）。
+- `alert_expiry(m)` / `alert_is_current(m, now)`：讀 `fetch_marine_alert` 新增的 `expires` 欄；
+  缺欄回傳 True（行為不減）。
+- `EXPIRED_TTL_HOURS = 24`：已過效期項目在卡面/中性列的保留窗（**以 endTime 起算**，不是發布時間）。
+  超過就整筆消失，風險列也不提。已解除項目仍用 `LIFTED_TTL_HOURS = 48`，但 TTL 基準改用
+  endTime（缺該欄才退回發布/生效時間）。
+- `current_risk_level()`：特報/警報先判過效期 → 不進紅/黃；24 小時內轉進 `lifted_recent`（⚪ 中性列
+  「最近：… 已過有效時間」）；超過 24 小時連註記都不留 → 🟢。海上警報同理（不計 🔴）。
+- `render_alert_card()`：已過效期與已解除同屬「不再是危險信號」組 → `sev-grey`＋`expired_note`、
+  與已解除一起置底；超過各自 TTL 整筆移除。
+- `typhoon_alert_state()` 新增 `expired` 狀態（CAP 已到期但 CWA 未發 END 報）、
+  `filter_typhoon_stale()` 不再讓已到期 CAP 替舊氣旋撐 TTL。颱風卡 badge i18n `state_expired`。
+  ⚠️ 這是防禦性路徑：CWA 對活動中的海上警報每 3 小時發新報、解警一定發 END，實務未遇過。
+- i18n 新增 `expired_note` / `note_lifted` / `note_expired` / `valid_until` / `expired_at` / `state_expired`
+  （zh＋ja）。同時修正兩處措辭：`risk_report` 由「有效至 {valid}」改為「有效 {valid}」（`{valid}` 本是
+  「起 ~ 迄」區間，寫「有效至」不通）；`risk_neutral` 把「已解除」從模板移到各條目自帶（否則已過效期
+  的條目會被寫成「已解除」）。
+
+**驗證**：`python3 build/test_report_expiry.py`（新增的離線回歸，不連 CWA：把 `cwa.datetime` 換成固定
+時鐘餵合成資料；21 案全過）。重點案例：1 過期 61 小時 → 🟢 且卡面不出現（就是這次事故的原形狀）；
+2 過期 30 分鐘 → ⚪ 帶「已過有效時間」、卡面轉灰；3 效期内特報照樣 🟡 且不轉灰（不迴歸）；
+4 正式解除報 → 不計入、標「已解除」；5 **10/25 修正不迴歸**：生效豪雨特報內文提到「解除大雨特報，
+改發豪雨特報」仍計入；7 過效期 CAP → 不推紅、氣旋 badge 轉「警報已過效期」；8 生效 CAP 照舊紅；
+10 舊快取（無 `valid_end` 欄）仍判過期；11 ja 介面用 `有効時間経過`。
+
+**測試站實測**（`wea-testing`，2026-11-14 12:19 期；自訂網域 `weatesting.avpclub.eu.org` 與
+`29e2dca8.wea-testing.pages.dev` 兩者內容一致）：
+- 效期內的陸上強風特報不受影響：zh 首页 🟡「陸上強風特報（**有效** 2026-11-14 20:00 ~ 2026-11-15 23:00）」、
+  badge `sev-yellow`、卡面無過期註記；ja 同位置為「有効 …」＋🟡 警戒中。措辭已為「有效 …」。
+- **A/B/C 端到端重放**（同一条 `site.build_home()` 管線，氣旋/雨量/海上警報全用即時真實 CWA 資料，
+  只把 `reports` 換成 11/11 16:16 那筆，時鐘固定 2026-11-14 10:00）：
+  - A 對照組（即時真實特報 ＋ 新碼）→ 🟡（不迴歸）
+  - B 11/11 那筆 ＋ **修正前**（`git show HEAD:build/cwa.py` 另存後 importlib 載入）→ 完整重現她看到的
+    🟡 「陸上強風特報（有效 2026-11-11 16:16 ~ 2026-11-11 23:00）」
+  - C 11/11 那筆 ＋ 修正後 → 🟢 目前無危險信號，該卡整張不出現
+  重放腳本是一次性的（`/tmp/weather-scratch/replay_1111.py`，要重跑：`git show <修正前 commit>:build/cwa.py`
+  另存、用 `build/.venv/bin/python` 跑（`site.py` 需 python-markdown），並用 importlib 載 `build/site.py`
+  ——`import site` 會被 stdlib `site` 搶走）。**正式回歸只跑 `build/test_report_expiry.py`**。
+- ⚠ 本轮**未用真 Chromium**：Playwright MCP 連接不穩（兩次導航失敗、一次回傳非頁面內容的錯亂文字）。
+  首页與事件頁本就是零 JS 靜態頁（前端零外部請求），HTTP 拉回的就是权威結果；本轮 diff 只碰
+  `cwa.py`／`i18n.py`（`git diff --name-only` 不含 `map_page.py`/`cbph.py`/`tiles.py`/`taiwan_geo.py`），
+  `/map/` 向量層不受影響 → 不需重跑 §2-7c 的 Leaflet 真瀏覽器驗證。
+
 ## 站內連結的深度前綴（§12，✅ 2026-10-26 修復；測試站實測 129 條斷鏈 → 0）
 
 **根因一類化**：`public/` 是三層樹——網站根（zh 首頁、`llms.txt`／`sitemap.xml`／`robots.txt`／`AGENTS.md` 只在這裡）、`ja/`（ja 首頁＋ja 事件＋ja `/map/`）、`events/**` 與信任頁 `about|contact|privacy/`（zh 深度 1、ja 深度 2）。**同一個 `base` 字串同時要指「語言根」和「網站根」就會錯**。定案規則：
