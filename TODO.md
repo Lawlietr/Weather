@@ -8,6 +8,7 @@
 
 | # | 任務 | 優先級 | 狀態 | 設計檔 |
 |---|------|--------|------|--------|
+| §2-4a-followup | **真 Chromium 下 `.leaflet-overlay-pane path` = 0**（可能雨量點層沒渲染）。2026-11-14 順帶發現、使用者定調**先不查但未處理前每輪對話都要提醒**：打 `https://weather.avpclub.eu.org/map/`（真 Chromium，經 Playwright MCP）得 `leaflet-tile` **15** 張、頁面嵌入 **1,365** 個 `"Point"` / **0** 個 Polygon，但 overlay pane 內 `<path>` **0** 個。已知可解釋的部分：0 polygon 與當天沒有生效中的 cbph 告警一致。不可解釋的部分：1,365 個雨量點應該要產生 SVG path。起手檢查四項：`map_page.py` 的 renderer 選型（SVG vs canvas）、超閾值/淡點的獨立 pane 與 zIndex（390/410，見 §2-4a 續）、checkbox 初始 `checked` 跟隨（§2-4a 續定案）、頁面全域變數 `DATA` 的實際 feature 數與各層開關預設 | 高 | **待辦、尚未開始**（2026-11-14 發現；開始處理時删本行提醒註記） | [design/map.md](design/map.md) |
 | §2-7d | 底圖**再向東擴** `MAP_MAX_BOUNDS`（§2-4b 上線後的衍生項：薔琵實例——10/21 23:30 發海警，10/22 11:00 中心 125.7°E、10/22 23:00 124.6°E 都在現行東界 124.3°E 以外 → **海警後前 10～14 小時地圖上看不到中心**） | — | **擱置**（2026-10-28 使用者決定先不做；三方案 A/B/C 與瓦片/體積實算已寫好，隨時可啟動） | [design/map.md](design/map.md)「§2-7d」 |
 | §2-4c | 特報陸地紅區層（選項 A：自託縣界 GeoJSON；**動工前需確認縣界資料源**） | 高 | 待辦 | [design/map.md](design/map.md) |
 | §2-2b | 災情新聞點層（人工/agent 餵料，gazetteer 已備） | 中 | 暫緩（2026/9/1 定） | [design/map.md](design/map.md) |
