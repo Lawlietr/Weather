@@ -162,6 +162,10 @@ padding:8px 10px;margin:8px 0;font-size:.85rem;line-height:1.6}
 .rain-pin{background:transparent;border:none}   /* pin 形狀的 divIcon：去掉 Leaflet 預設白框 */
 .layer .cnt{margin-left:auto;color:var(--muted);font-size:.85rem}
 .layer .offhint{color:var(--muted);font-size:.78rem;font-weight:400}
+/* §2-4a-followup2（2026-11-14）：0 站時的資訊列（沒有 checkbox，因為無東西可切換） */
+.layer.noinput{cursor:default}
+.swatch.round.empty{background:transparent;border:2px solid currentColor}
+.rain-note{margin:0 0 6px 24px;font-size:.78rem;color:var(--muted);line-height:1.5}
 .map-detail{font-size:.9rem}
 .map-detail .dl{margin:8px 0}
 .map-detail .dt{color:var(--muted);font-size:.8rem;margin-bottom:1px}
@@ -372,15 +376,35 @@ def build(OUT, fc, events, warnings=None):
         from cwa import RAIN_BELOW as _RB, RAIN_LEVELS as _RL
         lv_colors = [c for _m1, _m24, c, _r in _RL][:3]
         top_color = lv_colors[0] if lv_colors else "#e11d48"
+        # 最低一級閾值（RAIN_LEVELS 最後一筆）寫進「未超標」的證據文字，不寫死在文案裡，
+        # 以免日後調閾值時證據文字還寫著舊值。
+        min_m1, min_m24 = (_RL[-1][0], _RL[-1][1]) if _RL else (10.0, 50.0)
         if rain_top:
             layers_html += (
                 f'<label class="layer"><input type="checkbox" data-type="rain" checked>'
                 f'<span class="swatch round" style="background:{top_color}"></span>'
                 f'{t(lang, "map_layer_rain")}<span class="cnt">{len(rain_top)}</span></label>')
-            items = []
-            for lv_key, color in zip(("map_rain_l3", "map_rain_l2", "map_rain_l1"), lv_colors):
-                items.append(f'<span><i style="{_rain_legend_item(color)}"></i>{t(lang, lv_key)}</span>')
-            layers_html += ('<div class="rain-legend">' + "<br>".join(items) + '</div>')
+        else:
+            # 這一列恒顯示（§2-4a-followup2，2026-11-14）。0 站時**不加 checkbox**：沒有圖層可
+            # 切換，不可動的 checkbox 只會讓人以為壞了 → 改用空心圈圖示＋計數 0＋證據文字。
+            # 證據分兩種情形，正是要分辨的兩件事：有資料但都沒超標 vs 本次拿不到資料。
+            if rain_feats:
+                p1max = max(f["properties"].get("p1hr") or 0.0 for f in rain_feats)
+                p24max = max(f["properties"].get("p24hr") or 0.0 for f in rain_feats)
+                note = t(lang, "map_rain_top_zero", p1="%g" % p1max, p24="%g" % p24max,
+                         m1="%g" % min_m1, m24="%g" % min_m24)
+            else:
+                note = t(lang, "map_rain_no_data")
+            layers_html += (
+                f'<div class="layer noinput">'
+                f'<span class="swatch round empty" style="color:{top_color}"></span>'
+                f'{t(lang, "map_layer_rain")}<span class="cnt">0</span></div>'
+                f'<div class="rain-note">{note}</div>')
+        # 圖例：這一區在就顯示（0 站時正好讓使用者看到「未超標」是相對於哪些閾值）
+        items = []
+        for lv_key, color in zip(("map_rain_l3", "map_rain_l2", "map_rain_l1"), lv_colors):
+            items.append(f'<span><i style="{_rain_legend_item(color)}"></i>{t(lang, lv_key)}</span>')
+        layers_html += ('<div class="rain-legend">' + "<br>".join(items) + '</div>')
         if rain_below:
             # 第二個開關：未超閾值的淡色底點。**預設不勾選**（2026-10-28 使用者定案：平時
             # 1,300+ 個淡點把底圖弄亂，要看全站網絡時自己勾開）。超閾值點仍預設開；
@@ -392,6 +416,13 @@ def build(OUT, fc, events, warnings=None):
                 f'</span>{t(lang, "map_layer_rain_below")}'
                 f'<span class="offhint">{t(lang, "map_rain_below_off")}</span>'
                 f'<span class="cnt">{len(rain_below)}</span></label>')
+        elif rain_feats:
+            # 對稱處理：淡點 0 站（全部測站都超標時才會出現，罕見）也給一行資訊而不是消失。
+            layers_html += (
+                f'<div class="layer noinput">'
+                f'<span class="swatch round empty" style="color:{_RB["color"]}"></span>'
+                f'{t(lang, "map_layer_rain_below")}<span class="cnt">0</span></div>'
+                f'<div class="rain-note">{t(lang, "map_rain_below_zero")}</div>')
 
         warn_html = ""
         if fc.get("warnings"):
