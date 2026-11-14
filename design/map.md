@@ -171,15 +171,15 @@
 | 手機 390×844 | 瓦片 9 張、land path 79、console error 0 |
 | build／體積 | 2,200 瓦片全快取命中、零 warning；`_blank.png` 334 bytes RGBA alpha=0；`public/` 14.02 MiB／2,241 檔（**檔數不變**）、最大單檔 1.18 MiB（CF Pages 25 MiB 上限的 **4.7%**） |
 
-**測試站部署＋線上複驗（2026-10-27 15:11 build → `wea-testing`，帶 `--branch main`）**：`weatesting.avpclub.eu.org/map/` 與 `/ja/map/` 皆 land **79 paths**（pane z=1）、tile z=200、overlay 2,620 paths、容器底色 `rgb(170,211,223)`、land pane 內 `leaflet-interactive` **0**（不搶命中）；`_blank.png` HTTP 200／334 bytes／PNG colorType **6**（RGBA）；正常載入**零 4xx、零 console error**（load 2.0 s）。用 `ctx.route(/\/assets\/tiles\/\d+\//, r => r.abort())` 模擬瓦片全滅 → 20 張 errorTile 全走透明佔位底、台灣/澎湖/石垣/與那國 可見（截圖 `/tmp/live_tiles404.png`）。**對照正式站**（`weather.avpclub.eu.org/map/`）：land 0 paths、HTML 仍含 `_ocean.png` → 符合「DEV 尚未合併」的预期。
+**測試站部署＋線上複驗（2026-10-27 15:11 build → `wea-testing`，帶 `--branch main`）**：`weatesting.avpclub.eu.org/map/` 與 `/ja/map/` 皆 land **79 paths**（pane z=1）、tile z=200、overlay 2,620 paths、容器底色 `rgb(170,211,223)`、land pane 內 `leaflet-interactive` **0**（不搶命中）；`_blank.png` HTTP 200／334 bytes／PNG colorType **6**（RGBA）；正常載入**零 4xx、零 console error**（load 2.0 s）。用 `ctx.route(/\/assets\/tiles\/\d+\//, r => r.abort())` 模擬瓦片全滅 → 20 張 errorTile 全走透明佔位底、台灣/澎湖/石垣/與那國 可見（截圖 `/tmp/live_tiles404.png`）。**對照正式站**（`weather.avpclub.eu.org/map/`）：land 0 paths、HTML 仍含 `_ocean.png` → 符合「DEV 尚未合併」的預期。
 
-**正式站上線後複驗**（2026-10-27 15:49 透過 `build/deploy-cron.sh` 於部署機手動跑一次，`rc=0`；build：2,200 瓦片全快取命中、失敗 0、零 warning）：四个託管（`weather.avpclub.eu.org`／`.uk`／`.larch.dpdns.org`／`lawlietr.github.io/Weather`）＋ ja 頁皆 **land 79 paths（pane z=1）＜ tile z=200 ＜ overlay 2,632 paths**、容器底色海色、`_blank.png` HTTP 200／334 B／colorType 6、land pane 內命中 0、**零 4xx、零 console error**（load 1.0–2.1 s）。瓦片全滅情境（route abort）：三邊都看到 20 張 errorTile 全走透明佔位底、兜底 land 79 條可見。
+**正式站上線後複驗**（2026-10-27 15:49 透過 `build/deploy-cron.sh` 於部署機手動跑一次，`rc=0`；build：2,200 瓦片全快取命中、失敗 0、零 warning）：四個託管（`weather.avpclub.eu.org`／`.uk`／`.larch.dpdns.org`／`lawlietr.github.io/Weather`）＋ ja 頁皆 **land 79 paths（pane z=1）＜ tile z=200 ＜ overlay 2,632 paths**、容器底色海色、`_blank.png` HTTP 200／334 B／colorType 6、land pane 內命中 0、**零 4xx、零 console error**（load 1.0–2.1 s）。瓦片全滅情境（route abort）：三邊都看到 20 張 errorTile 全走透明佔位底、兜底 land 79 條可見。
 
 ⚠️ **上線時發現並已修：GitHub Pages 鏡像會漏掉 `_` 開頭的資產**。實測 `_blank.png` 在鏡像上 404（同路徑在 CF 200），而 `map/index.html`、`assets/tiles/8/214_110.png`、`leaflet.css` 均 200，gh-pages tree 內唯一的 `_` 開頭檔就是它——gh-pages 屬於 Pages 的 **branch 來源**，GitHub 會跑 Jekyll，而 Jekyll 忽略 `_` 開頭的檔/資料夾（舊 `_ocean.png` 也一直在鏡像上 404，只是沒人發現）。修法：`site.py` 於站根產空檔 **`public/.nojekyll`**（commit `94963c6`），重新部署後鏡像 `_blank.png` 已是 200、`.nojekyll` 200。`public/` 2,242 檔／14.03 MiB。
 
 **邊界與坑（改視野前必读）**
-- 兜底層只蓋 `zoom_bbox` 聯集 ⊕ 0.5° ＝ **(115.2, 19.6)~(127.4, 27.8)**。窗外不含：沖繩本島（127.7°E）、呂宋 main（18.5°N 以南）、東沙（116.7°E 已在窗内但未在 NE 10m land 出小島）。
-- ⚠️ **改 `tiles.MAP_MAX_BOUNDS`／`ZOOMS` 後必須重跑 `python3 build/make_taiwan_geo.py`**，否则兜底層不會跟著長——就是 §2-7「maxBounds 比瓦片寬」漂移教訓的翻版（產生器頭部已寫這條）。
+- 兜底層只蓋 `zoom_bbox` 聯集 ⊕ 0.5° ＝ **(115.2, 19.6)~(127.4, 27.8)**。窗外不含：沖繩本島（127.7°E）、呂宋 main（18.5°N 以南）、東沙（116.7°E 已在窗內但未在 NE 10m land 出小島）。
+- ⚠️ **改 `tiles.MAP_MAX_BOUNDS`／`ZOOMS` 後必須重跑 `python3 build/make_taiwan_geo.py`**，否則兜底層不會跟著長——就是 §2-7「maxBounds 比瓦片寬」漂移教訓的翻版（產生器頭部已寫這條）。
 - 矩形裁剪會在窗邊留下**沿裁剪邊的直線邊**（大陸/大島被窗切開處），屬預期，該處本就是視野邊緣。
 - 來源授權：Natural Earth 公有領域（與 `ISLANDS` 同）；不需署名但也無需隱晦。
 - ⚠️ **檔名以 `_` 開頭 → GitHub Pages 鏡像會 404**（2026-10-27 實測；**鏡像已於 2026-11-07 移除：`gh-pages` 分支已刪、Pages 站已關**，本條只在重建鏡像時適用 → `LOCAL_CRON.md` §四）：gh-pages 是 orphan 分支直推＝Pages 的 **branch 來源**，GitHub 對 branch 來源會跑 Jekyll，而 Jekyll **忽略 `_` 開頭的檔/資料夾**——實測 `assets/tiles/_blank.png` 在 `lawlietr.github.io` 404、同一路徑在 CF 上 200（鏡像上瓦片與 `leaflet.css` 皆 200，tree 內唯一的 `_` 開頭檔就是它）。舊 `_ocean.png` 也一直在鏡像上 404（只是從沒人發現）。**修法：`build/site.py` 已在站根產 `public/.nojekyll`（空檔）關掉 Jekyll**；WORKFLOW §3 ⑤ 已加檢查。若日後再出現 `_` 開頭的資產，只要 `.nojekyll` 在就不會再被漏。
@@ -270,7 +270,7 @@ W-C0034-005（已在 `cwa.load_snapshot()` 的 `typhoons` 內，**不额外打 A
 - **三級色＝深靛藍 → 洋紅 → 玫紅**（`cwa.RAIN_LEVELS`）：L3 `#be123c` r17、L2 `#c026d3` r12、
   L1 `#4338ca` r9。保留「越嚴重越紅」語意，且避開 OSM 幹道/高快的橘（色相 ~20–40°）與
   §2-7 擴大後的海面淡藍 `#aad3df`。
-- **半徑隨縮放**（2026-10-26 使用者改口：「地圖拉進後圈還是一样小、點擊不方便」，故先前
+- **半徑隨縮放**（2026-10-26 使用者改口：「地圖拉進後圈還是一樣小、點擊不方便」，故先前
   的「先固定」作廢）。實作＝`map.on("zoomend")` → `rescaleRain()` 重算視野內（含 15% 邊界）的
   `setRadius`。兩個係數分開，**可見點溫和、命中圈激進**：
   `RAIN_STYLE.dot_zoom_factor` 1.2/級（上限 `max_radius` 22px 半徑）、
@@ -349,7 +349,42 @@ W-C0034-005（已在 `cwa.load_snapshot()` 的 `typhoons` 內，**不额外打 A
 
 **規則**：`/map/`（Leaflet 向量層）驗證一律用 Playwright 真 Chromium，**不要用 obscura 截圖判層**——obscura 引擎缺 SVG 1.1 factory API（`createSVGRect` 等）→ `L.Browser.svg === false` → 所有向量層（雨量圓點、告警 polygon）不渲染且無 console 輸出，截圖會假陽性「圖層空」。obscura 的 SVG/console 缺陷已備妥 bug 報告文本待回報。
 
-**Playwright 跑法（2026-10-26 實測更正）**：用 `NODE_PATH=/root/opencode-stuffs/translate-cloud/node_modules node <script>`（playwright **1.64.0**，對應本機快取 `~/.cache/ms-playwright/chromium-1248`）。
-⚠️ 舊指引寫的 `steam-deck-utilities/web/node_modules` **目前跑不起來**：那組是 playwright **1.62.1**，要 `chromium_headless_shell-1234`，本機快取只有 1248 → `browserType.launch: Executable doesn't exist`（2026-10-26 實測踩到）。
+**Playwright 跑法（2026-11-14 更新：改用遠端 Playwright MCP）**：用 `playwright` MCP 工具（端點 URL 見 `~/.pi/agent/mcp.json`，瀏覽器跑在另一臺機器）。**不要**在本機 `npm i -g playwright` 或裝瀏覽器 binary（會留下版本對不上的孤兒，本 repo 也不需要）。舊指引的 `NODE_PATH=<某臺機器的目錄>/node_modules node <script>` 已停用：那是本機舊跑法，而且寫死了單一機器的絕對路徑。
+⚠️ 向量層仍不可用 obscura 判層（見上一段）；需要看本機頁面時，先把頁面用 `python3 -m http.server` 開在本機，再從 MCP 那端打本機 LAN IP。
 
-**驗證要點**：`.leaflet-overlay-pane path.leaflet-interactive` 的數量＋fill 顏色分佈＋實際中心座標（可用 tile src 座標反算）。
+**驗證要點（2026-11-14 更正：要按 pane 計數，`overlay-pane` 是錯的選擇器）**：自 §2-4a 續（2026-10-28）起，各層落在**自訂 pane**、zIndex 用 pane 固定，`L.layerGroup` 不再進 `.leaflet-overlay-pane`。舊寫法 `.leaflet-overlay-pane path.leaflet-interactive` 會得出 0——那是**測量方式錯**，不是層沒畫（2026-11-14 就踩過一次，還差點因此誤判缺陷）。正確計數：
+
+| pane | zIndex | 這一層画什麼 | 2026-11-14 14:00 正式站實測 |
+|---|---|---|---|
+| `.leaflet-land-pane` | 1 | 兜底陸地（§2-7c） | 79 path（＝`FALLBACK_LAND` 的 79 環） |
+| tilePane | 200 | 離線瓦片 | 15 張 |
+| `.leaflet-rainbelow-pane` | 390 | 未超閾值淡點（預設不勾） | 0 path（未勾，正常） |
+| `.leaflet-overlay-pane` | 400 | cbph 告警 polygon | 0 path（當天四類皆無生效告警） |
+| `.leaflet-raintop-pane` | 410 | 超閾值雨量點 | 0 path（全網絡最大 `p1hr` 6.5mm、`p24hr` 17.5mm，皆低於 L1 閾值 10/50 → `rainTop.length === 0`，碼上不加圖層＝正確） |
+| `.leaflet-typhoon-pane` | 420 | 軌跡／風圈／點 | 33 path（1 個氣旋） |
+
+**判讀順序**：先讀頁面嵌入的 `<script id="map-data" type="application/json">`（`json.loads` 取 `features`，依 `properties.type` 分組、`properties.below` 分超/未超，並看 `generated_at` 與每筆 `properties.obs` 確認新舊），再比對 pane 計數。兩邊對得上就是正常，不得只看 path 數量下結論。
+
+### 合成超閾值的端到端驗證（2026-11-14；預覽儀在 `/tmp`、不入 repo，沿用上節慣例）
+
+淡雨日常常 0 站超標，生產頁看不到那一層，所以要合成。做法（全程走正式碼，不手改 HTML）：
+1. monkeypatch `cwa._get_json("O-A0002-001")` 回傳假造的測站資料（含三級各一、兩個邊界值、兩個未超標）。
+2. 呼叫真的 `cwa.fetch_rain_points()` → 分級、上色、`below`、排序都由正式碼算。
+3. 以當天 `build/map.geo.json` 為底（保留 typhoon 圖元，順帶驗疊放順序），把 rain 圖元換成合成者。
+4. 呼叫真的 `map_page.build(OUT, fc, events)` 產頁（圖例與 checkbox 也是 build 端生成的）。
+5. 複製本機 `public/`（需要 assets/tiles）到 `/tmp`、覆蓋 map 頁、`python3 -m http.server`，再從 Playwright MCP 打本機 LAN IP。
+
+實測（4 個合成超標站：`p1hr` 55／30／25／12，另兩個未超標含 `p24hr` 49.9 邊界）：
+- `.leaflet-raintop-pane` **8 path**（4 站 ×（圓點＋命中圈））；`.leaflet-rainbelow-pane` 0（未勾）。
+- 圖層清單出現「**雨量站（超閾值）4**」且預設勾選；ja 頁對應「雨量観測点（閾値超過）4」。
+- 圖例三級色 `rgb(190,18,60)`／`rgb(192,38,211)`／`rgb(67,56,202)`，對應 50/25/10mm（或 250/100/50mm 24h）。
+- 邊界判定正確：`p1hr` 恰好 25 → L2；`p24hr` 49.9 → `below`。
+- 點超閾值點 → 詳情卡顯示站名／位置／近 1hr 55mm／近 24hr 300mm／本日累計／觀測時間。
+- 開關往復：取消勾選 → raintop 8→0；重勾 → 0→8。淡點勾開 → rainbelow 0→4（2 站 ×2）。
+- pane zIndex 實測 1／390／400／410／420，與 §2-4a 續定案一致。
+
+→ 結論：TODO `§2-4a-followup` 那條（「真 Chromium 下 overlay pane 0 個 path」）是**測量用錯 pane**，非缺陷，該題結案。
+
+⚠ 合成也壓不出來的兩件事：超閾值點與告警 polygon 的點擊搶讓（當天 0 polygon）、超閾值點與真氣旋中心重疊時的疊放（合成點都在台灣，氣旋在 149°E／157°E）。兩者 2026-10-28 已用真 Chromium 驗過，往後在自然事件期間順帶複驗即可。
+
+**順帶發現一個 UX 缺口**（已記入 TODO `§2-4a-followup2`）：0 站超標時，圖層清單**不會**出現「雨量站（超閾值）」那一列，三級圖例也不出現，使用者看不到「查過但沒超標」的證據。這與 §2-4a 續把淡點全部上圖的理由（區分「查過但沒超標」與「壞了」）不一致。建議：該列恒顯示（含 0），0 時附全網絡最大 `p1hr`／`p24hr` 作為證據。
