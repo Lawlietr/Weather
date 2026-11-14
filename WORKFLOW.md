@@ -62,7 +62,7 @@ cd /root/opencode-stuffs/Weather && git checkout main && git pull --ff-only orig
 ③ 驗證（見 §3 檢查清單）
 ④ git add / commit（訊息用繁體中文，簡述本次更新）
 ⑤ git push origin main（內部 Forgejo）
-⑥ 將 public/ 產物推到公開託管：只推 Cloudflare Pages（正常情況交給 cron，手動则 `./build/deploy.sh`）；
+⑥ 將 public/ 產物推到公開託管：只推 Cloudflare Pages（正常情況交給 cron，手動則 `./build/deploy.sh`）；
    GitHub Pages 鏡像已停用（不再推 `gh-pages`）→ §6、`LOCAL_CRON.md` §四
 ```
 
@@ -204,7 +204,7 @@ cd public && python3 -m http.server 8080
 4. 公開 GitHub repo 只應收到 `public/` 靜態產物，**不收 markdown 原文與 build 腳本**
    （金鑰不進輸出已驗證，但流程上仍分開）。
 5. **GitHub Actions 已完全不使用（2026-11-07 刪除 `.github/workflows/build.yml`）**：直接原因是 **GitHub scheduler 不可靠**——2026-10-23 實測近 2 天 24 期排程只觸發 10 期、實際間隔 185–424 分（應為 120 分），每次 run 2.5–3.4 分鐘；同期本地 cron 10/10 準時、歷時 33–58 秒。另有一層誤判風險：Actions 分頁每 2 小時的 `pages build and deployment` 是 GitHub 為 branch 來源 Pages 內建的發布器（由推 `gh-pages` 觸發），不是我們的部署——不推 `gh-pages` 就不會再出現。⚙️ 技術備註（日後若要重新引入 Actions 會再踩）：Actions `schedule` 只讀 default branch（`main`）。GitHub 側亦有延遲 5–7 小時／整期漏跑的公開回報（orgs/community discussion #201472）。
-   `build/build.sh` 的 CWA 前置檢查（3 次重試、失敗 `exit 1`）仍保留——不管從哪裡触发都不推舊資料。
+   `build/build.sh` 的 CWA 前置檢查（3 次重試、失敗 `exit 1`）仍保留——不管從哪裡觸發都不推舊資料。
    唯一自動更新通道＝本地 cron（每 2 小時，見 §7）。舊版曾因 `MaxWindSpeed=None` 讓 build 崩潰（`TypeError`），已修復（`cwa.py` 加 `if ws is not None`）。
 6. **Cloudflare token 限區域或失效**：code 9109。去 CF 後台重開 token 並更新 GitHub Secret 即可；
    或改用本地 cron 備用（`build/cron-enable.sh`）。⚠️ 2026-10-31 更新：兩機的 `build/deploy.env` **已刪除**（開發機那份是失效 token、CF API 403／9109；部署機那份是 source 時用 `${VAR:?}` 中止腳本的模板）。金鑰一律取自 `~/.zshrc.secrets`，要兜底檔請 `cp build/deploy.env.example build/deploy.env && chmod 600`；兩機實戰可用的 CF/CWA 鍵都在 `~/.zshrc.secrets`（開發機那份對 CF `/accounts` 與 `wea-testing` 實測 HTTP 200）。別再拿 `deploy.env` 去部署（見 §6 測試站）。
@@ -284,7 +284,7 @@ cd public && python3 -m http.server 8080
 4. **災情新聞用 `build/rss_candidates.json`**：build 已自動抓 RSS（候選清單：關鍵詞 flag 在前、48h 窗口、跨來源去重）；**不要**再手動 curl feed 或 web 搜尋逐家掃（除非候選清單過舊、不足，或無 active 事件需要補充）。手動 web 搜尋仍限一次，命中 0~2 條即停。
 5. **寫檔一次成型**：長內容分段寫或先存 `/tmp/weather-scratch/` 再 `cp`，避免 write 工具 output token 截斷重來（8/28 實測發生）。
 6. **完成定義**：git status 乾淨（或 diff 已確認）＋ build ＋ deploy ＋ 推 `origin` 與 `github`。deploy 之後不要再做「驗證」式查詢。
-7. **事件檔不得整檔覆寫（10/25 事故）**：改 `颱風/**`、`災情/**` 前先 `read` 現檔＋`git log --oneline -5 -- <該檔>`；只用 `edit` 附加／原地改，`write` 僅用於新建。commit 前自查上一版與現行的行數・不重複連結數（應只增不減），並用 `git show HEAD:"$f" | while IFS= read -r l; do grep -qF -- "$l" "$f" || echo "LOST: ${l:0:60}"; done` 確認零遺失。**发現行數/連結變少 → 不得 commit**，先用 `git show HEAD~1:"$f"` 還原舊內容再重新附加（参 `AGENTS.md`「事件檔防呆」）。
+7. **事件檔不得整檔覆寫（10/25 事故）**：改 `颱風/**`、`災情/**` 前先 `read` 現檔＋`git log --oneline -5 -- <該檔>`；只用 `edit` 附加／原地改，`write` 僅用於新建。commit 前自查上一版與現行的行數・不重複連結數（應只增不減），並用 `git show HEAD:"$f" | while IFS= read -r l; do grep -qF -- "$l" "$f" || echo "LOST: ${l:0:60}"; done` 確認零遺失。**發現行數/連結變少 → 不得 commit**，先用 `git show HEAD~1:"$f"` 還原舊內容再重新附加（参 `AGENTS.md`「事件檔防呆」）。
 8. **暫存檔只准寫 `/tmp/weather-scratch/`（2026-11-07 定案）**：舊版第 3、5 條只說「存 `/tmp`」，結果本機 `/tmp` 長期堆了 70+ 個來源不明的 `cwa_*.json`／`*.html`／`*.py`（8 MB），與部署殘留混在一起、無人能判斷能不能刪。現行規則：開工先 `mkdir -p /tmp/weather-scratch`，所有除錯用的 JSON／HTML／草稿一律寫在該目錄（檔名帶日期），**session 收尾前自行刪除**；沒清也由 `deploy-cron.sh` 的 `cleanup_tmp()` 掃超過 2 天未動的（→ `LOCAL_CRON.md` §5.1）。⚠️ 不要在 `/tmp` 頂層直接建檔（那層混了系統與工具檔案，清掃無法安全辨識）。
 
 ## 附：快速指令參考
