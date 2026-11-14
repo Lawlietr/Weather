@@ -73,6 +73,13 @@ git push origin main
 ./build/deploy.sh --preview             # build 後本機預覽，不部署
 ```
 
+⚠️ **在部署機（`192.168.100.14`）的 ssh 非互動式 shell 裡直接跑 `deploy.sh` 會失敗**：`deploy.sh: line 120: npx: command not found`（rc=127）。原因是該機的 node 只從兩處進來——`~/.zshrc` 的 `~/.hermes/node/bin`（只對互動式 shell 生效）與 `deploy-cron.sh` 的 PATH 修正（`~/.local/share/pi-node/current/bin`）；金鑰也同樣只靠 `.zshrc` source `~/.zshrc.secrets`。所以：
+
+- 在互動式 zsh 裡：`./build/deploy.sh` 正常。
+- 在 ssh／腳本裡：用 `bash build/deploy-cron.sh`（它自帶金鑰載入＋PATH 修正＋flock＋日誌，就是 cron 那條入口）；只想看金鑰與網路可用性加 `--selfcheck`。
+
+（2026-11-14 15:32 實測：`deploy.sh` rc=127，改跑 `deploy-cron.sh` 後 `END 成功 (rc=0)`）
+
 ---
 
 ## 2. 新增／更新事件流程

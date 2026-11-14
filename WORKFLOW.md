@@ -256,7 +256,7 @@ cd public && python3 -m http.server 8080
 ## 7. 排程與自動更新
 
 - **兩台機器**：開發＝`192.168.100.15`（`DEV`），部署＝`192.168.100.14`（本機、cron 每 2 小時）。開發機的 `DEV` 不會進生產；但 merge 回 `main` 後要到部署機 `git pull --ff-only origin main` 才會上線 → 見 §0.1。
-- **手動**：`MANUAL_UPDATE.md`（改 markdown → `./build/deploy.sh` → 上線）。
+- **手動**：`MANUAL_UPDATE.md`（改 markdown → `./build/deploy.sh` → 上線）。⚠️ 在部署機的 **ssh 非互動式 shell** 裡改用 `bash build/deploy-cron.sh`（`deploy.sh` 在該環境拿不到 node 與金鑰，實測 rc=127）→ `MANUAL_UPDATE.md`「用 `deploy.sh` 的進階選項」下方的注意列。
 - **本地 cron（唯一自動通道，每 2 小時整點）**：本機或 Ubuntu LXC/VM 排 `build/deploy-cron.sh`（CWA 前置檢查 3 次重試、失敗中止、不推舊資料）。安裝/停用/自檢、金鑰（`build/deploy.env`）、日誌等細節見 `LOCAL_CRON.md`。2026-10-23 由每 2 小時提高為每小時（颱風期間加頻；`build/cron.txt` 行 `0 * * * *`），2026-10-24 薔琵遠離後**降回每 2 小時**（`0 */2 * * *`）。
 - **GitHub Actions：完全不使用**（2026-11-07 刪除 `.github/workflows/build.yml`，repo 內已沒有任何 workflow 檔案）。先前的教訓：`schedule:` 於 2026-10-23 因排程不可靠停用（24 期只跑 10 期、間隔 185–424 分），同日改僅留手動 dispatch；同日進一步發現在 Actions 分頁每 2 小時出現的 `pages build and deployment` 其實是 **GitHub 為 branch 來源 Pages 內建的發布器**，由本地 cron 推 `gh-pages` 觸發（不讀我們的 workflow、不抓 CWA、不碰 Cloudflare），容易誤判成「Actions 上又有自動部署」。**现行做法：不再推 `gh-pages`（→ §6、`LOCAL_CRON.md` §四），所以 Actions 分頁不會再出現新 run。**日后若要重新引入自動觸發，首選是 CF Worker Cron 打一個手動觸發（**僅評估、未實作**，含變體 A/B/C 與待驗證項 → `design/cf-cron.md`）。自證目前狀態：
 
