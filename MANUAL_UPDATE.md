@@ -138,7 +138,7 @@ git push origin main
 
 ### GitHub Pages（已於 2026-11-07 移除，不再是部署目標）
 - `deploy.sh` 預設**不推** `gh-pages`；`gh-pages` 分支已從 origin/github **刪除**（codeberg 無此分支），`lawlietr.github.io/Weather/` 已不可用（站已關，`gh api repos/Lawlietr/Weather/pages` → 404）。
-- 為何移除：推 `gh-pages` 會觸發 GitHub 為 branch 來源 Pages 內建的 `pages build and deployment` workflow（Actions 分頁每 2 小時出現一期、易誤判為「另有自動部署」），而該鏡像不是正式管道、也不影響三個正式域名；停在最後一期的舊災情挂在网上比沒資料更危險。
+- 為何移除：推 `gh-pages` 會觸發 GitHub 為 branch 來源 Pages 內建的 `pages build and deployment` workflow（Actions 分頁每 2 小時出現一期、易誤判為「另有自動部署」），而該鏡像不是正式管道、也不影響三個正式域名；停在最後一期的舊災情掛在網上比沒資料更危險。
 - 真的要重建鏡像：先在 GitHub repo 重新啟用 Pages（branch 來源 `gh-pages`），再跑 `./build/deploy.sh --gh`（憑證優先序：`GH_PAT` → 本機 `github` remote 的 SSH）。
 
 > 只有一邊要上線：`public/` 只推 Cloudflare Pages。
