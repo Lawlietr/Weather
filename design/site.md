@@ -149,21 +149,41 @@ preview URL，共 50 期）得到：11/11 18:00 → 11/14 10:00 共 33 個排程
 
 **測試站實測**（`wea-testing`，2026-11-14 12:19 期；自訂網域 `weatesting.avpclub.eu.org` 與
 `29e2dca8.wea-testing.pages.dev` 兩者內容一致）：
-- 效期內的陸上強風特報不受影響：zh 首页 🟡「陸上強風特報（**有效** 2026-11-14 20:00 ~ 2026-11-15 23:00）」、
+- 效期內的陸上強風特報不受影響：zh 首頁 🟡「陸上強風特報（**有效** 2026-11-14 20:00 ~ 2026-11-15 23:00）」、
   badge `sev-yellow`、卡面無過期註記；ja 同位置為「有効 …」＋🟡 警戒中。措辭已為「有效 …」。
-- **A/B/C 端到端重放**（同一条 `site.build_home()` 管線，氣旋/雨量/海上警報全用即時真實 CWA 資料，
+- **A/B/C 端到端重放**（同一條 `site.build_home()` 管線，氣旋/雨量/海上警報全用即時真實 CWA 資料，
   只把 `reports` 換成 11/11 16:16 那筆，時鐘固定 2026-11-14 10:00）：
   - A 對照組（即時真實特報 ＋ 新碼）→ 🟡（不迴歸）
   - B 11/11 那筆 ＋ **修正前**（`git show HEAD:build/cwa.py` 另存後 importlib 載入）→ 完整重現她看到的
     🟡 「陸上強風特報（有效 2026-11-11 16:16 ~ 2026-11-11 23:00）」
   - C 11/11 那筆 ＋ 修正後 → 🟢 目前無危險信號，該卡整張不出現
-  重放腳本是一次性的（`/tmp/weather-scratch/replay_1111.py`，要重跑：`git show <修正前 commit>:build/cwa.py`
-  另存、用 `build/.venv/bin/python` 跑（`site.py` 需 python-markdown），並用 importlib 載 `build/site.py`
+- 重放腳本是一次性的（`/tmp/weather-scratch/replay_1111.py`；合成預覽另見
+  `/tmp/weather-scratch/make_synth.py`。要重跑：`git show <修正前 commit>:build/cwa.py` 另存、
+  用 `build/.venv/bin/python` 跑（`site.py` 需 python-markdown），並用 importlib 載 `build/site.py`
   ——`import site` 會被 stdlib `site` 搶走）。**正式回歸只跑 `build/test_report_expiry.py`**。
-- ⚠ 本轮**未用真 Chromium**：Playwright MCP 連接不穩（兩次導航失敗、一次回傳非頁面內容的錯亂文字）。
-  首页與事件頁本就是零 JS 靜態頁（前端零外部請求），HTTP 拉回的就是权威結果；本轮 diff 只碰
-  `cwa.py`／`i18n.py`（`git diff --name-only` 不含 `map_page.py`/`cbph.py`/`tiles.py`/`taiwan_geo.py`），
-  `/map/` 向量層不受影響 → 不需重跑 §2-7c 的 Leaflet 真瀏覽器驗證。
+  ⚠ 合成預覽頁會把假風險狀態放到 `wea-testing`（只限測試站、不是生產站），看完**務必**立刻
+  `npx -y wrangler@latest pages deploy public --project-name wea-testing --branch main` 還原，
+  並用 `grep 產生時間` 確認已回到真實那一期的時間戳。
+- **obscura 真瀏覽器驗證**（obscura MCP 0.4.1-cjk）：
+  1. 不迴歸：zh/ja 首頁風險列 `risk-yellow`、border `rgb(255,179,0)`、badge `sev-yellow`，各一筆且
+     無過期註記；無 console error。
+  2. **合成預覽**（把 11/11 那筆塞回 `site.build_home()`、其餘用即時真實 CWA 資料，寫進 `public/`
+     的 hardlink 副本後暫時部署 `wea-testing`，看完立即重新部署真實 `public/` 還原）：
+     - **B 過期 30 分鐘**（`eaf6bdec.wea-testing.pages.dev`）→ 風險列 `risk-neutral`、⚪ 常態監視
+       （border 不再是黃色）、文字「最近：陸上強風特報（有效至 2026-11-11 23:00，已過有效時間）」；
+       「警報與特報」卡 badge `sev-grey`（`rgb(158,158,158)`）＋「（有效時間已過，供參考）」。
+     - **A 過期 61 小時**（`24c0f32f.wea-testing.pages.dev`，時鐘就是事故當期）→ 風險列 `risk-green`、
+       🟢 目前無危險信號（border `rgb(102,187,106)`），「警報與特報」卡**整張不出現**。
+     兩期「各縣市災情」時間軸仍有 8 月的陸上強風特報——那是事件存檔層的歷史紀錄，與風險列無關。
+  3. 事件頁（薔琵、0920 西南風）正常：h1/章節/23 與 19 個表格、無 console error。
+     ⚠ 事件頁 URL 為**無副檔名**的 `/events/…/<名>`，手拼 `.html` 會 404。
+  4. `/map/` 只用 obscura 做**結構對照**、不判向量層（AGENTS 定案：obscura 缺 SVG 1.1 factory API，
+     向量層會假陽性「圖層空」）：測試站與生產站舊版探測結果完全一致（`leaflet-container` 在、內嵌
+     GeoJSON 1368 個 Feature、tile 模版 `tiles/{z}/{x}_{y}.png`、最大 inline 腳本 1,108,986 bytes、
+     無 console error；`tiles` 與 `overlaySvgs` 兩邊都回 0）→ 回 0 是 obscura 的已知限制，不是新版差異。
+     向量層的正式判定仍須 Playwright 真 Chromium（本輪 Playwright MCP 兩次導航失敗、一次回傳非頁面
+     內容的錯亂文字，不適用）。本輪 diff 不含 `map_page.py`／`cbph.py`／`tiles.py`／`taiwan_geo.py`，
+     `/map/` 不受影響。
 
 ## 站內連結的深度前綴（§12，✅ 2026-10-26 修復；測試站實測 129 條斷鏈 → 0）
 
