@@ -2,7 +2,7 @@
 
 > 本檔只記**要做的事＋優先級＋狀態＋設計檔連結**；問題背景、定案細節、規格與陷阱在 `design/<功能>.md`（每功能領域一份）；流程 runbook（更新／build／驗證／部署）在 `WORKFLOW.md`。已完成項目的歷史細節看 git history。
 > 編號為傳統編號（§N），供既有引用對照；細節一律跟連結進 design/。
-> 最後更新：2026-11-07（**部署通道精簡**：只推 Cloudflare Pages；刪除 `.github/workflows/build.yml`（GitHub Actions 完全不使用）；**GitHub Pages 鏡像已徹底移除——`gh-pages` 分支已從 origin/github 刪除、Pages 站已關** → `LOCAL_CRON.md` §四、`WORKFLOW.md` §6/§7。`/tmp` 暫存規則與自動清理 → `LOCAL_CRON.md` §5.1、`WORKFLOW.md` §8 第 8 條。前次 2026-10-28：§2-4b 颱風軌跡／風圈層上線；衍生項 §2-7d（底圖再向東擴）**已擱置**（使用者 2026-10-28 决定先不做；三方案與瓦片/體積實算已備、隨時可啟動）。再前：2026-10-27 §2-7c 兜底陸地層上線（順帶修 §2-7a 的 `errorTileUrl` 實色底缺陷）、2026-10-26 §12 斷鏈修復 129→0。更舊的變更史看 git history）
+> 最後更新：2026-11-17（**底圖供應商評估完成**：OpenFreeMap／VersaTiles／Protomaps 實測比對、結論不換 → `design/tile-providers.md`、下方 §2-7e。前次 2026-11-07（**部署通道精簡**：只推 Cloudflare Pages；刪除 `.github/workflows/build.yml`（GitHub Actions 完全不使用）；**GitHub Pages 鏡像已徹底移除——`gh-pages` 分支已從 origin/github 刪除、Pages 站已關** → `LOCAL_CRON.md` §四、`WORKFLOW.md` §6/§7。`/tmp` 暫存規則與自動清理 → `LOCAL_CRON.md` §5.1、`WORKFLOW.md` §8 第 8 條。前次 2026-10-28：§2-4b 颱風軌跡／風圈層上線；衍生項 §2-7d（底圖再向東擴）**已擱置**（使用者 2026-10-28 决定先不做；三方案與瓦片/體積實算已備、隨時可啟動）。再前：2026-10-27 §2-7c 兜底陸地層上線（順帶修 §2-7a 的 `errorTileUrl` 實色底缺陷）、2026-10-26 §12 斷鏈修復 129→0。更舊的變更史看 git history）
 
 ## 待辦（依優先級排序）
 
@@ -16,6 +16,7 @@
 | §6 | 停班停課事件檔存檔層（**事件期間才做**、非待辦；新事件時從 feed/查詢頁/新聞撈入事件檔「停班停課」章節） | 中高 | 事件期間進行 | [design/class-halt.md](design/class-halt.md) |
 | §5 | 事件分享按鈕：A Web Share＋複製連結 → B Line 一鍵 → C OG 分享圖卡 | 低 | 待辦 | [design/share-button.md](design/share-button.md) |
 | §1 | RSS 關鍵詞微調（`rss.py` `KEYWORDS`；隨事件期間 flag 假陽性/假陰性實戰資料，非獨立待辦） | 隨事件 | 隨事件維護 | [design/rss.md](design/rss.md) |
+| §2-7e | **底圖供應商升級 POC（只走 Protomaps）**：2026-11-17 已對 OpenFreeMap／VersaTiles／Protomaps 做實測評估（同窗向量估 ≈23 MB vs 現行 PNG 10.38 MB；MapLibre 需自托管 JS gzip 265 KB＋sprite＋中文 glyph range；VersaTiles 無柵格輸出路線；Protomaps 可留在 Leaflet、+37 KB gzip、`lang` 含 zh-Hant）。本輪結論＝**不換**；啟動前要驗 Cloudflare Pages 的 HTTP Range 支援、`flavor` 海色能否對上 `OCEAN_RGB`／`FALLBACK_LAND`、真 Chromium 比對 z8/z11 | 低 | 評估完成、未啟動 | [design/tile-providers.md](design/tile-providers.md) |
 
 ## 已完成（非待辦；細節在設計檔與 git history）
 

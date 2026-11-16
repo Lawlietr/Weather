@@ -40,7 +40,7 @@
 
 ## 選型與離線自駕（已定案並實作）
 
-- **Leaflet + OSM（非 Google Maps）**：Google 計費綁 billing、必須外連無法離線、key 暴露前端；若日後嫌 OSM 瓦片太素，改預渲染瓦片供應商（CARTO/OpenFreeMap）即可，架構不變。
+- **Leaflet + OSM（非 Google Maps）**：Google 計費綁 billing、必須外連無法離線、key 暴露前端。⚠️ 「換一個 URL 就能換成別家預渲染底圖」這 assumption **對 OpenFreeMap 不成立**——它只有向量瓦片、無柵格端點（2026-11-17 實測），換它等於把底圖改成 MapLibre 渲染、架構會動。三家（OpenFreeMap／VersaTiles／Protomaps）的實測比對與唯一可留 Leaflet 的路線（Protomaps）→ `design/tile-providers.md`。
 - **離線自駕（硬需求）**：JS/CSS 全自託、不引 CDN；build 時只抓台灣周邊瓦片（z8–z11、**per-zoom bbox——見「底圖視野擴展」節**；`build/_tile_cache/` 持久化、缺什麼補什麼），完全離線、零外部請求；不跑 OSM tile server，出範圍顯示**海色底**（`#aad3df`）＋`errorTileUrl` 佔位，不再露紙色。
 - **保持輕量**：Leaflet 只在地圖頁載入；**首頁維持零 JS**（現有靜態 SVG 軌跡圖不換）。
 
